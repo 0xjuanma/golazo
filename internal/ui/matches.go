@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/0xjuanma/golazo/internal/api"
@@ -14,38 +13,13 @@ type MatchDisplay struct {
 }
 
 var (
-	// Match list styles
-	matchItemStyle = lipgloss.NewStyle().
-			Foreground(textColor).
-			Padding(0, 1)
-
-	matchItemSelectedStyle = lipgloss.NewStyle().
-				Foreground(selectedColor).
-				Background(selectedBg).
-				Bold(true).
-				Padding(0, 1)
-
+	// Legacy match list styles (kept for backward compatibility)
 	matchHeaderStyle = lipgloss.NewStyle().
-				Foreground(accentColor).
-				Bold(true).
-				Padding(1, 0).
-				BorderBottom(true).
-				BorderForeground(borderColor)
-
-	matchScoreStyle = lipgloss.NewStyle().
-			Foreground(accentColor).
-			Bold(true)
-
-	matchLiveStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("1")). // Red for live
-			Bold(true)
-
-	matchTimeStyle = lipgloss.NewStyle().
-			Foreground(dimColor)
-
-	matchLeagueStyle = lipgloss.NewStyle().
-			Foreground(dimColor).
-			Italic(true)
+		Foreground(accentColor).
+		Bold(true).
+		Padding(1, 0).
+		BorderBottom(true).
+		BorderForeground(borderColor)
 )
 
 // RenderLiveMatches renders the live matches view with a list of matches.
@@ -53,7 +27,7 @@ var (
 // matches is the list of matches to display.
 // selected indicates which match is currently selected (0-indexed).
 func RenderLiveMatches(width, height int, matches []MatchDisplay, selected int) string {
-	var lines []string
+	lines := make([]string, 0, len(matches)+3) // +3 for header, empty line, help
 
 	// Header
 	header := matchHeaderStyle.Width(width - 2).Render("Live Matches")
@@ -81,7 +55,7 @@ func RenderLiveMatches(width, height int, matches []MatchDisplay, selected int) 
 	lines = append(lines, help)
 
 	content := strings.Join(lines, "\n")
-	
+
 	// Add padding
 	paddedContent := lipgloss.NewStyle().
 		Padding(1, 2).
@@ -96,55 +70,8 @@ func RenderLiveMatches(width, height int, matches []MatchDisplay, selected int) 
 	)
 }
 
+// renderMatchItem is kept for backward compatibility but uses styles from panels.go
 func renderMatchItem(match MatchDisplay, selected bool, width int) string {
-	// Match status indicator
-	statusIndicator := "  "
-	if match.Status == api.MatchStatusLive {
-		liveTime := "LIVE"
-		if match.LiveTime != nil {
-			liveTime = *match.LiveTime
-		}
-		statusIndicator = matchLiveStyle.Render("● " + liveTime)
-	} else if match.Status == api.MatchStatusFinished {
-		statusIndicator = matchTimeStyle.Render("FT")
-	} else if match.Status == api.MatchStatusNotStarted {
-		statusIndicator = matchTimeStyle.Render("VS")
-	}
-
-	// League name
-	leagueName := matchLeagueStyle.Render(match.League.Name)
-
-	// Teams and score
-	homeTeam := match.HomeTeam.ShortName
-	awayTeam := match.AwayTeam.ShortName
-
-	var scoreText string
-	if match.HomeScore != nil && match.AwayScore != nil {
-		scoreText = matchScoreStyle.Render(
-			fmt.Sprintf("%d - %d", *match.HomeScore, *match.AwayScore),
-		)
-	} else {
-		scoreText = matchTimeStyle.Render("vs")
-	}
-
-	// Build the match line
-	matchLine := fmt.Sprintf("%s  %s  %s  %s  %s",
-		statusIndicator,
-		leagueName,
-		homeTeam,
-		scoreText,
-		awayTeam,
-	)
-
-	// Truncate if too long
-	if len(matchLine) > width {
-		matchLine = Truncate(matchLine, width)
-	}
-
-	// Apply selection style
-	if selected {
-		return matchItemSelectedStyle.Width(width).Render(matchLine)
-	}
-	return matchItemStyle.Width(width).Render(matchLine)
+	// This function is deprecated - use renderMatchListItem from panels.go instead
+	return renderMatchListItem(match, selected, width)
 }
-

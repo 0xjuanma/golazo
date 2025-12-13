@@ -31,11 +31,18 @@ func RenderStatsView(width, height int, matches []MatchDisplay, selected int, de
 	// Render right panel (match stats)
 	rightPanel := renderMatchStatsPanel(rightWidth, panelHeight, details)
 
+	// Create modern neon vertical separator (matching live matches view style)
+	separatorStyle := lipgloss.NewStyle().
+		Foreground(borderColor).
+		Height(panelHeight).
+		Padding(0, 1)
+	separator := separatorStyle.Render("│")
+
 	// Combine panels horizontally
 	combined := lipgloss.JoinHorizontal(
 		lipgloss.Top,
 		leftPanel,
-		strings.Repeat(" ", 1),
+		separator,
 		rightPanel,
 	)
 

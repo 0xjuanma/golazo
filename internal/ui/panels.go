@@ -261,7 +261,7 @@ func renderMatchListItem(match MatchDisplay, selected bool, width int) string {
 // renderMatchDetailsPanel renders the right panel with match details and live updates.
 func renderMatchDetailsPanel(width, height int, details *api.MatchDetails, liveUpdates []string, sp spinner.Model, loading bool) string {
 	if details == nil {
-		title := panelTitleStyle.Width(width - 6).Render("Match Details")
+		title := panelTitleStyle.Width(width - 6).Render("Minute-by-minute")
 
 		// Nice empty state for match details
 		emptyIcon := lipgloss.NewStyle().
@@ -303,10 +303,8 @@ func renderMatchDetailsPanel(width, height int, details *api.MatchDetails, liveU
 			))
 	}
 
-	// Match header with teams and score
-	title := panelTitleStyle.Width(width - 6).Render(
-		fmt.Sprintf("%s vs %s", details.HomeTeam.ShortName, details.AwayTeam.ShortName),
-	)
+	// Panel title
+	title := panelTitleStyle.Width(width - 6).Render("Minute-by-minute")
 
 	var content strings.Builder
 

@@ -6,6 +6,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/lucasb-eyer/go-colorful"
 )
 
 var (
@@ -54,7 +55,15 @@ func RenderMainMenu(width, height, selected int, sp spinner.Model, randomSpinner
 
 	menuContent := strings.Join(items, "\n")
 
-	title := menuTitleStyle.Render("GOLAZO")
+	asciiTitle := `  ________       .__                       
+ /  _____/  ____ |  | _____  ____________  
+/   \  ___ /  _ \|  | \__  \ \___   /  _ \ 
+\    \_\  (  <_> )  |__/ __ \_/    (  <_> )
+ \______  /\____/|____(____  /_____ \____/ 
+        \/                 \/      \/      `
+
+	// Apply gradient to ASCII title (cyan to red, same as spinner)
+	title := renderGradientText(asciiTitle)
 	help := menuHelpStyle.Render("↑/↓: navigate  Enter: select  q: quit")
 
 	// Spinner with fixed spacing - always reserve space to prevent movement
@@ -91,4 +100,42 @@ func RenderMainMenu(width, height, selected int, sp spinner.Model, randomSpinner
 		lipgloss.Center,
 		content,
 	)
+}
+
+// renderGradientText applies a gradient (cyan to red) to multi-line text.
+func renderGradientText(text string) string {
+	lines := strings.Split(text, "\n")
+	if len(lines) == 0 {
+		return text
+	}
+
+	// Create gradient colors (same as spinner)
+	startColor, _ := colorful.Hex("#00FFFF") // Cyan
+	endColor, _ := colorful.Hex("#FF0000")   // Red
+
+	var result strings.Builder
+	for i, line := range lines {
+		if line == "" {
+			result.WriteString("\n")
+			continue
+		}
+
+		// Calculate gradient position for this line (0.0 to 1.0)
+		ratio := float64(i) / float64(len(lines)-1)
+
+		// Blend colors based on line position
+		color := startColor.BlendLab(endColor, ratio)
+
+		// Convert to hex for lipgloss
+		hexColor := color.Hex()
+
+		// Style the line with gradient color
+		lineStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(hexColor))
+		result.WriteString(lineStyle.Render(line))
+		if i < len(lines)-1 {
+			result.WriteString("\n")
+		}
+	}
+
+	return result.String()
 }

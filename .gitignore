@@ -2,4 +2,4 @@
 golazo
 test_api.go
 test_api_setup.sh
-test_api.go
+scripts/test_api.go

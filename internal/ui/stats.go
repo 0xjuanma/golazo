@@ -178,12 +178,12 @@ func renderMatchStatsPanel(width, height int, details *api.MatchDetails) string 
 	if details.League.Name != "" {
 		info = append(info, lipgloss.NewStyle().
 			Foreground(dimColor).
-			Render("League: "+details.League.Name))
+			Render(constants.LabelLeague+details.League.Name))
 	}
 	if details.MatchTime != nil {
 		info = append(info, lipgloss.NewStyle().
 			Foreground(dimColor).
-			Render("Date: "+details.MatchTime.Format("Jan 2, 2006")))
+			Render(constants.LabelDate+details.MatchTime.Format("Jan 2, 2006")))
 	}
 	if len(info) > 0 {
 		stats = append(stats, strings.Join(info, " | "))

@@ -43,9 +43,27 @@ func main() {
 	fmt.Println("\nTest 3: Fetching finished matches from last 7 days...")
 	url3 := fmt.Sprintf("%s/fixtures?from=%s&to=%s&status=FT", baseURL, dateFrom, dateTo)
 	testEndpoint(url3, apiKey)
+
+	// Test 4: Get fixtures with specific league (Premier League = 39)
+	fmt.Println("\nTest 4: Fetching Premier League fixtures from last 7 days...")
+	url4 := fmt.Sprintf("%s/fixtures?from=%s&to=%s&league=39", baseURL, dateFrom, dateTo)
+	testEndpoint(url4, apiKey)
+
+	// Test 5: Get finished matches with league filter
+	fmt.Println("\nTest 5: Fetching finished Premier League matches from last 7 days...")
+	url5 := fmt.Sprintf("%s/fixtures?from=%s&to=%s&status=FT&league=39", baseURL, dateFrom, dateTo)
+	testEndpoint(url5, apiKey)
+
+	// Test 6: Get fixtures with season parameter (2024)
+	fmt.Println("\nTest 6: Fetching fixtures with season parameter...")
+	currentYear := time.Now().Year()
+	url6 := fmt.Sprintf("%s/fixtures?from=%s&to=%s&season=%d&league=39", baseURL, dateFrom, dateTo, currentYear)
+	testEndpoint(url6, apiKey)
 }
 
 func testEndpoint(url string, apiKey string) {
+	fmt.Printf("  URL: %s\n", url)
+	
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		fmt.Printf("  ❌ Failed to create request: %v\n", err)
@@ -66,8 +84,10 @@ func testEndpoint(url string, apiKey string) {
 	bodyStr := string(bodyBytes)
 
 	fmt.Printf("  Status: %d\n", resp.StatusCode)
+	fmt.Printf("  Headers: %+v\n", resp.Header)
+	
 	if resp.StatusCode != http.StatusOK {
-		fmt.Printf("  ❌ Error response: %s\n", bodyStr[:min(500, len(bodyStr))])
+		fmt.Printf("  ❌ Error response: %s\n", bodyStr[:min(1000, len(bodyStr))])
 		return
 	}
 
@@ -75,22 +95,48 @@ func testEndpoint(url string, apiKey string) {
 	var result map[string]interface{}
 	if err := json.Unmarshal(bodyBytes, &result); err != nil {
 		fmt.Printf("  ❌ Failed to parse JSON: %v\n", err)
-		fmt.Printf("  Response: %s\n", bodyStr[:min(500, len(bodyStr))])
+		fmt.Printf("  Response: %s\n", bodyStr[:min(1000, len(bodyStr))])
 		return
 	}
 
+	// Print full response structure for debugging
+	fmt.Printf("  Response keys: %v\n", getKeys(result))
+	
+	// Check for errors in response
+	if errors, ok := result["errors"].([]interface{}); ok && len(errors) > 0 {
+		fmt.Printf("  ⚠ API Errors: %+v\n", errors)
+	}
+	
 	// Check response structure
 	if response, ok := result["response"].([]interface{}); ok {
 		fmt.Printf("  ✓ Found %d matches\n", len(response))
 		if len(response) > 0 {
-			// Show first match
+			// Show first match summary
 			if firstMatch, ok := response[0].(map[string]interface{}); ok {
-				fmt.Printf("  Sample match: %+v\n", firstMatch)
+				fmt.Printf("  Sample match ID: %v\n", firstMatch["fixture"])
+				if teams, ok := firstMatch["teams"].(map[string]interface{}); ok {
+					if home, ok := teams["home"].(map[string]interface{}); ok {
+						if away, ok := teams["away"].(map[string]interface{}); ok {
+							fmt.Printf("  Sample: %v vs %v\n", home["name"], away["name"])
+						}
+					}
+				}
 			}
+		} else {
+			fmt.Printf("  ⚠ No matches found in response\n")
 		}
 	} else {
-		fmt.Printf("  ⚠ Unexpected response structure: %+v\n", result)
+		fmt.Printf("  ⚠ Unexpected response structure\n")
+		fmt.Printf("  Full response: %s\n", bodyStr[:min(500, len(bodyStr))])
 	}
+}
+
+func getKeys(m map[string]interface{}) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
 }
 
 func min(a, b int) int {
@@ -99,4 +145,3 @@ func min(a, b int) int {
 	}
 	return b
 }
-

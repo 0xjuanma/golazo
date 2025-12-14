@@ -15,6 +15,29 @@ const (
 	baseURL = "https://v3.football.api-sports.io"
 )
 
+// Supported league IDs for API-Sports.io
+// These are the most popular leagues that typically have matches
+var (
+	// SupportedLeagues contains the league IDs that will be queried for matches.
+	// API-Sports.io league IDs:
+	//   - Premier League: 39
+	//   - La Liga: 140
+	//   - Bundesliga: 78
+	//   - Serie A: 135
+	//   - Ligue 1: 61
+	//   - Champions League: 2
+	//   - MLS: 253
+	SupportedLeagues = []int{
+		39,  // Premier League
+		140, // La Liga
+		78,  // Bundesliga
+		135, // Serie A
+		61,  // Ligue 1
+		2,   // Champions League
+		253, // MLS
+	}
+)
+
 // Client implements the api.Client interface for API-Sports.io (free tier)
 type Client struct {
 	httpClient *http.Client
@@ -36,53 +59,58 @@ func NewClient(apiKey string) *Client {
 
 // FinishedMatchesByDateRange retrieves finished matches within a date range.
 // This is used for the stats view to show completed matches.
+// Queries multiple supported leagues and aggregates results.
 func (c *Client) FinishedMatchesByDateRange(ctx context.Context, dateFrom, dateTo time.Time) ([]api.Match, error) {
 	dateFromStr := dateFrom.Format("2006-01-02")
 	dateToStr := dateTo.Format("2006-01-02")
 
-	// API-Sports.io uses /fixtures endpoint with date range
-	// Use 'from' and 'to' parameters for date range, and filter for finished matches (status=FT)
-	url := fmt.Sprintf("%s/fixtures?from=%s&to=%s&status=FT", c.baseURL, dateFromStr, dateToStr)
+	allMatches := make([]api.Match, 0)
 
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
+	// Query each supported league and aggregate matches
+	// API-Sports.io free tier may require league parameter
+	for _, leagueID := range SupportedLeagues {
+		// API-Sports.io uses /fixtures endpoint with date range
+		// Use 'from' and 'to' parameters for date range, and filter for finished matches (status=FT)
+		url := fmt.Sprintf("%s/fixtures?from=%s&to=%s&status=FT&league=%d", c.baseURL, dateFromStr, dateToStr, leagueID)
 
-	req.Header.Set("x-apisports-key", c.apiKey)
-
-	resp, err := c.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch matches: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		// Read error response body for better error messages
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		bodyStr := string(bodyBytes)
-		if len(bodyStr) > 200 {
-			bodyStr = bodyStr[:200]
+		req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+		if err != nil {
+			continue // Skip this league on error
 		}
-		return nil, fmt.Errorf("unexpected status code: %d, response: %s", resp.StatusCode, bodyStr)
-	}
 
-	var response footballdataMatchesResponse
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
-	}
+		req.Header.Set("x-apisports-key", c.apiKey)
 
-	// Convert all matches (already filtered by status=FT in the API call)
-	matches := make([]api.Match, 0, len(response.Response))
-	for _, m := range response.Response {
-		apiMatch := m.toAPIMatch()
-		// Double-check status is finished (should already be filtered by API)
-		if apiMatch.Status == api.MatchStatusFinished {
-			matches = append(matches, apiMatch)
+		resp, err := c.httpClient.Do(req)
+		if err != nil {
+			continue // Skip this league on request error
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			// Read error response body for debugging (but don't fail completely)
+			io.ReadAll(resp.Body) // Discard response body
+			resp.Body.Close()
+			// Continue to next league instead of failing completely
+			continue
+		}
+
+		var response footballdataMatchesResponse
+		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+			resp.Body.Close()
+			continue // Skip this league on parse error
+		}
+		resp.Body.Close()
+
+		// Convert all matches (already filtered by status=FT in the API call)
+		for _, m := range response.Response {
+			apiMatch := m.toAPIMatch()
+			// Double-check status is finished (should already be filtered by API)
+			if apiMatch.Status == api.MatchStatusFinished {
+				allMatches = append(allMatches, apiMatch)
+			}
 		}
 	}
 
-	return matches, nil
+	return allMatches, nil
 }
 
 // RecentFinishedMatches retrieves finished matches from the last N days.

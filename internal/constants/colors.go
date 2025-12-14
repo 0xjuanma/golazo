@@ -5,4 +5,3 @@ const (
 	GradientStartColor = "#00FFFF" // Bright cyan
 	GradientEndColor   = "#FF0000" // Bright red
 )
-

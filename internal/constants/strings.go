@@ -8,7 +8,7 @@ const (
 
 // Panel titles
 const (
-	PanelLiveMatches      = "Live Matches"
+	PanelLiveMatches     = "Live Matches"
 	PanelFinishedMatches = "Finished Matches"
 	PanelMinuteByMinute  = "Minute-by-minute"
 	PanelMatchStatistics = "Match Statistics"
@@ -26,17 +26,17 @@ const (
 
 // Help text
 const (
-	HelpMainMenu     = "↑/↓: navigate  Enter: select  q: quit"
-	HelpMatchesView  = "↑/↓: navigate  Esc: back  q: quit"
+	HelpMainMenu    = "↑/↓: navigate  Enter: select  q: quit"
+	HelpMatchesView = "↑/↓: navigate  Esc: back  q: quit"
 )
 
 // Status text
 const (
-	StatusLive      = "LIVE"
-	StatusFinished = "FT"
-	StatusNotStarted = "VS"
+	StatusLive            = "LIVE"
+	StatusFinished        = "FT"
+	StatusNotStarted      = "VS"
 	StatusNotStartedShort = "NS"
-	StatusFinishedText = "Finished"
+	StatusFinishedText    = "Finished"
 )
 
 // Loading text
@@ -52,4 +52,3 @@ const (
 	LabelDate   = "Date: "
 	LabelVenue  = "Venue: "
 )
-

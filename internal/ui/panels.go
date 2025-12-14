@@ -129,7 +129,7 @@ func renderMatchesListPanel(width, height int, matches []MatchDisplay, selected 
 	items := make([]string, 0, len(matches))
 	contentWidth := width - 6 // Account for border and padding
 
-		if len(matches) == 0 {
+	if len(matches) == 0 {
 		emptyMessage := lipgloss.NewStyle().
 			Foreground(dimColor).
 			Align(lipgloss.Center).

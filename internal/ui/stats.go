@@ -133,7 +133,7 @@ func renderFinishedMatchListItem(match MatchDisplay, selected bool, width int) s
 func renderMatchStatsPanel(width, height int, details *api.MatchDetails) string {
 	title := panelTitleStyle.Width(width - 6).Render(constants.PanelMatchStatistics)
 
-		if details == nil {
+	if details == nil {
 		emptyStyle := lipgloss.NewStyle().
 			Foreground(dimColor).
 			Padding(1, 0).

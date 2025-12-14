@@ -35,6 +35,7 @@ type model struct {
 	randomSpinner      *ui.RandomCharSpinner
 	loading            bool
 	mainViewLoading    bool
+	useMockData        bool
 	fotmobClient       *fotmob.Client
 	footballDataClient *footballdata.Client
 	parser             *fotmob.LiveUpdateParser
@@ -45,7 +46,8 @@ type model struct {
 }
 
 // NewModel creates a new application model with default values.
-func NewModel() model {
+// useMockData determines whether to use mock data instead of real API data.
+func NewModel(useMockData bool) model {
 	s := spinner.New()
 	s.Spinner = spinner.Line // More prominent spinner animation
 	s.Style = ui.SpinnerStyle()
@@ -79,6 +81,7 @@ func NewModel() model {
 		spinner:            s,
 		randomSpinner:      randomSpinner,
 		liveUpdates:        []string{},
+		useMockData:        useMockData,
 		fotmobClient:       fotmob.NewClient(),
 		footballDataClient: footballDataClient,
 		parser:             fotmob.NewLiveUpdateParser(),
@@ -114,7 +117,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		// Continue polling if match is live
 		if m.polling && m.matchDetails != nil && m.matchDetails.Status == api.MatchStatusLive {
-			cmds = append(cmds, pollMatchDetails(m.fotmobClient, m.parser, m.matchDetails.ID, m.lastEvents))
+			cmds = append(cmds, pollMatchDetails(m.fotmobClient, m.parser, m.matchDetails.ID, m.lastEvents, m.useMockData))
 		} else {
 			m.loading = false
 			m.polling = false
@@ -139,7 +142,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if msg.details.Status == api.MatchStatusLive {
 					m.polling = true
 					m.loading = true
-					cmds = append(cmds, pollMatchDetails(m.fotmobClient, m.parser, msg.details.ID, m.lastEvents))
+					cmds = append(cmds, pollMatchDetails(m.fotmobClient, m.parser, msg.details.ID, m.lastEvents, m.useMockData))
 				} else {
 					m.loading = false
 					m.polling = false
@@ -301,12 +304,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			m.currentView = viewStats
 			m.loading = true
-			return m, tea.Batch(m.spinner.Tick, fetchFinishedMatches(m.footballDataClient))
+			return m, tea.Batch(m.spinner.Tick, fetchFinishedMatches(m.footballDataClient, m.useMockData))
 		} else if msg.selection == 1 {
 			// Live Matches view
 			m.currentView = viewLiveMatches
 			m.loading = true
-			return m, tea.Batch(m.spinner.Tick, fetchLiveMatches(m.fotmobClient))
+			return m, tea.Batch(m.spinner.Tick, fetchLiveMatches(m.fotmobClient, m.useMockData))
 		}
 		return m, nil
 	}
@@ -396,13 +399,13 @@ func (m model) loadMatchDetails(matchID int) (tea.Model, tea.Cmd) {
 	m.liveUpdates = []string{}
 	m.lastEvents = []api.MatchEvent{}
 	m.loading = true
-	return m, tea.Batch(m.spinner.Tick, fetchMatchDetails(m.fotmobClient, matchID))
+	return m, tea.Batch(m.spinner.Tick, fetchMatchDetails(m.fotmobClient, matchID, m.useMockData))
 }
 
 // loadStatsMatchDetails loads match details for stats view.
 func (m model) loadStatsMatchDetails(matchID int) (tea.Model, tea.Cmd) {
 	m.loading = true
-	return m, tea.Batch(m.spinner.Tick, fetchStatsMatchDetails(m.footballDataClient, matchID))
+	return m, tea.Batch(m.spinner.Tick, fetchStatsMatchDetails(m.footballDataClient, matchID, m.useMockData))
 }
 
 func (m model) View() string {
@@ -429,24 +432,31 @@ type matchDetailsMsg struct {
 }
 
 // fetchLiveMatches fetches live matches from the API.
-// Falls back to mock data if client is nil, on error, or if no live matches are available.
-func fetchLiveMatches(client *fotmob.Client) tea.Cmd {
+// If useMockData is true, always uses mock data.
+// If useMockData is false, uses real API data (no fallback to mock data).
+func fetchLiveMatches(client *fotmob.Client, useMockData bool) tea.Cmd {
 	return func() tea.Msg {
-		// Use mock data for testing if client is not available
-		if client == nil {
+		// Use mock data if flag is set
+		if useMockData {
 			matches := data.MockLiveMatches()
 			return liveMatchesMsg{matches: matches}
+		}
+
+		// If client is not available and not using mock data, return empty
+		if client == nil {
+			return liveMatchesMsg{matches: []api.Match{}}
 		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
 		matches, err := client.LiveMatches(ctx)
-		if err != nil || len(matches) == 0 {
-			// Fallback to mock data on error or if no live matches available
-			matches = data.MockLiveMatches()
+		if err != nil {
+			// Return empty on error when not using mock data
+			return liveMatchesMsg{matches: []api.Match{}}
 		}
 
+		// Return actual API results (even if empty)
 		return liveMatchesMsg{matches: matches}
 	}
 }
@@ -457,15 +467,23 @@ type liveMatchesMsg struct {
 }
 
 // fetchMatchDetails fetches match details from the API.
-func fetchMatchDetails(client *fotmob.Client, matchID int) tea.Cmd {
+// If useMockData is true, always uses mock data.
+// If useMockData is false, uses real API data (no fallback to mock data).
+func fetchMatchDetails(client *fotmob.Client, matchID int, useMockData bool) tea.Cmd {
 	return func() tea.Msg {
+		// Use mock data if flag is set
+		if useMockData {
+			details, _ := data.MockMatchDetails(matchID)
+			return matchDetailsMsg{details: details}
+		}
+
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
 		details, err := client.MatchDetails(ctx, matchID)
 		if err != nil {
-			// Fallback to mock data on error
-			details, _ = data.MockMatchDetails(matchID)
+			// Return nil on error when not using mock data
+			return matchDetailsMsg{details: nil}
 		}
 
 		return matchDetailsMsg{details: details}
@@ -474,8 +492,15 @@ func fetchMatchDetails(client *fotmob.Client, matchID int) tea.Cmd {
 
 // pollMatchDetails polls match details every 90 seconds for live updates.
 // Conservative interval to avoid rate limiting (90 seconds = 1.5 minutes).
-func pollMatchDetails(client *fotmob.Client, parser *fotmob.LiveUpdateParser, matchID int, lastEvents []api.MatchEvent) tea.Cmd {
+// If useMockData is true, always uses mock data.
+func pollMatchDetails(client *fotmob.Client, parser *fotmob.LiveUpdateParser, matchID int, lastEvents []api.MatchEvent, useMockData bool) tea.Cmd {
 	return tea.Tick(90*time.Second, func(t time.Time) tea.Msg {
+		// Use mock data if flag is set
+		if useMockData {
+			details, _ := data.MockMatchDetails(matchID)
+			return matchDetailsMsg{details: details}
+		}
+
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
@@ -495,13 +520,19 @@ type finishedMatchesMsg struct {
 }
 
 // fetchFinishedMatches fetches finished matches from the Football-Data.org API.
-// For testing, falls back to mock data if client is nil.
-func fetchFinishedMatches(client *footballdata.Client) tea.Cmd {
+// If useMockData is true, always uses mock data.
+// If useMockData is false, uses real API data (no fallback to mock data).
+func fetchFinishedMatches(client *footballdata.Client, useMockData bool) tea.Cmd {
 	return func() tea.Msg {
-		// Use mock data for testing if client is not available
-		if client == nil {
+		// Use mock data if flag is set
+		if useMockData {
 			matches := data.MockFinishedMatches()
 			return finishedMatchesMsg{matches: matches}
+		}
+
+		// If client is not available and not using mock data, return empty
+		if client == nil {
+			return finishedMatchesMsg{matches: []api.Match{}}
 		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -510,25 +541,29 @@ func fetchFinishedMatches(client *footballdata.Client) tea.Cmd {
 		// Fetch matches from last 7 days
 		matches, err := client.RecentFinishedMatches(ctx, 7)
 		if err != nil {
-			// Fallback to mock data on error for testing
-			matches = data.MockFinishedMatches()
+			// Return empty on error when not using mock data
+			return finishedMatchesMsg{matches: []api.Match{}}
 		}
 
+		// Return actual API results
 		return finishedMatchesMsg{matches: matches}
 	}
 }
 
 // fetchStatsMatchDetails fetches match details from the Football-Data.org API.
-// For testing, falls back to mock data if client is nil or on error.
-func fetchStatsMatchDetails(client *footballdata.Client, matchID int) tea.Cmd {
+// If useMockData is true, always uses mock data.
+// If useMockData is false, uses real API data (no fallback to mock data).
+func fetchStatsMatchDetails(client *footballdata.Client, matchID int, useMockData bool) tea.Cmd {
 	return func() tea.Msg {
-		// Use mock data for testing if client is not available
-		if client == nil {
-			details, err := data.MockFinishedMatchDetails(matchID)
-			if err != nil {
-				return matchDetailsMsg{details: nil}
-			}
+		// Use mock data if flag is set
+		if useMockData {
+			details, _ := data.MockFinishedMatchDetails(matchID)
 			return matchDetailsMsg{details: details}
+		}
+
+		// If client is not available and not using mock data, return nil
+		if client == nil {
+			return matchDetailsMsg{details: nil}
 		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -536,8 +571,8 @@ func fetchStatsMatchDetails(client *footballdata.Client, matchID int) tea.Cmd {
 
 		details, err := client.MatchDetails(ctx, matchID)
 		if err != nil {
-			// Fallback to mock data on error for testing
-			details, _ = data.MockFinishedMatchDetails(matchID)
+			// Return nil on error when not using mock data
+			return matchDetailsMsg{details: nil}
 		}
 
 		return matchDetailsMsg{details: details}

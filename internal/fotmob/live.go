@@ -17,11 +17,11 @@ func (c *Client) LiveMatches(ctx context.Context) ([]api.Match, error) {
 	today := time.Now()
 	matches, err := c.MatchesByDate(ctx, today)
 	if err != nil {
-		return nil, fmt.Errorf("fetch matches for today: %w", err)
+		return nil, fmt.Errorf("fetch matches for date %s: %w", today.Format("2006-01-02"), err)
 	}
 
 	// Filter for live matches only (started but not finished)
-	liveMatches := make([]api.Match, 0)
+	var liveMatches []api.Match
 	for _, match := range matches {
 		// Only include matches that are live (started but not finished)
 		if match.Status == api.MatchStatusLive {
@@ -194,7 +194,7 @@ func (p *LiveUpdateParser) NewEvents(oldEvents, newEvents []api.MatchEvent) []ap
 	}
 
 	// Find events that don't exist in old events
-	newOnly := make([]api.MatchEvent, 0)
+	var newOnly []api.MatchEvent
 	for _, event := range newEvents {
 		if !oldEventMap[event.ID] {
 			newOnly = append(newOnly, event)

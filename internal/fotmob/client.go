@@ -62,9 +62,11 @@ func (c *Client) MatchesByDate(ctx context.Context, date time.Time) ([]api.Match
 
 	// Use a mutex to protect the shared slice
 	var mu sync.Mutex
-	allMatches := make([]api.Match, 0)
+	var allMatches []api.Match
 
 	// Query leagues concurrently with rate limiting
+	// Best-effort aggregation: if a league query fails, we skip it and continue with others
+	// This allows partial results even if some leagues are unavailable
 	var wg sync.WaitGroup
 	for i, leagueID := range SupportedLeagues {
 		wg.Add(1)
@@ -81,14 +83,16 @@ func (c *Client) MatchesByDate(ctx context.Context, date time.Time) ([]api.Match
 
 			req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 			if err != nil {
-				return // Skip this league on error
+				// Skip this league on error - best effort aggregation
+				return
 			}
 
 			req.Header.Set("User-Agent", "Mozilla/5.0")
 
 			resp, err := c.httpClient.Do(req)
 			if err != nil {
-				return // Skip this league on request error
+				// Skip this league on request error - best effort aggregation
+				return
 			}
 			defer resp.Body.Close()
 
@@ -105,12 +109,13 @@ func (c *Client) MatchesByDate(ctx context.Context, date time.Time) ([]api.Match
 			}
 
 			if err := json.NewDecoder(resp.Body).Decode(&leagueResponse); err != nil {
-				return // Skip this league on parse error
+				// Skip this league on parse error - best effort aggregation
+				return
 			}
 
 			// Filter matches for the requested date and add league info
 			// Note: Matches are sorted chronologically, so we need to check all matches
-			leagueMatches := make([]api.Match, 0)
+			var leagueMatches []api.Match
 			for _, m := range leagueResponse.Fixtures.AllMatches {
 				// Check if match is on the requested date
 				if m.Status.UTCTime != "" {
@@ -161,25 +166,25 @@ func (c *Client) MatchDetails(ctx context.Context, matchID int) (*api.MatchDetai
 
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+		return nil, fmt.Errorf("create request for match %d: %w", matchID, err)
 	}
 
 	req.Header.Set("User-Agent", "Mozilla/5.0")
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch match details: %w", err)
+		return nil, fmt.Errorf("fetch match details for match %d: %w", matchID, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+		return nil, fmt.Errorf("unexpected status code %d for match %d", resp.StatusCode, matchID)
 	}
 
 	var response fotmobMatchDetails
 
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
+		return nil, fmt.Errorf("decode match details response for match %d: %w", matchID, err)
 	}
 
 	return response.toAPIMatchDetails(), nil
@@ -210,19 +215,19 @@ func (c *Client) LeagueTable(ctx context.Context, leagueID int) ([]api.LeagueTab
 
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+		return nil, fmt.Errorf("create request for league %d table: %w", leagueID, err)
 	}
 
 	req.Header.Set("User-Agent", "Mozilla/5.0")
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch league table: %w", err)
+		return nil, fmt.Errorf("fetch league table for league %d: %w", leagueID, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+		return nil, fmt.Errorf("unexpected status code %d for league %d table", resp.StatusCode, leagueID)
 	}
 
 	var response struct {
@@ -232,7 +237,7 @@ func (c *Client) LeagueTable(ctx context.Context, leagueID int) ([]api.LeagueTab
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
+		return nil, fmt.Errorf("decode league table response for league %d: %w", leagueID, err)
 	}
 
 	entries := make([]api.LeagueTableEntry, 0, len(response.Data.Table))

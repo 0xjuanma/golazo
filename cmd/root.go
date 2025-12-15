@@ -18,15 +18,17 @@ var rootCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		p := tea.NewProgram(app.NewModel(mockFlag), tea.WithAltScreen())
 		if _, err := p.Run(); err != nil {
-			fmt.Printf("Error running application: %v\n", err)
+			fmt.Fprintf(os.Stderr, "Error running application: %v\n", err)
 			os.Exit(1)
 		}
 	},
 }
 
+// Execute runs the root command.
+// Errors are written to stderr and the program exits with code 1 on failure.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
+		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
 }

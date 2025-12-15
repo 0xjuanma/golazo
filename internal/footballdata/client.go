@@ -53,7 +53,7 @@ func NewClient(apiKey string) *Client {
 // This is used for the stats view to show completed matches.
 // Queries each date individually and aggregates results, as API-Sports.io date range queries don't work reliably.
 func (c *Client) FinishedMatchesByDateRange(ctx context.Context, dateFrom, dateTo time.Time) ([]api.Match, error) {
-	allMatches := make([]api.Match, 0)
+	var allMatches []api.Match
 
 	// Create a set of supported league IDs for quick lookup
 	supportedLeagueSet := make(map[int]bool)
@@ -66,7 +66,12 @@ func (c *Client) FinishedMatchesByDateRange(ctx context.Context, dateFrom, dateT
 	// Normalize dates to UTC to avoid timezone issues
 	currentDate := dateFrom.UTC()
 	dateToUTC := dateTo.UTC()
+	var lastErr error
+	successCount := 0
+	totalDates := 0
+
 	for !currentDate.After(dateToUTC) {
+		totalDates++
 		dateStr := currentDate.Format("2006-01-02")
 
 		// API-Sports.io league-specific queries don't work reliably (require season parameter which may be incorrect)
@@ -75,7 +80,7 @@ func (c *Client) FinishedMatchesByDateRange(ctx context.Context, dateFrom, dateT
 		url := fmt.Sprintf("%s/fixtures?date=%s&status=FT", c.baseURL, dateStr)
 		req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 		if err != nil {
-			// Move to next date on request creation error
+			lastErr = fmt.Errorf("create request for date %s: %w", dateStr, err)
 			currentDate = currentDate.AddDate(0, 0, 1)
 			continue
 		}
@@ -84,7 +89,7 @@ func (c *Client) FinishedMatchesByDateRange(ctx context.Context, dateFrom, dateT
 
 		resp, err := c.httpClient.Do(req)
 		if err != nil {
-			// Move to next date on request error
+			lastErr = fmt.Errorf("fetch matches for date %s: %w", dateStr, err)
 			currentDate = currentDate.AddDate(0, 0, 1)
 			continue
 		}
@@ -93,7 +98,7 @@ func (c *Client) FinishedMatchesByDateRange(ctx context.Context, dateFrom, dateT
 			// Read and discard error response body
 			io.ReadAll(resp.Body)
 			resp.Body.Close()
-			// Move to next date on HTTP error
+			lastErr = fmt.Errorf("unexpected status code %d for date %s", resp.StatusCode, dateStr)
 			currentDate = currentDate.AddDate(0, 0, 1)
 			continue
 		}
@@ -101,7 +106,7 @@ func (c *Client) FinishedMatchesByDateRange(ctx context.Context, dateFrom, dateT
 		var response footballdataMatchesResponse
 		if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 			resp.Body.Close()
-			// Move to next date on parse error
+			lastErr = fmt.Errorf("decode response for date %s: %w", dateStr, err)
 			currentDate = currentDate.AddDate(0, 0, 1)
 			continue
 		}
@@ -109,16 +114,14 @@ func (c *Client) FinishedMatchesByDateRange(ctx context.Context, dateFrom, dateT
 
 		// Check for API errors (rate limits, etc.)
 		if len(response.Errors) > 0 {
-			// If we hit rate limit or other errors, return what we have so far
-			// This prevents silently failing and allows partial results
-			if allMatches == nil {
-				allMatches = make([]api.Match, 0)
-			}
-			// Continue to next date - don't break the loop to allow partial results
+			// If we hit rate limit or other errors, continue to allow partial results
+			// Track error but don't fail completely
+			lastErr = fmt.Errorf("API errors for date %s: %v", dateStr, response.Errors)
 			currentDate = currentDate.AddDate(0, 0, 1)
 			continue
 		}
 
+		successCount++
 		// Filter for finished matches in supported leagues
 		for _, m := range response.Response {
 			// Check if this match is from a supported league
@@ -133,6 +136,11 @@ func (c *Client) FinishedMatchesByDateRange(ctx context.Context, dateFrom, dateT
 
 		// Move to next day
 		currentDate = currentDate.AddDate(0, 0, 1)
+	}
+
+	// Return error if all dates failed, but allow partial results
+	if successCount == 0 && totalDates > 0 {
+		return allMatches, fmt.Errorf("failed to fetch matches for any date in range %s to %s: %w", dateFrom.Format("2006-01-02"), dateTo.Format("2006-01-02"), lastErr)
 	}
 
 	return allMatches, nil
@@ -159,14 +167,14 @@ func (c *Client) MatchesByDate(ctx context.Context, date time.Time) ([]api.Match
 
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+		return nil, fmt.Errorf("create request for matches on date %s: %w", dateStr, err)
 	}
 
 	req.Header.Set("x-apisports-key", c.apiKey)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch matches: %w", err)
+		return nil, fmt.Errorf("fetch matches for date %s: %w", dateStr, err)
 	}
 	defer resp.Body.Close()
 
@@ -177,12 +185,12 @@ func (c *Client) MatchesByDate(ctx context.Context, date time.Time) ([]api.Match
 		if len(bodyStr) > 200 {
 			bodyStr = bodyStr[:200]
 		}
-		return nil, fmt.Errorf("unexpected status code: %d, response: %s", resp.StatusCode, bodyStr)
+		return nil, fmt.Errorf("unexpected status code %d for matches on date %s, response: %s", resp.StatusCode, dateStr, bodyStr)
 	}
 
 	var response footballdataMatchesResponse
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
+		return nil, fmt.Errorf("decode matches response for date %s: %w", dateStr, err)
 	}
 
 	matches := make([]api.Match, 0, len(response.Response))
@@ -200,14 +208,14 @@ func (c *Client) MatchDetails(ctx context.Context, matchID int) (*api.MatchDetai
 
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+		return nil, fmt.Errorf("create request for match %d: %w", matchID, err)
 	}
 
 	req.Header.Set("x-apisports-key", c.apiKey)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch match details: %w", err)
+		return nil, fmt.Errorf("fetch match details for match %d: %w", matchID, err)
 	}
 	defer resp.Body.Close()
 
@@ -218,14 +226,14 @@ func (c *Client) MatchDetails(ctx context.Context, matchID int) (*api.MatchDetai
 		if len(bodyStr) > 200 {
 			bodyStr = bodyStr[:200]
 		}
-		return nil, fmt.Errorf("unexpected status code: %d, response: %s", resp.StatusCode, bodyStr)
+		return nil, fmt.Errorf("unexpected status code %d for match %d, response: %s", resp.StatusCode, matchID, bodyStr)
 	}
 
 	var response struct {
 		Response []footballdataMatch `json:"response"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
+		return nil, fmt.Errorf("decode match details response for match %d: %w", matchID, err)
 	}
 
 	if len(response.Response) == 0 {
@@ -301,14 +309,14 @@ func (c *Client) LeagueMatches(ctx context.Context, leagueID int) ([]api.Match, 
 
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+		return nil, fmt.Errorf("create request for league %d matches: %w", leagueID, err)
 	}
 
 	req.Header.Set("x-apisports-key", c.apiKey)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch league matches: %w", err)
+		return nil, fmt.Errorf("fetch matches for league %d: %w", leagueID, err)
 	}
 	defer resp.Body.Close()
 
@@ -319,12 +327,12 @@ func (c *Client) LeagueMatches(ctx context.Context, leagueID int) ([]api.Match, 
 		if len(bodyStr) > 200 {
 			bodyStr = bodyStr[:200]
 		}
-		return nil, fmt.Errorf("unexpected status code: %d, response: %s", resp.StatusCode, bodyStr)
+		return nil, fmt.Errorf("unexpected status code %d for league %d matches, response: %s", resp.StatusCode, leagueID, bodyStr)
 	}
 
 	var response footballdataMatchesResponse
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
+		return nil, fmt.Errorf("decode league matches response for league %d: %w", leagueID, err)
 	}
 
 	matches := make([]api.Match, 0, len(response.Response))
@@ -342,14 +350,14 @@ func (c *Client) LeagueTable(ctx context.Context, leagueID int) ([]api.LeagueTab
 
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+		return nil, fmt.Errorf("create request for league %d table: %w", leagueID, err)
 	}
 
 	req.Header.Set("x-apisports-key", c.apiKey)
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch league table: %w", err)
+		return nil, fmt.Errorf("fetch league table for league %d: %w", leagueID, err)
 	}
 	defer resp.Body.Close()
 
@@ -360,7 +368,7 @@ func (c *Client) LeagueTable(ctx context.Context, leagueID int) ([]api.LeagueTab
 		if len(bodyStr) > 200 {
 			bodyStr = bodyStr[:200]
 		}
-		return nil, fmt.Errorf("unexpected status code: %d, response: %s", resp.StatusCode, bodyStr)
+		return nil, fmt.Errorf("unexpected status code %d for league %d table, response: %s", resp.StatusCode, leagueID, bodyStr)
 	}
 
 	var response struct {
@@ -391,14 +399,14 @@ func (c *Client) LeagueTable(ctx context.Context, leagueID int) ([]api.LeagueTab
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		return nil, fmt.Errorf("failed to decode response: %w", err)
+		return nil, fmt.Errorf("decode league table response for league %d: %w", leagueID, err)
 	}
 
 	if len(response.Response) == 0 || len(response.Response[0].League.Standings) == 0 {
 		return []api.LeagueTableEntry{}, nil
 	}
 
-	entries := make([]api.LeagueTableEntry, 0)
+	var entries []api.LeagueTableEntry
 	for _, row := range response.Response[0].League.Standings[0] {
 		entries = append(entries, api.LeagueTableEntry{
 			Position: row.Rank,

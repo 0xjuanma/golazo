@@ -228,8 +228,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.handleMainViewKeys(msg)
 		case viewLiveMatches:
 			// Delegate to list component
-			var cmd tea.Cmd
-			m.liveMatchesList, cmd = m.liveMatchesList.Update(msg)
+			var listCmd tea.Cmd
+			m.liveMatchesList, listCmd = m.liveMatchesList.Update(msg)
 			// Get selected index from list
 			if selectedItem := m.liveMatchesList.SelectedItem(); selectedItem != nil {
 				if item, ok := selectedItem.(ui.MatchListItem); ok {
@@ -245,16 +245,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 				}
 			}
-			return m, cmd
+			return m, listCmd
 		case viewStats:
 			// Handle date range selector navigation first (left/right keys)
 			if msg.String() == "h" || msg.String() == "left" || msg.String() == "l" || msg.String() == "right" {
-				updatedM, cmd := m.handleStatsViewKeys(msg)
-				return updatedM, cmd
+				updatedM, statsCmd := m.handleStatsViewKeys(msg)
+				return updatedM, statsCmd
 			}
 			// Delegate other keys to list component
-			var cmd tea.Cmd
-			m.statsMatchesList, cmd = m.statsMatchesList.Update(msg)
+			var listCmd tea.Cmd
+			m.statsMatchesList, listCmd = m.statsMatchesList.Update(msg)
 			// Get selected index from list
 			if selectedItem := m.statsMatchesList.SelectedItem(); selectedItem != nil {
 				if item, ok := selectedItem.(ui.MatchListItem); ok {
@@ -270,7 +270,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					}
 				}
 			}
-			return m, cmd
+			return m, listCmd
 		}
 	case liveMatchesMsg:
 		// Debug: Check if we got matches
@@ -439,6 +439,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// handleMainViewKeys processes keyboard input for the main menu view.
+// Handles navigation (up/down) and selection (enter) to switch between views.
 func (m model) handleMainViewKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "j", "down":
@@ -469,6 +471,9 @@ func (m model) handleMainViewKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// handleLiveMatchesKeys processes keyboard input for the live matches view.
+// Handles navigation between matches and loading match details on selection.
+// Note: This function is currently unused as list component handles navigation directly.
 func (m model) handleLiveMatchesKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "j", "down":
@@ -493,6 +498,8 @@ func (m model) handleLiveMatchesKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// handleStatsViewKeys processes keyboard input for the stats view.
+// Handles date range navigation (left/right) to change the time period for finished matches.
 func (m model) handleStatsViewKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "h", "left":
@@ -525,7 +532,8 @@ func (m model) handleStatsViewKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// loadMatchDetails loads match details and starts live updates.
+// loadMatchDetails loads match details for the live matches view and starts live updates polling.
+// Resets live updates and event history before fetching new details.
 func (m model) loadMatchDetails(matchID int) (tea.Model, tea.Cmd) {
 	m.liveUpdates = []string{}
 	m.lastEvents = []api.MatchEvent{}
@@ -534,7 +542,8 @@ func (m model) loadMatchDetails(matchID int) (tea.Model, tea.Cmd) {
 	return m, tea.Batch(m.spinner.Tick, m.randomSpinner.Init(), fetchMatchDetails(m.fotmobClient, matchID, m.useMockData))
 }
 
-// loadStatsMatchDetails loads match details for stats view.
+// loadStatsMatchDetails loads match details for the stats view.
+// Fetches detailed statistics for a finished match.
 func (m model) loadStatsMatchDetails(matchID int) (tea.Model, tea.Cmd) {
 	m.loading = true
 	m.statsViewLoading = true

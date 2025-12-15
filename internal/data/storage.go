@@ -55,7 +55,11 @@ func SaveLiveUpdate(matchID int, update string) error {
 
 	var updates []LiveUpdate
 	if data, err := os.ReadFile(updatesFile); err == nil {
-		json.Unmarshal(data, &updates)
+		// Best effort to load existing updates; if unmarshal fails, start with empty slice
+		if err := json.Unmarshal(data, &updates); err != nil {
+			// Invalid JSON in file - start fresh with empty slice
+			updates = []LiveUpdate{}
+		}
 	}
 
 	updates = append(updates, LiveUpdate{

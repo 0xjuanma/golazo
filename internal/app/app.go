@@ -7,7 +7,6 @@ import (
 
 	"github.com/0xjuanma/golazo/internal/api"
 	"github.com/0xjuanma/golazo/internal/data"
-	"github.com/0xjuanma/golazo/internal/footballdata"
 	"github.com/0xjuanma/golazo/internal/fotmob"
 	"github.com/0xjuanma/golazo/internal/ui"
 	"github.com/charmbracelet/bubbles/list"
@@ -41,7 +40,6 @@ type model struct {
 	statsViewLoading          bool
 	useMockData               bool
 	fotmobClient              *fotmob.Client
-	footballDataClient        *footballdata.Client
 	parser                    *fotmob.LiveUpdateParser
 	lastEvents                []api.MatchEvent
 	polling                   bool
@@ -66,12 +64,6 @@ func NewModel(useMockData bool) model {
 	// Initialize separate random character spinner for stats view
 	statsViewSpinner := ui.NewRandomCharSpinner()
 	statsViewSpinner.SetWidth(30) // Wider spinner for more characters
-
-	// Initialize API-Sports.io client if API key is available (kept for backward compatibility)
-	var footballDataClient *footballdata.Client
-	if apiKey, err := data.FootballDataAPIKey(); err == nil {
-		footballDataClient = footballdata.NewClient(apiKey)
-	}
 
 	// Initialize list models with custom delegate
 	delegate := ui.NewMatchListDelegate()
@@ -101,7 +93,6 @@ func NewModel(useMockData bool) model {
 		upcomingMatches:     []ui.MatchDisplay{},
 		useMockData:         useMockData,
 		fotmobClient:        fotmob.NewClient(),
-		footballDataClient:  footballDataClient,
 		parser:              fotmob.NewLiveUpdateParser(),
 		lastEvents:          []api.MatchEvent{},
 		liveMatchesList:     liveList,
@@ -770,7 +761,7 @@ func (m model) View() string {
 			spinnerToUse.SetWidth(30)
 			m.statsViewSpinner = spinnerToUse
 		}
-		return ui.RenderStatsViewWithList(m.width, m.height, m.statsMatchesList, m.upcomingMatchesList, m.matchDetails, spinnerToUse, showSpinner, m.statsDateRange, false)
+		return ui.RenderStatsViewWithList(m.width, m.height, m.statsMatchesList, m.upcomingMatchesList, m.matchDetails, spinnerToUse, showSpinner, m.statsDateRange)
 	default:
 		return ui.RenderMainMenu(m.width, m.height, m.selected, m.spinner, m.randomSpinner, m.mainViewLoading)
 	}
@@ -879,39 +870,6 @@ type upcomingMatchesMsg struct {
 	matches []api.Match
 }
 
-// fetchFinishedMatches fetches finished matches from the API-Sports.io API.
-// If useMockData is true, always uses mock data.
-// If useMockData is false, uses real API data (no fallback to mock data).
-// days specifies how many days to fetch (1 or 3).
-// NOTE: This function is kept for backward compatibility but is no longer used by default.
-func fetchFinishedMatches(client *footballdata.Client, useMockData bool, days int) tea.Cmd {
-	return func() tea.Msg {
-		// Use mock data if flag is set
-		if useMockData {
-			matches := data.MockFinishedMatches()
-			return finishedMatchesMsg{matches: matches}
-		}
-
-		// If client is not available and not using mock data, return empty
-		if client == nil {
-			return finishedMatchesMsg{matches: []api.Match{}}
-		}
-
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-
-		// Fetch matches from last N days
-		matches, err := client.RecentFinishedMatches(ctx, days)
-		if err != nil {
-			// Return empty on error when not using mock data
-			return finishedMatchesMsg{matches: []api.Match{}}
-		}
-
-		// Return actual API results
-		return finishedMatchesMsg{matches: matches}
-	}
-}
-
 // fetchFinishedMatchesFotmob fetches finished matches from the FotMob API.
 // If useMockData is true, always uses mock data.
 // If useMockData is false, uses real API data (no fallback to mock data).
@@ -989,36 +947,6 @@ func fetchUpcomingMatchesFotmob(client *fotmob.Client, useMockData bool) tea.Cmd
 
 		// Return actual API results
 		return upcomingMatchesMsg{matches: upcoming}
-	}
-}
-
-// fetchStatsMatchDetails fetches match details from the API-Sports.io API.
-// If useMockData is true, always uses mock data.
-// If useMockData is false, uses real API data (no fallback to mock data).
-// NOTE: This function is kept for backward compatibility but is no longer used by default.
-func fetchStatsMatchDetails(client *footballdata.Client, matchID int, useMockData bool) tea.Cmd {
-	return func() tea.Msg {
-		// Use mock data if flag is set
-		if useMockData {
-			details, _ := data.MockFinishedMatchDetails(matchID)
-			return matchDetailsMsg{details: details}
-		}
-
-		// If client is not available and not using mock data, return nil
-		if client == nil {
-			return matchDetailsMsg{details: nil}
-		}
-
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-
-		details, err := client.MatchDetails(ctx, matchID)
-		if err != nil {
-			// Return nil on error when not using mock data
-			return matchDetailsMsg{details: nil}
-		}
-
-		return matchDetailsMsg{details: details}
 	}
 }
 

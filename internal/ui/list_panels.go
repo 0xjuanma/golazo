@@ -37,7 +37,7 @@ func RenderLiveMatchesListPanel(width, height int, listModel list.Model) string 
 // Minimal design matching live view - uses list headers instead of hardcoded titles.
 // List titles are only shown when there are items. Empty lists show gray messages instead.
 // For 1-day view, shows both finished and upcoming lists stacked vertically.
-func RenderStatsListPanel(width, height int, finishedList list.Model, upcomingList list.Model, dateRange int, apiKeyMissing bool) string {
+func RenderStatsListPanel(width, height int, finishedList list.Model, upcomingList list.Model, dateRange int) string {
 	// Render date range selector
 	dateSelector := renderDateRangeSelector(width-6, dateRange)
 
@@ -48,17 +48,13 @@ func RenderStatsListPanel(width, height int, finishedList list.Model, upcomingLi
 		Width(width - 6)
 
 	var finishedListView string
-	if apiKeyMissing {
-		finishedListView = emptyStyle.Render(constants.EmptyAPIKeyMissing)
+	finishedItems := finishedList.Items()
+	if len(finishedItems) == 0 {
+		// No items - show empty message, no list title
+		finishedListView = emptyStyle.Render(constants.EmptyNoFinishedMatches + "\n\nTry selecting a different date range (h/l keys)")
 	} else {
-		finishedItems := finishedList.Items()
-		if len(finishedItems) == 0 {
-			// No items - show empty message, no list title
-			finishedListView = emptyStyle.Render(constants.EmptyNoFinishedMatches + "\n\nTry selecting a different date range (h/l keys)")
-		} else {
-			// Has items - show list (which includes its title)
-			finishedListView = finishedList.View()
-		}
+		// Has items - show list (which includes its title)
+		finishedListView = finishedList.View()
 	}
 
 	// For 1-day view, show both lists stacked vertically
@@ -231,7 +227,7 @@ func RenderMultiPanelViewWithList(width, height int, listModel list.Model, detai
 
 // RenderStatsViewWithList renders the stats view with list component.
 // Rebuilt to match live view structure exactly: spinner at top, left panel (matches), right panel (details).
-func RenderStatsViewWithList(width, height int, finishedList list.Model, upcomingList list.Model, details *api.MatchDetails, randomSpinner *RandomCharSpinner, viewLoading bool, dateRange int, apiKeyMissing bool) string {
+func RenderStatsViewWithList(width, height int, finishedList list.Model, upcomingList list.Model, details *api.MatchDetails, randomSpinner *RandomCharSpinner, viewLoading bool, dateRange int) string {
 	// Handle edge case: if width/height not set, use defaults
 	if width <= 0 {
 		width = 80
@@ -290,7 +286,7 @@ func RenderStatsViewWithList(width, height int, finishedList list.Model, upcomin
 
 	// Render left panel (finished matches list) - match live view structure
 	// For 1-day view, combine finished and upcoming lists vertically
-	leftPanel := RenderStatsListPanel(leftWidth, panelHeight, finishedList, upcomingList, dateRange, apiKeyMissing)
+	leftPanel := RenderStatsListPanel(leftWidth, panelHeight, finishedList, upcomingList, dateRange)
 
 	// Render right panel (match details) - use same renderer as live view but without title
 	// Call renderMatchDetailsPanelWithTitle with showTitle=false to remove hardcoded title

@@ -1,6 +1,6 @@
 # League ID Reference
 
-This document tracks the league IDs used by different APIs in this application.
+This document tracks the league IDs used by the FotMob API in this application.
 
 ## Supported Leagues
 
@@ -11,9 +11,8 @@ The application currently supports 5 major leagues:
 - Serie A (Italy)
 - Ligue 1 (France)
 
-## API-Specific League IDs
+## FotMob API League IDs
 
-### FotMob API
 **Location:** `internal/fotmob/client.go`
 
 ```go
@@ -26,37 +25,14 @@ SupportedLeagues = []int{
 }
 ```
 
-**API Endpoint:** `https://www.fotmob.com/api/leagues?id={leagueID}&tab=fixtures`
+**API Endpoint:** `https://www.fotmob.com/api/leagues?id={leagueID}&tab={tab}`
 
-### API-Sports.io (Stats View)
-**Location:** `internal/footballdata/client.go`
-
-```go
-SupportedLeagues = []int{
-    39,  // Premier League
-    140, // La Liga
-    78,  // Bundesliga
-    135, // Serie A
-    61,  // Ligue 1
-}
-```
-
-**API Endpoint:** `https://v3.football.api-sports.io/fixtures?league={leagueID}&date={date}`
-
-## League ID Mapping
-
-| League | FotMob ID | API-Sports.io ID |
-|--------|-----------|------------------|
-| Premier League | 47 | 39 |
-| La Liga | 87 | 140 |
-| Bundesliga | 54 | 78 |
-| Serie A | 55 | 135 |
-| Ligue 1 | 53 | 61 |
+Where `tab` can be:
+- `fixtures` - Upcoming matches
+- `results` - Finished matches
 
 ## Notes
 
-- **FotMob** is used for the **Live Matches** view
-- **API-Sports.io** is used for the **Stats** view (finished matches)
-- League IDs are **different** between APIs - do not mix them up
-- When adding new leagues, update both files and this document
+- **FotMob** is used for both the **Live Matches** and **Stats** views
+- When adding new leagues, update `internal/fotmob/client.go` and this document
 

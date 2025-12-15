@@ -48,10 +48,3 @@ golazo
   ```bash
   golazo --mock
   ```
-
-### Environment Variables
-
-For the Stats view (finished matches), set your [API-football.com](https://www.api-football.com/) API key:
-```bash
-export FOOTBALL_DATA_API_KEY="your-api-key-here"
-```

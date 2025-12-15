@@ -22,7 +22,6 @@ const (
 	EmptySelectMatch       = "Select a match"
 	EmptyNoUpdates         = "No updates"
 	EmptyNoMatches         = "No matches available"
-	EmptyAPIKeyMissing     = "API key not configured\n\nSet FOOTBALL_DATA_API_KEY environment variable:\n  export FOOTBALL_DATA_API_KEY=\"your-key-here\"\n\nGet your free API key at:\n  https://www.api-sports.io/"
 )
 
 // Help text

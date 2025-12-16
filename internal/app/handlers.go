@@ -2,12 +2,14 @@ package app
 
 import (
 	"github.com/0xjuanma/golazo/internal/api"
+	"github.com/0xjuanma/golazo/internal/ui"
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 // handleMainViewKeys processes keyboard input for the main menu view.
 // Handles navigation (up/down) and selection (enter) to switch between views.
+// On selection, immediately starts API preloading while showing spinner for 2 seconds.
 func (m model) handleMainViewKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "j", "down":
@@ -23,7 +25,41 @@ func (m model) handleMainViewKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.mainViewLoading = true
-		return m, tea.Batch(m.spinner.Tick, performMainViewCheck(m.selected))
+		m.pendingSelection = m.selected
+
+		// Clear previous view state
+		m.matches = nil
+		m.upcomingMatches = nil
+		m.matchDetails = nil
+		m.liveUpdates = nil
+		m.lastEvents = nil
+		m.polling = false
+		m.upcomingMatchesList.SetItems([]list.Item{})
+		m.matchDetailsCache = make(map[int]*api.MatchDetails)
+
+		// Start API calls immediately while showing main view spinner
+		cmds := []tea.Cmd{
+			m.spinner.Tick,
+			performMainViewCheck(m.selected),
+		}
+
+		switch m.selected {
+		case 0: // Stats view - preload finished matches
+			m.statsViewLoading = true
+			m.loading = true
+			cmds = append(cmds, ui.SpinnerTick())
+			cmds = append(cmds, fetchFinishedMatchesFotmob(m.fotmobClient, m.useMockData, m.statsDateRange))
+			if m.statsDateRange == 1 {
+				cmds = append(cmds, fetchUpcomingMatchesFotmob(m.fotmobClient, m.useMockData))
+			}
+		case 1: // Live Matches view - preload live matches
+			m.liveViewLoading = true
+			m.loading = true
+			cmds = append(cmds, ui.SpinnerTick())
+			cmds = append(cmds, fetchLiveMatches(m.fotmobClient, m.useMockData))
+		}
+
+		return m, tea.Batch(cmds...)
 	}
 	return m, nil
 }
@@ -73,7 +109,7 @@ func (m model) handleStatsViewKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 		cmds := []tea.Cmd{
 			m.spinner.Tick,
-			m.statsViewSpinner.Init(),
+			ui.SpinnerTick(),
 			fetchFinishedMatchesFotmob(m.fotmobClient, m.useMockData, m.statsDateRange),
 		}
 
@@ -94,7 +130,7 @@ func (m model) loadMatchDetails(matchID int) (tea.Model, tea.Cmd) {
 	m.lastEvents = nil
 	m.loading = true
 	m.liveViewLoading = true
-	return m, tea.Batch(m.spinner.Tick, m.randomSpinner.Init(), fetchMatchDetails(m.fotmobClient, matchID, m.useMockData))
+	return m, tea.Batch(m.spinner.Tick, ui.SpinnerTick(), fetchMatchDetails(m.fotmobClient, matchID, m.useMockData))
 }
 
 // loadStatsMatchDetails loads match details for the stats view.
@@ -109,6 +145,5 @@ func (m model) loadStatsMatchDetails(matchID int) (tea.Model, tea.Cmd) {
 	// Fetch from API
 	m.loading = true
 	m.statsViewLoading = true
-	return m, tea.Batch(m.spinner.Tick, m.statsViewSpinner.Init(), fetchStatsMatchDetailsFotmob(m.fotmobClient, matchID, m.useMockData))
+	return m, tea.Batch(m.spinner.Tick, ui.SpinnerTick(), fetchStatsMatchDetailsFotmob(m.fotmobClient, matchID, m.useMockData))
 }
-

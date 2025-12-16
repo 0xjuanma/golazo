@@ -32,9 +32,9 @@ type model struct {
 
 	// Match data
 	matches           []ui.MatchDisplay
-	upcomingMatches   []ui.MatchDisplay            // Upcoming matches for 1-day stats view
+	upcomingMatches   []ui.MatchDisplay // Upcoming matches for 1-day stats view
 	matchDetails      *api.MatchDetails
-	matchDetailsCache map[int]*api.MatchDetails    // Cache to avoid repeated API calls
+	matchDetailsCache map[int]*api.MatchDetails // Cache to avoid repeated API calls
 	liveUpdates       []string
 	lastEvents        []api.MatchEvent
 
@@ -54,6 +54,7 @@ type model struct {
 	liveViewLoading  bool
 	statsViewLoading bool
 	polling          bool
+	pendingSelection int // Tracks which view is being preloaded (-1 = none, 0 = stats, 1 = live)
 
 	// Configuration
 	useMockData    bool
@@ -109,11 +110,11 @@ func New(useMockData bool) model {
 		statsMatchesList:    statsList,
 		upcomingMatchesList: upcomingList,
 		statsDateRange:      1,
+		pendingSelection:    -1, // No pending selection
 	}
 }
 
 // Init initializes the application.
 func (m model) Init() tea.Cmd {
-	return tea.Batch(m.spinner.Tick, m.randomSpinner.Init())
+	return tea.Batch(m.spinner.Tick, ui.SpinnerTick())
 }
-

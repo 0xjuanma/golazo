@@ -11,10 +11,27 @@ import (
 	"github.com/lucasb-eyer/go-colorful"
 )
 
-// RandomCharSpinner is a custom spinner that cycles through random characters.
+// SpinnerTickInterval is the unified tick rate for all spinners (70ms ≈ 14 fps).
+// This balances smooth animation with keyboard responsiveness.
+const SpinnerTickInterval = 70 * time.Millisecond
+
+// TickMsg is the unified message type for all spinner updates.
+// Only ONE tick chain should exist at any time to prevent message queue flooding.
+type TickMsg struct{}
+
+// SpinnerTick returns a command that generates a TickMsg after the standard interval.
+// This is the ONLY function that should create spinner ticks - ensures single tick chain.
+func SpinnerTick() tea.Cmd {
+	return tea.Tick(SpinnerTickInterval, func(time.Time) tea.Msg {
+		return TickMsg{}
+	})
+}
+
+// RandomCharSpinner is a custom spinner that displays a wave of random characters.
+// Note: Spinners do NOT self-tick. The app manages the tick chain centrally.
 type RandomCharSpinner struct {
-	chars      []rune
-	currentIdx int
+	charPool   []rune // Pool of characters to choose from
+	display    []rune // Currently displayed characters (wave buffer)
 	width      int
 	startColor colorful.Color // Gradient start color (cyan)
 	endColor   colorful.Color // Gradient end color (red)
@@ -22,74 +39,73 @@ type RandomCharSpinner struct {
 
 // NewRandomCharSpinner creates a new random character spinner.
 func NewRandomCharSpinner() *RandomCharSpinner {
-	// Random characters similar to the image: alphanumeric, symbols, special chars
-	chars := []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|;:,.<>?/~`£€¥")
+	// Extended Latin character set with subtle symbols for smooth, sophisticated animation
+	// Includes: uppercase, lowercase, European accented letters, numbers, subtle symbols
+	charPool := []rune(
+		"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz" + // Basic Latin
+			"ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõöøùúûüýþÿ" + // Extended Latin
+			"0123456789" + // Numbers
+			"×÷±≈∞≠√" + // Mathematical
+			"→←↑↓↔" + // Arrows
+			"€£¥$" + // Currency
+			"·•°§", // Clean punctuation
+	)
 
 	// Create gradient: cyan to red (high energy theme)
 	startColor, _ := colorful.Hex(constants.GradientStartColor) // Bright cyan
 	endColor, _ := colorful.Hex(constants.GradientEndColor)     // Bright red
 
+	width := 20
+
+	// Initialize display buffer with random characters
+	display := make([]rune, width)
+	for i := range display {
+		display[i] = charPool[rand.Intn(len(charPool))]
+	}
+
 	return &RandomCharSpinner{
-		chars:      chars,
-		currentIdx: rand.Intn(len(chars)),
-		width:      20, // Default width for spinner
+		charPool:   charPool,
+		display:    display,
+		width:      width,
 		startColor: startColor,
 		endColor:   endColor,
 	}
 }
 
-// Init initializes the spinner with a tick command.
-func (r *RandomCharSpinner) Init() tea.Cmd {
-	return r.tick()
-}
-
-// Model interface compatibility - not used but needed for Update signature
-func (r *RandomCharSpinner) Model() tea.Model {
-	return r
-}
-
-// Update updates the spinner state.
-func (r *RandomCharSpinner) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg.(type) {
-	case TickMsg:
-		// Change to a random character very quickly
-		r.currentIdx = rand.Intn(len(r.chars))
-		return r, r.tick()
+// Tick advances the spinner animation - randomizes all characters for trendy effect.
+// Does NOT return a tick command - the app manages the tick chain.
+func (r *RandomCharSpinner) Tick() {
+	// Ensure display buffer matches width
+	if len(r.display) != r.width {
+		r.display = make([]rune, r.width)
 	}
-	return r, nil
+
+	// Randomize all characters each tick for dynamic, trendy effect
+	for i := range r.display {
+		r.display[i] = r.charPool[rand.Intn(len(r.charPool))]
+	}
 }
 
 // View renders the spinner with gradient colors.
-// Uses currentIdx to ensure consistent animation when tick updates occur.
-// Always returns a non-empty string to ensure spinner is visible.
 func (r *RandomCharSpinner) View() string {
-	// Ensure width is at least 1 to always return visible content
 	if r.width <= 0 {
-		r.width = 20 // Default width if somehow zero
+		r.width = 20
 	}
 
-	// Create a string of characters for the spinner
-	// Use currentIdx as base and add position offset for variation
-	spinnerChars := make([]rune, r.width)
-	for i := range spinnerChars {
-		// Use currentIdx + position offset to create animated effect
-		charIdx := (r.currentIdx + i) % len(r.chars)
-		spinnerChars[i] = r.chars[charIdx]
+	// Ensure display buffer exists
+	if len(r.display) == 0 {
+		r.display = make([]rune, r.width)
+		for i := range r.display {
+			r.display[i] = r.charPool[rand.Intn(len(r.charPool))]
+		}
 	}
 
 	// Apply gradient to each character
 	var result strings.Builder
-	for i, char := range spinnerChars {
-		// Calculate gradient position (0.0 to 1.0)
+	for i, char := range r.display {
 		ratio := float64(i) / float64(r.width-1)
-
-		// Blend colors based on position
 		color := r.startColor.BlendLab(r.endColor, ratio)
-
-		// Convert to hex for lipgloss
 		hexColor := color.Hex()
-
-		// Style each character with its gradient color
 		charStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(hexColor))
 		result.WriteString(charStyle.Render(string(char)))
 	}
@@ -97,18 +113,16 @@ func (r *RandomCharSpinner) View() string {
 	return result.String()
 }
 
-// SetWidth sets the width of the spinner.
+// SetWidth sets the width of the spinner and resizes the display buffer.
 func (r *RandomCharSpinner) SetWidth(width int) {
+	if width == r.width {
+		return
+	}
 	r.width = width
-}
 
-// TickMsg is a message sent to update the spinner.
-type TickMsg struct{}
-
-// tick sends a tick message after a very short delay for fast, smooth animation.
-func (r *RandomCharSpinner) tick() tea.Cmd {
-	// Much faster update (20ms) for smoother animation
-	return tea.Tick(20*time.Millisecond, func(time.Time) tea.Msg {
-		return TickMsg{}
-	})
+	// Resize display buffer with random characters
+	r.display = make([]rune, width)
+	for i := range r.display {
+		r.display[i] = r.charPool[rand.Intn(len(r.charPool))]
+	}
 }

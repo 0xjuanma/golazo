@@ -3,7 +3,6 @@ package app
 import (
 	"github.com/0xjuanma/golazo/internal/api"
 	"github.com/0xjuanma/golazo/internal/ui"
-	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -125,6 +124,8 @@ func (m model) handleMatchDetails(msg matchDetailsMsg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	if msg.details == nil {
+		// Clear match details when API call fails so we don't show stale data
+		m.matchDetails = nil
 		m.loading = false
 		m.liveViewLoading = false
 		m.statsViewLoading = false
@@ -133,16 +134,16 @@ func (m model) handleMatchDetails(msg matchDetailsMsg) (tea.Model, tea.Cmd) {
 
 	m.matchDetails = msg.details
 
-	// Cache for stats view
-	if m.currentView == viewStats {
+	// Cache for stats view (including during preload)
+	if m.currentView == viewStats || m.pendingSelection == 0 {
 		m.matchDetailsCache[msg.details.ID] = msg.details
 		m.loading = false
 		m.statsViewLoading = false
 		return m, nil
 	}
 
-	// Handle live matches view
-	if m.currentView == viewLiveMatches {
+	// Handle live matches view (including during preload)
+	if m.currentView == viewLiveMatches || m.pendingSelection == 1 {
 		m.liveViewLoading = false
 
 		// Parse events for live updates
@@ -280,7 +281,7 @@ func (m model) handleLiveMatches(msg liveMatchesMsg) (tea.Model, tea.Cmd) {
 	m.matches = displayMatches
 	m.selected = 0
 	m.loading = false
-	cmds = append(cmds, m.randomSpinner.Init())
+	cmds = append(cmds, ui.SpinnerTick())
 
 	// Update list
 	m.liveMatchesList.SetItems(ui.ToMatchListItems(displayMatches))
@@ -354,7 +355,7 @@ func (m model) handleFinishedMatches(msg finishedMatchesMsg) (tea.Model, tea.Cmd
 	m.matches = displayMatches
 	m.selected = 0
 	m.loading = false
-	cmds = append(cmds, m.statsViewSpinner.Init())
+	cmds = append(cmds, ui.SpinnerTick())
 
 	// Update list
 	m.statsMatchesList.SetItems(ui.ToMatchListItems(displayMatches))
@@ -389,71 +390,86 @@ func (m model) handleUpcomingMatches(msg upcomingMatchesMsg) (tea.Model, tea.Cmd
 	return m, nil
 }
 
-// handleRandomSpinnerTick updates random spinner animations.
+// handleRandomSpinnerTick updates all active spinner animations.
+// Uses a SINGLE tick chain - all spinners share the same tick rate.
 func (m model) handleRandomSpinnerTick(msg ui.TickMsg) (tea.Model, tea.Cmd) {
-	var cmds []tea.Cmd
+	// Check if any spinner needs to be animated
+	needsTick := m.mainViewLoading || m.liveViewLoading || m.statsViewLoading
 
-	if m.mainViewLoading || m.liveViewLoading {
-		updatedModel, cmd := m.randomSpinner.Update(msg)
-		if s, ok := updatedModel.(*ui.RandomCharSpinner); ok {
-			m.randomSpinner = s
-		}
-		if cmd != nil {
-			cmds = append(cmds, cmd)
-		}
+	if !needsTick {
+		// No spinners active - don't continue the tick chain
+		return m, nil
+	}
+
+	// Update the appropriate spinner(s) based on current state
+	if m.mainViewLoading {
+		m.randomSpinner.Tick()
+	}
+
+	if m.liveViewLoading && m.currentView == viewLiveMatches {
+		m.randomSpinner.Tick()
 	}
 
 	if m.statsViewLoading {
-		updatedModel, cmd := m.statsViewSpinner.Update(msg)
-		if s, ok := updatedModel.(*ui.RandomCharSpinner); ok {
-			m.statsViewSpinner = s
-		}
-		if cmd != nil {
-			cmds = append(cmds, cmd)
-		}
+		m.statsViewSpinner.Tick()
 	}
 
-	return m, tea.Batch(cmds...)
+	// Return ONE tick command to continue the animation chain
+	return m, ui.SpinnerTick()
 }
 
 // handleMainViewCheck processes main view check completion and navigates to selected view.
 func (m model) handleMainViewCheck(msg mainViewCheckMsg) (tea.Model, tea.Cmd) {
 	m.mainViewLoading = false
+	m.pendingSelection = -1
 
-	// Clear previous view state
-	m.matches = nil
-	m.upcomingMatches = nil
-	m.matchDetails = nil
-	m.liveUpdates = nil
-	m.lastEvents = nil
-	m.polling = false
-	m.selected = 0
-	m.upcomingMatchesList.SetItems([]list.Item{})
+	var cmds []tea.Cmd
 
+	// Just switch to the target view - API calls already started during selection
 	switch msg.selection {
 	case 0: // Stats view
-		m.statsViewLoading = true
 		m.currentView = viewStats
-		m.loading = true
-		m.matchDetailsCache = make(map[int]*api.MatchDetails)
+		m.selected = 0
 
-		cmds := []tea.Cmd{
-			m.spinner.Tick,
-			m.statsViewSpinner.Init(),
-			fetchFinishedMatchesFotmob(m.fotmobClient, m.useMockData, m.statsDateRange),
+		// If matches already loaded, ensure first match is selected
+		if len(m.matches) > 0 {
+			m.statsMatchesList.Select(0)
+
+			// Load details from cache if available, otherwise start fetch
+			if cached, ok := m.matchDetailsCache[m.matches[0].ID]; ok {
+				m.matchDetails = cached
+			} else if m.matchDetails == nil {
+				// Details not loaded yet, start loading
+				updatedModel, loadCmd := m.loadStatsMatchDetails(m.matches[0].ID)
+				if updatedM, ok := updatedModel.(model); ok {
+					m = updatedM
+				}
+				cmds = append(cmds, loadCmd)
+			}
 		}
 
-		if m.statsDateRange == 1 {
-			cmds = append(cmds, fetchUpcomingMatchesFotmob(m.fotmobClient, m.useMockData))
+		// Keep spinners running if still loading
+		if m.statsViewLoading {
+			cmds = append(cmds, m.spinner.Tick, ui.SpinnerTick())
 		}
 
 		return m, tea.Batch(cmds...)
 
 	case 1: // Live Matches view
 		m.currentView = viewLiveMatches
-		m.loading = true
-		m.liveViewLoading = true
-		return m, tea.Batch(m.spinner.Tick, m.randomSpinner.Init(), fetchLiveMatches(m.fotmobClient, m.useMockData))
+		m.selected = 0
+
+		// If matches already loaded, ensure first match is selected
+		if len(m.matches) > 0 {
+			m.liveMatchesList.Select(0)
+		}
+
+		// Keep spinners running if still loading
+		if m.liveViewLoading {
+			cmds = append(cmds, m.spinner.Tick, ui.SpinnerTick())
+		}
+
+		return m, tea.Batch(cmds...)
 	}
 
 	return m, nil
@@ -466,4 +482,3 @@ func max(a, b int) int {
 	}
 	return b
 }
-

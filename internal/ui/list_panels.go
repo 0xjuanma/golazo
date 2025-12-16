@@ -2,11 +2,13 @@ package ui
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/0xjuanma/golazo/internal/api"
 	"github.com/0xjuanma/golazo/internal/constants"
 	"github.com/charmbracelet/bubbles/list"
+	"github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -489,49 +491,56 @@ func renderStatsMatchDetailsPanel(width, height int, details *api.MatchDetails) 
 	}
 
 	// ═══════════════════════════════════════════════
-	// MATCH STATISTICS
+	// MATCH STATISTICS (Visual Progress Bars)
 	// ═══════════════════════════════════════════════
 	if len(details.Statistics) > 0 {
 		lines = append(lines, "")
 		lines = append(lines, neonHeaderStyle.Render("Statistics"))
 
-		// Priority labels/keys to show first (check both key and label)
-		priorityPatterns := []string{
-			"possession", "ball possession",
-			"expected_goals", "xg", "expected goals",
-			"total_shots", "shots", "total shots",
-			"shots_on_target", "on target", "shots on target",
-			"passes", "accurate passes",
-			"pass_accuracy", "pass accuracy", "passes %",
+		// Only show these 5 specific stats
+		wantedStats := []struct {
+			patterns   []string
+			label      string
+			isProgress bool // true = show as progress bar
+		}{
+			{[]string{"possession", "ball possession", "ballpossesion"}, "Possession", true},
+			{[]string{"total_shots", "total shots"}, "Total Shots", false},
+			{[]string{"shots_on_target", "on target", "shotsontarget"}, "Shots on Target", false},
+			{[]string{"accurate_passes", "accurate passes"}, "Accurate Passes", false},
+			{[]string{"fouls", "fouls committed"}, "Fouls", false},
 		}
-		shownIndices := make(map[int]bool)
 
-		// Show priority stats first
-		for _, pattern := range priorityPatterns {
-			for i, stat := range details.Statistics {
-				if shownIndices[i] {
-					continue
-				}
+		// Style for centering stat blocks
+		centerStyle := lipgloss.NewStyle().Width(contentWidth).Align(lipgloss.Center)
+
+		for _, wanted := range wantedStats {
+			for _, stat := range details.Statistics {
 				keyLower := strings.ToLower(stat.Key)
 				labelLower := strings.ToLower(stat.Label)
-				if strings.Contains(keyLower, pattern) || strings.Contains(labelLower, pattern) {
-					statLine := renderStatLine(stat, contentWidth-2)
-					lines = append(lines, "  "+statLine)
-					shownIndices[i] = true
+
+				matched := false
+				for _, pattern := range wanted.patterns {
+					if strings.Contains(keyLower, pattern) || strings.Contains(labelLower, pattern) {
+						matched = true
+						break
+					}
+				}
+
+				if matched {
+					// Add spacing before each stat
+					lines = append(lines, "")
+
+					if wanted.isProgress {
+						// Render as visual progress bar (centered)
+						statLine := renderStatProgressBar(wanted.label, stat.HomeValue, stat.AwayValue, contentWidth, homeTeam, awayTeam)
+						lines = append(lines, centerStyle.Render(statLine))
+					} else {
+						// Render as comparison bar (centered)
+						statLine := renderStatComparison(wanted.label, stat.HomeValue, stat.AwayValue, contentWidth)
+						lines = append(lines, centerStyle.Render(statLine))
+					}
 					break
 				}
-			}
-		}
-
-		// Show remaining stats (limit to avoid overflow)
-		remaining := 0
-		maxRemaining := 6 // Show more stats if space allows
-		for i, stat := range details.Statistics {
-			if !shownIndices[i] && remaining < maxRemaining {
-				statLine := renderStatLine(stat, contentWidth-2)
-				lines = append(lines, "  "+statLine)
-				shownIndices[i] = true
-				remaining++
 			}
 		}
 	}
@@ -564,20 +573,135 @@ func renderGoalLine(g api.MatchEvent, maxWidth int) string {
 	return line
 }
 
-// renderStatLine renders a single statistic comparing home vs away
-func renderStatLine(stat api.MatchStatistic, maxWidth int) string {
-	// Format: "Home Value | Label | Away Value"
-	labelWidth := 16
-	valueWidth := (maxWidth - labelWidth - 3) / 2
+// Fixed bar width for consistent UI
+const statBarWidth = 20
 
-	label := truncateString(stat.Label, labelWidth)
-	homeVal := truncateString(stat.HomeValue, valueWidth)
-	awayVal := truncateString(stat.AwayValue, valueWidth)
+// renderStatProgressBar renders a stat as a visual progress bar using bubbles progress component
+// Uses gradient fill from cyan to red for the Golazo theme
+// Fixed width of 20 squares for consistent UI
+// Renders label on first line, bar on second line (both centered)
+func renderStatProgressBar(label, homeVal, awayVal string, maxWidth int, homeTeam, awayTeam string) string {
+	// Parse percentage values (e.g., "59" or "59%")
+	homePercent := parsePercent(homeVal)
+	awayPercent := parsePercent(awayVal)
 
-	return fmt.Sprintf("%s %s %s",
-		neonValueStyle.Render(fmt.Sprintf("%*s", valueWidth, homeVal)),
-		neonDimStyle.Render(fmt.Sprintf("%-*s", labelWidth, label)),
-		neonValueStyle.Render(fmt.Sprintf("%-*s", valueWidth, awayVal)))
+	// Normalize if they don't add up to 100
+	total := homePercent + awayPercent
+	if total > 0 && total != 100 {
+		homePercent = (homePercent * 100) / total
+		awayPercent = 100 - homePercent
+	}
+
+	// Create bubbles progress bar with gradient (cyan -> red for Golazo theme)
+	prog := progress.New(
+		progress.WithScaledGradient("#00FFFF", "#FF0055"), // Cyan to Red gradient
+		progress.WithWidth(statBarWidth),
+		progress.WithoutPercentage(),
+	)
+
+	// Render the progress bar at home team's percentage
+	progressView := prog.ViewAs(float64(homePercent) / 100.0)
+
+	// Format values
+	homeValStyled := neonValueStyle.Render(fmt.Sprintf("%3d%%", homePercent))
+	awayValStyled := neonDimStyle.Render(fmt.Sprintf("%3d%%", awayPercent))
+
+	// Line 1: Label (centered via parent, no width constraint)
+	labelStyle := lipgloss.NewStyle().Foreground(neonDim)
+	labelLine := labelStyle.Render(label)
+
+	// Line 2: Bar with values
+	barLine := fmt.Sprintf("%s %s %s", homeValStyled, progressView, awayValStyled)
+
+	return labelLine + "\n" + barLine
+}
+
+// renderStatComparison renders a stat as a visual comparison (for counts like shots, fouls)
+// Fixed width of 20 squares total (10 per side) for consistent UI
+// Renders label on first line, bar on second line (both centered)
+func renderStatComparison(label, homeVal, awayVal string, maxWidth int) string {
+	// Parse numeric values
+	homeNum := parseNumber(homeVal)
+	awayNum := parseNumber(awayVal)
+
+	// Determine who has more (for highlighting)
+	homeStyle := neonValueStyle
+	awayStyle := neonValueStyle
+	if homeNum > awayNum {
+		homeStyle = lipgloss.NewStyle().Foreground(neonCyan).Bold(true)
+	} else if awayNum > homeNum {
+		awayStyle = lipgloss.NewStyle().Foreground(neonCyan).Bold(true)
+	}
+
+	// Fixed bar width: 10 squares per side = 20 total
+	halfBar := statBarWidth / 2
+
+	// Visual bar comparison - proportional to max value
+	maxVal := max(homeNum, awayNum)
+	if maxVal == 0 {
+		maxVal = 1
+	}
+
+	// Home bar (right-aligned, grows left)
+	homeFilled := (homeNum * halfBar) / maxVal
+	if homeFilled > halfBar {
+		homeFilled = halfBar
+	}
+	homeEmpty := halfBar - homeFilled
+	homeBar := strings.Repeat(" ", homeEmpty) + strings.Repeat("▪", homeFilled)
+	homeBarStyled := lipgloss.NewStyle().Foreground(neonCyan).Render(homeBar)
+
+	// Away bar (left-aligned, grows right)
+	awayFilled := (awayNum * halfBar) / maxVal
+	if awayFilled > halfBar {
+		awayFilled = halfBar
+	}
+	awayEmpty := halfBar - awayFilled
+	awayBar := strings.Repeat("▪", awayFilled) + strings.Repeat(" ", awayEmpty)
+	awayBarStyled := lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render(awayBar)
+
+	// Line 1: Label (centered via parent, no width constraint)
+	labelStyle := lipgloss.NewStyle().Foreground(neonDim)
+	labelLine := labelStyle.Render(label)
+
+	// Line 2: Bar with values
+	barLine := fmt.Sprintf("%s %s %s %s",
+		homeStyle.Render(fmt.Sprintf("%10s", homeVal)),
+		homeBarStyled,
+		awayBarStyled,
+		awayStyle.Render(fmt.Sprintf("%-10s", awayVal)))
+
+	return labelLine + "\n" + barLine
+}
+
+// parsePercent extracts a percentage value from a string like "59" or "59%"
+func parsePercent(s string) int {
+	s = strings.TrimSuffix(s, "%")
+	s = strings.TrimSpace(s)
+	val, err := strconv.Atoi(s)
+	if err != nil {
+		return 0
+	}
+	return val
+}
+
+// parseNumber extracts a numeric value from a string, handling formats like "476 (89%)"
+func parseNumber(s string) int {
+	// Handle formats like "476 (89%)" - extract first number
+	s = strings.TrimSpace(s)
+	if idx := strings.Index(s, " "); idx > 0 {
+		s = s[:idx]
+	}
+	if idx := strings.Index(s, "("); idx > 0 {
+		s = s[:idx]
+	}
+	s = strings.TrimSpace(s)
+
+	val, err := strconv.Atoi(s)
+	if err != nil {
+		return 0
+	}
+	return val
 }
 
 // truncateString truncates a string to maxLen, adding "..." if truncated

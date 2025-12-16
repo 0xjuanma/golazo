@@ -11,76 +11,76 @@ import (
 )
 
 var (
-	// Panel styles - minimal rounded borders
+	// Panel styles - Neon design with thick red borders
 	panelStyle = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(borderColor).
+			Border(lipgloss.ThickBorder()).
+			BorderForeground(lipgloss.Color("196")). // neon red
 			Padding(0, 1)
 
-	// Header style - minimal with accent
+	// Header style - Neon with red accent
 	panelTitleStyle = lipgloss.NewStyle().
-			Foreground(accentColor).
+			Foreground(lipgloss.Color("196")). // neon red
 			Bold(true).
 			PaddingBottom(0).
 			BorderBottom(true).
 			BorderStyle(lipgloss.NormalBorder()).
-			BorderForeground(borderColor).
+			BorderForeground(lipgloss.Color("239")). // dark dim
 			MarginBottom(0)
 
-	// Selection styling - modern neon with text color highlight
+	// Selection styling - Neon with red highlight
 	matchListItemStyle = lipgloss.NewStyle().
-				Foreground(textColor).
+				Foreground(lipgloss.Color("255")). // neon white
 				Padding(0, 1)
 
 	matchListItemSelectedStyle = lipgloss.NewStyle().
-					Foreground(highlightColor).
+					Foreground(lipgloss.Color("196")). // neon red
 					Bold(true).
 					Padding(0, 1)
 
-	// Match details styles - refined typography
+	// Match details styles - Neon typography
 	matchTitleStyle = lipgloss.NewStyle().
-			Foreground(textColor).
+			Foreground(lipgloss.Color("255")). // neon white
 			Bold(true).
 			MarginBottom(0)
 
 	matchScoreStyle = lipgloss.NewStyle().
-			Foreground(accentColor).
+			Foreground(lipgloss.Color("196")). // neon red for scores
 			Bold(true).
 			Margin(0, 0).
 			Background(lipgloss.Color("0")).
 			Padding(0, 0)
 
 	matchStatusStyle = lipgloss.NewStyle().
-				Foreground(secondaryColor).
+				Foreground(lipgloss.Color("196")). // neon red for live
 				Bold(true)
 
-	// Event styles - elegant and readable
+	// Event styles - Neon readable
 	eventMinuteStyle = lipgloss.NewStyle().
-				Foreground(dimColor).
+				Foreground(lipgloss.Color("244")). // dim
 				Bold(true).
 				Width(4).
 				Align(lipgloss.Right).
 				MarginRight(0)
 
 	eventTextStyle = lipgloss.NewStyle().
-			Foreground(textColor).
+			Foreground(lipgloss.Color("255")). // neon white
 			MarginLeft(0)
 
 	eventGoalStyle = lipgloss.NewStyle().
-			Foreground(secondaryColor).
+			Foreground(lipgloss.Color("196")). // neon red
 			Bold(true)
 
 	eventCardStyle = lipgloss.NewStyle().
-			Foreground(secondaryColor).
+			Foreground(lipgloss.Color("196")). // neon red
 			Bold(true)
 
-	// Live update styles
+	// Live update styles - Neon
 	liveUpdateStyle = lipgloss.NewStyle().
-			Foreground(textColor).
+			Foreground(lipgloss.Color("255")). // neon white
 			Padding(0, 0)
 
 	spinnerStyle = lipgloss.NewStyle().
-			Foreground(accentColor)
+			Foreground(lipgloss.Color("51")) // neon cyan
 )
 
 // RenderMultiPanelView renders a minimal two-panel layout for live matches.
@@ -104,12 +104,12 @@ func RenderMultiPanelView(width, height int, matches []MatchDisplay, selected in
 	// Render right panel (match details with live updates)
 	rightPanel := renderMatchDetailsPanel(rightWidth, height, details, liveUpdates, sp, loading)
 
-	// Create modern neon vertical separator
+	// Create neon vertical separator - red accent
 	separatorStyle := lipgloss.NewStyle().
-		Foreground(borderColor).
+		Foreground(lipgloss.Color("196")). // neon red
 		Height(height).
 		Padding(0, 1)
-	separator := separatorStyle.Render("│")
+	separator := separatorStyle.Render("┃")
 
 	// Combine left and right panels horizontally
 	content := lipgloss.JoinHorizontal(
@@ -162,9 +162,9 @@ func renderMatchesListPanel(width, height int, matches []MatchDisplay, selected 
 }
 
 func renderMatchListItem(match MatchDisplay, selected bool, width int) string {
-	// Compact status indicator
+	// Compact status indicator with neon colors
 	var statusIndicator string
-	statusStyle := lipgloss.NewStyle().Foreground(dimColor).Width(4).Align(lipgloss.Left)
+	statusStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("244")).Width(4).Align(lipgloss.Left) // dim
 	if match.Status == api.MatchStatusLive {
 		liveTime := constants.StatusLive
 		if match.LiveTime != nil {
@@ -172,34 +172,35 @@ func renderMatchListItem(match MatchDisplay, selected bool, width int) string {
 		}
 		statusIndicator = matchStatusStyle.Render(liveTime)
 	} else if match.Status == api.MatchStatusFinished {
-		statusIndicator = statusStyle.Render(constants.StatusFinished)
+		finishedStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("51")).Width(4).Align(lipgloss.Left) // cyan for FT
+		statusIndicator = finishedStyle.Render(constants.StatusFinished)
 	} else {
 		statusIndicator = statusStyle.Render(constants.StatusNotStarted)
 	}
 
-	// Teams - compact display
-	homeTeamStyle := lipgloss.NewStyle().Foreground(textColor)
-	awayTeamStyle := lipgloss.NewStyle().Foreground(textColor)
+	// Teams - neon display with cyan for teams
+	homeTeamStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("51")) // cyan
+	awayTeamStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("51")) // cyan
 	if selected {
-		homeTeamStyle = homeTeamStyle.Foreground(highlightColor).Bold(true)
-		awayTeamStyle = awayTeamStyle.Foreground(highlightColor).Bold(true)
+		homeTeamStyle = homeTeamStyle.Foreground(lipgloss.Color("196")).Bold(true) // red when selected
+		awayTeamStyle = awayTeamStyle.Foreground(lipgloss.Color("196")).Bold(true) // red when selected
 	}
 
 	homeTeam := homeTeamStyle.Render(match.HomeTeam.ShortName)
 	awayTeam := awayTeamStyle.Render(match.AwayTeam.ShortName)
 
-	// Score - prominent display
+	// Score - red for emphasis
 	var scoreText string
-	scoreStyle := lipgloss.NewStyle().Foreground(accentColor).Bold(true)
+	scoreStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Bold(true) // neon red
 	if match.HomeScore != nil && match.AwayScore != nil {
 		scoreText = scoreStyle.Render(fmt.Sprintf("%d-%d", *match.HomeScore, *match.AwayScore))
 	} else {
-		scoreText = lipgloss.NewStyle().Foreground(dimColor).Render("vs")
+		scoreText = lipgloss.NewStyle().Foreground(lipgloss.Color("244")).Render("vs") // dim
 	}
 
-	// League name - subtle
+	// League name - subtle dim
 	leagueName := lipgloss.NewStyle().
-		Foreground(dimColor).
+		Foreground(lipgloss.Color("244")). // dim
 		Italic(true).
 		Render(Truncate(match.League.Name, 20))
 
@@ -241,11 +242,23 @@ func renderMatchDetailsPanel(width, height int, details *api.MatchDetails, liveU
 }
 
 // renderMatchDetailsPanelWithTitle renders the right panel with optional title.
-// showTitle controls whether to display the "Minute by Minute" title.
+// Uses Neon design with Golazo red/cyan theme.
 func renderMatchDetailsPanelWithTitle(width, height int, details *api.MatchDetails, liveUpdates []string, sp spinner.Model, loading bool, showTitle bool) string {
+	// Neon color constants
+	neonRed := lipgloss.Color("196")
+	neonCyan := lipgloss.Color("51")
+	neonDim := lipgloss.Color("244")
+	neonWhite := lipgloss.Color("255")
+
+	// Use cyan border for details panel
+	detailsPanelStyle := lipgloss.NewStyle().
+		Border(lipgloss.ThickBorder()).
+		BorderForeground(neonCyan).
+		Padding(0, 1)
+
 	if details == nil {
 		emptyMessage := lipgloss.NewStyle().
-			Foreground(dimColor).
+			Foreground(neonDim).
 			Align(lipgloss.Center).
 			Width(width - 6).
 			PaddingTop(1).
@@ -261,7 +274,7 @@ func renderMatchDetailsPanelWithTitle(width, height int, details *api.MatchDetai
 			)
 		}
 
-		return panelStyle.
+		return detailsPanelStyle.
 			Width(width).
 			Height(height).
 			Render(content)
@@ -275,9 +288,9 @@ func renderMatchDetailsPanelWithTitle(width, height int, details *api.MatchDetai
 
 	var content strings.Builder
 
-	// Score section
+	// Score section - neon red for scores
 	scoreSection := lipgloss.NewStyle().
-		Foreground(accentColor).
+		Foreground(neonRed).
 		Bold(true).
 		Align(lipgloss.Center).
 		Padding(0, 0)
@@ -290,17 +303,17 @@ func renderMatchDetailsPanelWithTitle(width, height int, details *api.MatchDetai
 	}
 	content.WriteString("\n")
 
-	// Status and league info
-	infoStyle := lipgloss.NewStyle().Foreground(dimColor)
+	// Status and league info with neon colors
+	infoStyle := lipgloss.NewStyle().Foreground(neonDim)
 	var statusText string
 	if details.Status == api.MatchStatusLive {
 		liveTime := constants.StatusLive
 		if details.LiveTime != nil {
 			liveTime = *details.LiveTime
 		}
-		statusText = matchStatusStyle.Render(liveTime)
+		statusText = lipgloss.NewStyle().Foreground(neonRed).Bold(true).Render(liveTime)
 	} else if details.Status == api.MatchStatusFinished {
-		statusText = infoStyle.Render(constants.StatusFinished)
+		statusText = lipgloss.NewStyle().Foreground(neonCyan).Render(constants.StatusFinished)
 	} else {
 		statusText = infoStyle.Render(constants.StatusNotStartedShort)
 	}
@@ -314,20 +327,26 @@ func renderMatchDetailsPanelWithTitle(width, height int, details *api.MatchDetai
 	))
 	content.WriteString("\n")
 
-	// Teams section
-	teamsText := fmt.Sprintf("%s vs %s", details.HomeTeam.ShortName, details.AwayTeam.ShortName)
-	content.WriteString(infoStyle.Render(teamsText))
+	// Teams section with cyan accent
+	teamStyle := lipgloss.NewStyle().Foreground(neonCyan)
+	vsStyle := lipgloss.NewStyle().Foreground(neonWhite)
+	teamsDisplay := lipgloss.JoinHorizontal(lipgloss.Left,
+		teamStyle.Render(details.HomeTeam.ShortName),
+		vsStyle.Render(" vs "),
+		teamStyle.Render(details.AwayTeam.ShortName),
+	)
+	content.WriteString(teamsDisplay)
 	content.WriteString("\n\n")
 
 	// For finished matches, show detailed match information
 	// For live matches, show live updates
 	if details.Status == api.MatchStatusFinished {
 		// Match Information section
-		infoSection := make([]string, 0)
+		var infoSection []string
 
 		// Venue
 		if details.Venue != "" {
-			infoSection = append(infoSection, fmt.Sprintf("📍 %s", details.Venue))
+			infoSection = append(infoSection, details.Venue)
 		}
 
 		// Half-time score
@@ -338,7 +357,7 @@ func renderMatchDetailsPanelWithTitle(width, height int, details *api.MatchDetai
 
 		// Match duration
 		if details.ExtraTime {
-			infoSection = append(infoSection, infoStyle.Render("⏱️  AET"))
+			infoSection = append(infoSection, infoStyle.Render("AET"))
 		}
 		if details.Penalties != nil && details.Penalties.Home != nil && details.Penalties.Away != nil {
 			penText := fmt.Sprintf("Pens: %d - %d", *details.Penalties.Home, *details.Penalties.Away)
@@ -350,8 +369,8 @@ func renderMatchDetailsPanelWithTitle(width, height int, details *api.MatchDetai
 			content.WriteString("\n\n")
 		}
 
-		// Goals Timeline section
-		goals := make([]api.MatchEvent, 0)
+		// Goals Timeline section with neon styling
+		var goals []api.MatchEvent
 		for _, event := range details.Events {
 			if event.Type == "goal" {
 				goals = append(goals, event)
@@ -360,17 +379,18 @@ func renderMatchDetailsPanelWithTitle(width, height int, details *api.MatchDetai
 
 		if len(goals) > 0 {
 			goalsTitle := lipgloss.NewStyle().
-				Foreground(accentColor).
+				Foreground(neonCyan).
 				Bold(true).
 				PaddingTop(0).
 				BorderBottom(true).
 				BorderStyle(lipgloss.NormalBorder()).
-				BorderForeground(borderColor).
+				BorderForeground(lipgloss.Color("239")).
 				Width(width - 6).
-				Render("⚽ Goals")
+				Render("Goals")
 			content.WriteString(goalsTitle)
 			content.WriteString("\n")
 
+			minuteStyle := lipgloss.NewStyle().Foreground(neonRed).Bold(true)
 			for _, goal := range goals {
 				player := "Unknown"
 				if goal.Player != nil {
@@ -381,14 +401,17 @@ func renderMatchDetailsPanelWithTitle(width, height int, details *api.MatchDetai
 				if goal.Assist != nil && *goal.Assist != "" {
 					assistText = fmt.Sprintf(" (assist: %s)", *goal.Assist)
 				}
-				goalLine := fmt.Sprintf("%d' %s - %s%s", goal.Minute, teamName, player, assistText)
-				content.WriteString(infoStyle.Render(goalLine))
+				goalLine := lipgloss.JoinHorizontal(lipgloss.Left,
+					minuteStyle.Render(fmt.Sprintf("%d'", goal.Minute)),
+					lipgloss.NewStyle().Foreground(neonWhite).Render(fmt.Sprintf(" %s - %s%s", teamName, player, assistText)),
+				)
+				content.WriteString(goalLine)
 				content.WriteString("\n")
 			}
 			content.WriteString("\n")
 		}
 
-		// Cards section
+		// Cards section with neon styling
 		homeYellow := 0
 		homeRed := 0
 		awayYellow := 0
@@ -416,64 +439,82 @@ func renderMatchDetailsPanelWithTitle(width, height int, details *api.MatchDetai
 
 		if homeYellow > 0 || homeRed > 0 || awayYellow > 0 || awayRed > 0 {
 			cardsTitle := lipgloss.NewStyle().
-				Foreground(accentColor).
+				Foreground(neonCyan).
 				Bold(true).
 				PaddingTop(0).
 				BorderBottom(true).
 				BorderStyle(lipgloss.NormalBorder()).
-				BorderForeground(borderColor).
+				BorderForeground(lipgloss.Color("239")).
 				Width(width - 6).
-				Render("🟨🟥 Cards")
+				Render("Cards")
 			content.WriteString(cardsTitle)
 			content.WriteString("\n")
 
-			homeCards := make([]string, 0)
+			// Visual card indicators - cyan for yellow, red for red
+			yellowStyle := lipgloss.NewStyle().Foreground(neonCyan)
+			redStyle := lipgloss.NewStyle().Foreground(neonRed)
+
+			var homeCards []string
 			if homeYellow > 0 {
-				homeCards = append(homeCards, fmt.Sprintf("%d🟨", homeYellow))
+				homeCards = append(homeCards, yellowStyle.Render(strings.Repeat("▪", homeYellow)))
 			}
 			if homeRed > 0 {
-				homeCards = append(homeCards, fmt.Sprintf("%d🟥", homeRed))
+				homeCards = append(homeCards, redStyle.Render(strings.Repeat("▪", homeRed)))
 			}
-			awayCards := make([]string, 0)
+			var awayCards []string
 			if awayYellow > 0 {
-				awayCards = append(awayCards, fmt.Sprintf("%d🟨", awayYellow))
+				awayCards = append(awayCards, yellowStyle.Render(strings.Repeat("▪", awayYellow)))
 			}
 			if awayRed > 0 {
-				awayCards = append(awayCards, fmt.Sprintf("%d🟥", awayRed))
+				awayCards = append(awayCards, redStyle.Render(strings.Repeat("▪", awayRed)))
 			}
 
 			if len(homeCards) > 0 || len(awayCards) > 0 {
-				cardsLine := fmt.Sprintf("%s: %s | %s: %s",
-					details.HomeTeam.ShortName, strings.Join(homeCards, " "),
-					details.AwayTeam.ShortName, strings.Join(awayCards, " "))
-				content.WriteString(infoStyle.Render(cardsLine))
+				homeCardsStr := "-"
+				if len(homeCards) > 0 {
+					homeCardsStr = strings.Join(homeCards, " ")
+				}
+				awayCardsStr := "-"
+				if len(awayCards) > 0 {
+					awayCardsStr = strings.Join(awayCards, " ")
+				}
+				cardsLine := lipgloss.JoinHorizontal(lipgloss.Left,
+					teamStyle.Render(details.HomeTeam.ShortName),
+					lipgloss.NewStyle().Foreground(neonDim).Render(": "),
+					lipgloss.NewStyle().Foreground(neonWhite).Render(homeCardsStr),
+					lipgloss.NewStyle().Foreground(neonDim).Render(" | "),
+					teamStyle.Render(details.AwayTeam.ShortName),
+					lipgloss.NewStyle().Foreground(neonDim).Render(": "),
+					lipgloss.NewStyle().Foreground(neonWhite).Render(awayCardsStr),
+				)
+				content.WriteString(cardsLine)
 				content.WriteString("\n\n")
 			}
 		}
 
-		// Match Events section (all events)
+		// Match Events section with neon styling
 		eventsTitle := lipgloss.NewStyle().
-			Foreground(accentColor).
+			Foreground(neonCyan).
 			Bold(true).
 			PaddingTop(0).
 			BorderBottom(true).
 			BorderStyle(lipgloss.NormalBorder()).
-			BorderForeground(borderColor).
+			BorderForeground(lipgloss.Color("239")).
 			Width(width - 6).
-			Render("📋 All Events")
+			Render("All Events")
 		content.WriteString(eventsTitle)
 		content.WriteString("\n")
 
 		// Display match events (goals, cards, substitutions)
 		if len(details.Events) == 0 {
 			emptyEvents := lipgloss.NewStyle().
-				Foreground(dimColor).
+				Foreground(neonDim).
 				Padding(0, 0).
 				Render("No events recorded")
 			content.WriteString(emptyEvents)
 		} else {
 			// Show events in chronological order (oldest first)
-			eventsList := make([]string, 0, len(details.Events))
+			var eventsList []string
 			for _, event := range details.Events {
 				eventLine := formatMatchEventForDisplay(event, details.HomeTeam.ShortName, details.AwayTeam.ShortName)
 				eventsList = append(eventsList, eventLine)
@@ -481,14 +522,14 @@ func renderMatchDetailsPanelWithTitle(width, height int, details *api.MatchDetai
 			content.WriteString(strings.Join(eventsList, "\n"))
 		}
 	} else {
-		// Live Updates section for live/upcoming matches
+		// Live Updates section for live/upcoming matches with neon styling
 		updatesTitle := lipgloss.NewStyle().
-			Foreground(accentColor).
+			Foreground(neonCyan).
 			Bold(true).
 			PaddingTop(0).
 			BorderBottom(true).
 			BorderStyle(lipgloss.NormalBorder()).
-			BorderForeground(borderColor).
+			BorderForeground(lipgloss.Color("239")).
 			Width(width - 6).
 			Render(constants.PanelUpdates)
 		content.WriteString(updatesTitle)
@@ -504,13 +545,13 @@ func renderMatchDetailsPanelWithTitle(width, height int, details *api.MatchDetai
 		// Display live updates (newest first)
 		if len(liveUpdates) == 0 && !loading {
 			emptyUpdates := lipgloss.NewStyle().
-				Foreground(dimColor).
+				Foreground(neonDim).
 				Padding(0, 0).
 				Render(constants.EmptyNoUpdates)
 			content.WriteString(emptyUpdates)
 		} else if len(liveUpdates) > 0 {
 			// Show updates in reverse order (newest at top)
-			updatesList := make([]string, 0, len(liveUpdates))
+			var updatesList []string
 			for i := len(liveUpdates) - 1; i >= 0; i-- {
 				updateLine := liveUpdateStyle.Render(liveUpdates[i])
 				updatesList = append(updatesList, updateLine)
@@ -529,7 +570,7 @@ func renderMatchDetailsPanelWithTitle(width, height int, details *api.MatchDetai
 		)
 	}
 
-	panel := panelStyle.
+	panel := detailsPanelStyle.
 		Width(width).
 		Height(height).
 		Render(panelContent)
@@ -607,9 +648,15 @@ func renderEvent(event api.MatchEvent, width int) string {
 }
 
 // formatMatchEventForDisplay formats a match event for display in the stats view
+// Uses neon styling with red/cyan theme and no emojis
 func formatMatchEventForDisplay(event api.MatchEvent, homeTeam, awayTeam string) string {
+	// Neon colors
+	neonRed := lipgloss.Color("196")
+	neonCyan := lipgloss.Color("51")
+	neonWhite := lipgloss.Color("255")
+
 	minuteStr := fmt.Sprintf("%d'", event.Minute)
-	minuteStyle := eventMinuteStyle.Render(minuteStr)
+	minuteStyle := lipgloss.NewStyle().Foreground(neonRed).Bold(true).Width(4).Align(lipgloss.Right).Render(minuteStr)
 
 	var eventText string
 	switch event.Type {
@@ -626,7 +673,8 @@ func formatMatchEventForDisplay(event api.MatchEvent, homeTeam, awayTeam string)
 		if event.Assist != nil && *event.Assist != "" {
 			assistText = fmt.Sprintf(" (assist: %s)", *event.Assist)
 		}
-		eventText = eventGoalStyle.Render(fmt.Sprintf("⚽ %s - %s%s", teamName, playerName, assistText))
+		goalStyle := lipgloss.NewStyle().Foreground(neonRed).Bold(true)
+		eventText = goalStyle.Render(fmt.Sprintf("GOAL %s - %s%s", teamName, playerName, assistText))
 	case "card":
 		teamName := homeTeam
 		if event.Team.ShortName != homeTeam {
@@ -640,11 +688,12 @@ func formatMatchEventForDisplay(event api.MatchEvent, homeTeam, awayTeam string)
 		if event.EventType != nil {
 			cardType = *event.EventType
 		}
-		cardEmoji := "🟨"
+		cardIndicator := lipgloss.NewStyle().Foreground(neonCyan).Render("▪") // cyan for yellow
 		if cardType == "red" {
-			cardEmoji = "🟥"
+			cardIndicator = lipgloss.NewStyle().Foreground(neonRed).Render("▪") // red for red
 		}
-		eventText = eventCardStyle.Render(fmt.Sprintf("%s %s - %s", cardEmoji, teamName, playerName))
+		cardStyle := lipgloss.NewStyle().Foreground(neonWhite)
+		eventText = lipgloss.JoinHorizontal(lipgloss.Left, cardIndicator, cardStyle.Render(fmt.Sprintf(" %s - %s", teamName, playerName)))
 	case "substitution":
 		teamName := homeTeam
 		if event.Team.ShortName != homeTeam {
@@ -654,7 +703,8 @@ func formatMatchEventForDisplay(event api.MatchEvent, homeTeam, awayTeam string)
 		if event.Player != nil {
 			playerName = *event.Player
 		}
-		eventText = eventTextStyle.Render(fmt.Sprintf("🔄 %s - %s", teamName, playerName))
+		subStyle := lipgloss.NewStyle().Foreground(neonWhite)
+		eventText = subStyle.Render(fmt.Sprintf("SUB %s - %s", teamName, playerName))
 	default:
 		teamName := homeTeam
 		if event.Team.ShortName != homeTeam {
@@ -664,10 +714,11 @@ func formatMatchEventForDisplay(event api.MatchEvent, homeTeam, awayTeam string)
 		if event.Player != nil {
 			playerName = *event.Player
 		}
+		defaultStyle := lipgloss.NewStyle().Foreground(neonWhite)
 		if playerName != "" {
-			eventText = eventTextStyle.Render(fmt.Sprintf("%s - %s", teamName, playerName))
+			eventText = defaultStyle.Render(fmt.Sprintf("%s - %s", teamName, playerName))
 		} else {
-			eventText = eventTextStyle.Render(teamName)
+			eventText = defaultStyle.Render(teamName)
 		}
 	}
 

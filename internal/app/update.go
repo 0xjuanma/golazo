@@ -125,6 +125,8 @@ func (m model) handleMatchDetails(msg matchDetailsMsg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
 	if msg.details == nil {
+		// Clear match details when API call fails so we don't show stale data
+		m.matchDetails = nil
 		m.loading = false
 		m.liveViewLoading = false
 		m.statsViewLoading = false

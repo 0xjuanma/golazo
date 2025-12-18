@@ -20,6 +20,11 @@ type liveMatchesMsg struct {
 	matches []api.Match
 }
 
+// liveRefreshMsg is sent when live matches are refreshed (periodic 5-min timer).
+type liveRefreshMsg struct {
+	matches []api.Match
+}
+
 // statsDataMsg contains all stats data (5 days finished + today upcoming) from API response.
 // This is the unified message for stats view - always fetches 5 days, filters client-side.
 type statsDataMsg struct {

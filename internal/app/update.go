@@ -33,6 +33,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case liveMatchesMsg:
 		return m.handleLiveMatches(msg)
 
+	case liveRefreshMsg:
+		return m.handleLiveRefresh(msg)
+
 	case statsDataMsg:
 		return m.handleStatsData(msg)
 
@@ -269,10 +272,13 @@ func (m model) handleStatsSelection(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (m model) handleLiveMatches(msg liveMatchesMsg) (tea.Model, tea.Cmd) {
 	var cmds []tea.Cmd
 
+	// Schedule the next refresh (5-min timer)
+	cmds = append(cmds, scheduleLiveRefresh(m.fotmobClient, m.useMockData))
+
 	if len(msg.matches) == 0 {
 		m.liveViewLoading = false
 		m.loading = false
-		return m, nil
+		return m, tea.Batch(cmds...)
 	}
 
 	// Convert to display format
@@ -301,6 +307,56 @@ func (m model) handleLiveMatches(msg liveMatchesMsg) (tea.Model, tea.Cmd) {
 	}
 
 	m.liveViewLoading = false
+	return m, tea.Batch(cmds...)
+}
+
+// handleLiveRefresh processes periodic live matches refresh (every 5 min).
+// Only updates if still in the live view.
+func (m model) handleLiveRefresh(msg liveRefreshMsg) (tea.Model, tea.Cmd) {
+	// Ignore refresh if not in live view (user navigated away)
+	if m.currentView != viewLiveMatches {
+		return m, nil
+	}
+
+	var cmds []tea.Cmd
+
+	// Schedule the next refresh
+	cmds = append(cmds, scheduleLiveRefresh(m.fotmobClient, m.useMockData))
+
+	if len(msg.matches) == 0 {
+		// No live matches - clear list but keep view
+		m.matches = nil
+		m.liveMatchesList.SetItems(nil)
+		return m, tea.Batch(cmds...)
+	}
+
+	// Convert to display format
+	displayMatches := make([]ui.MatchDisplay, 0, len(msg.matches))
+	for _, match := range msg.matches {
+		displayMatches = append(displayMatches, ui.MatchDisplay{Match: match})
+	}
+
+	// Preserve current selection if possible
+	currentMatchID := 0
+	if m.selected >= 0 && m.selected < len(m.matches) {
+		currentMatchID = m.matches[m.selected].ID
+	}
+
+	m.matches = displayMatches
+	m.liveMatchesList.SetItems(ui.ToMatchListItems(displayMatches))
+	m.updateLiveListSize()
+
+	// Try to restore previous selection
+	newSelected := 0
+	for i, match := range displayMatches {
+		if match.ID == currentMatchID {
+			newSelected = i
+			break
+		}
+	}
+	m.selected = newSelected
+	m.liveMatchesList.Select(newSelected)
+
 	return m, tea.Batch(cmds...)
 }
 

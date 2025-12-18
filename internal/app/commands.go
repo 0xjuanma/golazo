@@ -10,6 +10,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+// LiveRefreshInterval is the interval between automatic live matches list refreshes.
+const LiveRefreshInterval = 5 * time.Minute
+
 // fetchLiveMatches fetches live matches from the API.
 // Returns mock data if useMockData is true, otherwise uses real API.
 func fetchLiveMatches(client *fotmob.Client, useMockData bool) tea.Cmd {
@@ -32,6 +35,31 @@ func fetchLiveMatches(client *fotmob.Client, useMockData bool) tea.Cmd {
 
 		return liveMatchesMsg{matches: matches}
 	}
+}
+
+// scheduleLiveRefresh schedules the next live matches refresh after 5 minutes.
+// This is used to keep the live matches list current while the user is in the view.
+func scheduleLiveRefresh(client *fotmob.Client, useMockData bool) tea.Cmd {
+	return tea.Tick(LiveRefreshInterval, func(t time.Time) tea.Msg {
+		if useMockData {
+			return liveRefreshMsg{matches: data.MockLiveMatches()}
+		}
+
+		if client == nil {
+			return liveRefreshMsg{matches: nil}
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		// Force refresh to bypass cache
+		matches, err := client.LiveMatchesForceRefresh(ctx)
+		if err != nil {
+			return liveRefreshMsg{matches: nil}
+		}
+
+		return liveRefreshMsg{matches: matches}
+	})
 }
 
 // fetchMatchDetails fetches match details from the API.

@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Polling Spinner** 🎯 - Small gradient random spinner shows when live match data is being polled
+- **Kick-off Time** 🎯 - Live matches now display kick-off time (KO) in the match list
 
 ### Changed
 

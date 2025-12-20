@@ -677,15 +677,15 @@ func renderStyledLiveUpdate(update string) string {
 
 	// Neon colors matching theme
 	neonRed := lipgloss.Color("196")
-	neonCyan := lipgloss.Color("51")
 	neonDim := lipgloss.Color("244")
 	neonWhite := lipgloss.Color("255")
 
 	switch symbol {
 	case "●": // Goal - gradient on [GOAL] label, white text for rest
 		return renderGoalWithGradient(update)
-	case "▪": // Yellow card - cyan color for entire line
-		return lipgloss.NewStyle().Foreground(neonCyan).Render(update)
+	case "▪": // Yellow card - yellow color for entire line
+		neonYellow := lipgloss.Color("226") // Bright yellow
+		return lipgloss.NewStyle().Foreground(neonYellow).Render(update)
 	case "■": // Red card - red color for entire line
 		return lipgloss.NewStyle().Foreground(neonRed).Bold(true).Render(update)
 	case "↔": // Substitution - dim symbol and text

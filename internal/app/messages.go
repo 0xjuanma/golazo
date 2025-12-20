@@ -48,3 +48,13 @@ type statsDayDataMsg struct {
 	finished []api.Match // finished matches for this day
 	upcoming []api.Match // upcoming matches (only for today)
 }
+
+// pollTickMsg is sent when the 90-second poll interval elapses.
+// This triggers the actual API call with loading state visible.
+type pollTickMsg struct {
+	matchID int
+}
+
+// pollDisplayCompleteMsg is sent after minimum display time (1 second) has elapsed.
+// This allows the "Updating..." spinner to be visible for at least 1 second.
+type pollDisplayCompleteMsg struct{}

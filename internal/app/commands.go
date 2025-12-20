@@ -160,10 +160,28 @@ func fetchMatchDetails(client *fotmob.Client, matchID int, useMockData bool) tea
 	}
 }
 
-// pollMatchDetails polls match details every 90 seconds for live updates.
-// Conservative interval to avoid rate limiting.
-func pollMatchDetails(client *fotmob.Client, parser *fotmob.LiveUpdateParser, matchID int, lastEvents []api.MatchEvent, useMockData bool) tea.Cmd {
+// schedulePollTick schedules the next poll after 90 seconds.
+// When the tick fires, it sends pollTickMsg which triggers the actual API call.
+func schedulePollTick(matchID int) tea.Cmd {
 	return tea.Tick(90*time.Second, func(t time.Time) tea.Msg {
+		return pollTickMsg{matchID: matchID}
+	})
+}
+
+// MinPollDisplayTime is the minimum time to show the "Updating..." spinner.
+const MinPollDisplayTime = 1 * time.Second
+
+// scheduleMinDisplayTime schedules a message after the minimum display time.
+func scheduleMinDisplayTime() tea.Cmd {
+	return tea.Tick(MinPollDisplayTime, func(t time.Time) tea.Msg {
+		return pollDisplayCompleteMsg{}
+	})
+}
+
+// fetchPollMatchDetails fetches match details for a poll refresh.
+// This is called when pollTickMsg is received, with loading state visible.
+func fetchPollMatchDetails(client *fotmob.Client, matchID int, useMockData bool) tea.Cmd {
+	return func() tea.Msg {
 		if useMockData {
 			details, _ := data.MockMatchDetails(matchID)
 			return matchDetailsMsg{details: details}
@@ -178,7 +196,7 @@ func pollMatchDetails(client *fotmob.Client, parser *fotmob.LiveUpdateParser, ma
 		}
 
 		return matchDetailsMsg{details: details}
-	})
+	}
 }
 
 // fetchStatsDayData fetches stats data for a single day (progressive loading).

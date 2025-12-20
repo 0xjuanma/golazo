@@ -21,6 +21,8 @@ func (m model) View() string {
 			m.liveViewLoading,
 			m.liveBatchesLoaded,
 			m.liveTotalBatches,
+			m.pollingSpinner,
+			m.polling,
 		)
 
 	case viewStats:

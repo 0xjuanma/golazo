@@ -51,6 +51,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case mainViewCheckMsg:
 		return m.handleMainViewCheck(msg)
 
+	case pollTickMsg:
+		return m.handlePollTick(msg)
+
+	case pollDisplayCompleteMsg:
+		return m.handlePollDisplayComplete()
+
 	default:
 		// Fallback handler for ui.TickMsg type assertion
 		if _, ok := msg.(ui.TickMsg); ok {
@@ -120,7 +126,7 @@ func (m model) handleLiveUpdate(msg liveUpdateMsg) (tea.Model, tea.Cmd) {
 
 	// Continue polling if match is live
 	if m.polling && m.matchDetails != nil && m.matchDetails.Status == api.MatchStatusLive {
-		return m, pollMatchDetails(m.fotmobClient, m.parser, m.matchDetails.ID, m.lastEvents, m.useMockData)
+		return m, schedulePollTick(m.matchDetails.ID)
 	}
 
 	m.loading = false
@@ -155,25 +161,24 @@ func (m model) handleMatchDetails(msg matchDetailsMsg) (tea.Model, tea.Cmd) {
 	if m.currentView == viewLiveMatches || m.pendingSelection == 1 {
 		m.liveViewLoading = false
 
-		// Parse events for live updates
-		var eventsToParse []api.MatchEvent
-		if len(m.lastEvents) == 0 {
-			eventsToParse = msg.details.Events
-		} else {
-			eventsToParse = m.parser.NewEvents(m.lastEvents, msg.details.Events)
-		}
-
-		if len(eventsToParse) > 0 {
-			updates := m.parser.ParseEvents(eventsToParse, msg.details.HomeTeam, msg.details.AwayTeam)
-			m.liveUpdates = append(m.liveUpdates, updates...)
-		}
+		// Parse ALL events to rebuild the live updates list
+		// This ensures proper ordering (descending by minute) and uniqueness
+		m.liveUpdates = m.parser.ParseEvents(msg.details.Events, msg.details.HomeTeam, msg.details.AwayTeam)
 		m.lastEvents = msg.details.Events
 
 		// Continue polling if match is live
 		if msg.details.Status == api.MatchStatusLive {
+			// Mark poll data as received
+			m.pollDataReceived = true
+
+			// Only hide spinner if both data received and display time elapsed
+			if m.pollDataReceived && m.pollDisplayElapsed {
+				m.loading = false
+			}
+
 			m.polling = true
-			m.loading = true
-			cmds = append(cmds, pollMatchDetails(m.fotmobClient, m.parser, msg.details.ID, m.lastEvents, m.useMockData))
+			// Schedule next poll tick (90 seconds from now)
+			cmds = append(cmds, schedulePollTick(msg.details.ID))
 		} else {
 			m.loading = false
 			m.polling = false
@@ -617,7 +622,7 @@ func filterMatchesByDays(matches []api.Match, days int) []api.Match {
 // Uses a SINGLE tick chain - all spinners share the same tick rate.
 func (m model) handleRandomSpinnerTick(msg ui.TickMsg) (tea.Model, tea.Cmd) {
 	// Check if any spinner needs to be animated
-	needsTick := m.mainViewLoading || m.liveViewLoading || m.statsViewLoading
+	needsTick := m.mainViewLoading || m.liveViewLoading || m.statsViewLoading || m.polling
 
 	if !needsTick {
 		// No spinners active - don't continue the tick chain
@@ -635,6 +640,11 @@ func (m model) handleRandomSpinnerTick(msg ui.TickMsg) (tea.Model, tea.Cmd) {
 
 	if m.statsViewLoading {
 		m.statsViewSpinner.Tick()
+	}
+
+	// Update polling spinner when polling is active
+	if m.polling && m.pollingSpinner != nil {
+		m.pollingSpinner.Tick()
 	}
 
 	// Return ONE tick command to continue the animation chain
@@ -693,6 +703,45 @@ func (m model) handleMainViewCheck(msg mainViewCheckMsg) (tea.Model, tea.Cmd) {
 		}
 
 		return m, tea.Batch(cmds...)
+	}
+
+	return m, nil
+}
+
+// handlePollTick handles the 90-second poll tick.
+// Sets loading state and triggers the actual API call.
+func (m model) handlePollTick(msg pollTickMsg) (tea.Model, tea.Cmd) {
+	// Only process if we're still in live view and polling is active
+	if m.currentView != viewLiveMatches || !m.polling {
+		return m, nil
+	}
+
+	// Verify the poll is for the currently selected match
+	if m.matchDetails == nil || m.matchDetails.ID != msg.matchID {
+		return m, nil
+	}
+
+	// Set loading state to show "Updating..." spinner
+	m.loading = true
+	m.pollDataReceived = false
+	m.pollDisplayElapsed = false
+
+	// Start the actual API call, spinner animation, and minimum display timer
+	return m, tea.Batch(
+		fetchPollMatchDetails(m.fotmobClient, msg.matchID, m.useMockData),
+		ui.SpinnerTick(),
+		scheduleMinDisplayTime(), // Ensure spinner shows for at least 1 second
+	)
+}
+
+// handlePollDisplayComplete handles the minimum display time elapsed.
+// Hides the spinner only if both data received and display time elapsed.
+func (m model) handlePollDisplayComplete() (tea.Model, tea.Cmd) {
+	m.pollDisplayElapsed = true
+
+	// Only hide spinner if both conditions are met
+	if m.pollDataReceived && m.pollDisplayElapsed {
+		m.loading = false
 	}
 
 	return m, nil

@@ -419,8 +419,35 @@ func (m fotmobMatchDetails) toAPIMatchDetails() *api.MatchDetails {
 		if e.Type == "Card" && e.Card != "" {
 			eventTypeDetail = strings.ToLower(e.Card)
 		} else if e.Type == "Substitution" && len(e.Swap) >= 2 {
-			// Substitution: swap[0] is out, swap[1] is in
-			eventTypeDetail = "out"
+			// Substitution: swap[0] is player going out, swap[1] is player coming in
+			// Store player out in Player field, player in in Assist field (repurposed)
+			playerOut := e.Swap[0].Name
+			playerIn := e.Swap[1].Name
+			event.Player = &playerOut
+			event.Assist = &playerIn // Repurpose Assist to store player coming in
+			eventTypeDetail = "sub"
+		} else if strings.ToLower(e.Type) == "addedtime" {
+			// Added time event - extract minutes from available fields
+			eventTypeDetail = "addedtime"
+			// Try multiple sources for added time info
+			var addedTimeStr string
+			// Check timeStr (can be string or int)
+			if timeStrVal, ok := e.TimeStr.(string); ok && timeStrVal != "" {
+				addedTimeStr = timeStrVal
+			} else if timeStrInt, ok := e.TimeStr.(float64); ok {
+				addedTimeStr = strconv.Itoa(int(timeStrInt))
+			}
+			// Check nameStr which sometimes contains the added time
+			if addedTimeStr == "" && e.NameStr != "" {
+				addedTimeStr = e.NameStr
+			}
+			// Check if there's a player field with the info
+			if addedTimeStr == "" && e.Player != nil && e.Player.Name != "" {
+				addedTimeStr = e.Player.Name
+			}
+			if addedTimeStr != "" {
+				event.Player = &addedTimeStr
+			}
 		}
 		if eventTypeDetail != "" {
 			event.EventType = &eventTypeDetail

@@ -8,6 +8,7 @@ import (
 	"github.com/0xjuanma/golazo/internal/constants"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/lucasb-eyer/go-colorful"
 )
 
 var (
@@ -238,12 +239,17 @@ func renderMatchListItem(match MatchDisplay, selected bool, width int) string {
 
 // renderMatchDetailsPanel renders the right panel with match details and live updates.
 func renderMatchDetailsPanel(width, height int, details *api.MatchDetails, liveUpdates []string, sp spinner.Model, loading bool) string {
-	return renderMatchDetailsPanelWithTitle(width, height, details, liveUpdates, sp, loading, true)
+	return renderMatchDetailsPanelFull(width, height, details, liveUpdates, sp, loading, true, nil, false)
 }
 
-// renderMatchDetailsPanelWithTitle renders the right panel with optional title.
+// renderMatchDetailsPanelWithPolling renders the right panel with polling spinner support.
+func renderMatchDetailsPanelWithPolling(width, height int, details *api.MatchDetails, liveUpdates []string, sp spinner.Model, loading bool, pollingSpinner *RandomCharSpinner, isPolling bool) string {
+	return renderMatchDetailsPanelFull(width, height, details, liveUpdates, sp, loading, true, pollingSpinner, isPolling)
+}
+
+// renderMatchDetailsPanelFull renders the right panel with optional title and polling spinner.
 // Uses Neon design with Golazo red/cyan theme.
-func renderMatchDetailsPanelWithTitle(width, height int, details *api.MatchDetails, liveUpdates []string, sp spinner.Model, loading bool, showTitle bool) string {
+func renderMatchDetailsPanelFull(width, height int, details *api.MatchDetails, liveUpdates []string, sp spinner.Model, loading bool, showTitle bool, pollingSpinner *RandomCharSpinner, isPolling bool) string {
 	// Neon color constants
 	neonRed := lipgloss.Color("196")
 	neonCyan := lipgloss.Color("51")
@@ -523,6 +529,16 @@ func renderMatchDetailsPanelWithTitle(width, height int, details *api.MatchDetai
 		}
 	} else {
 		// Live Updates section for live/upcoming matches with neon styling
+		// Build title - show "Updating..." with spinner only during poll API calls
+		var titleText string
+		if isPolling && loading && pollingSpinner != nil {
+			// Poll API call in progress - show "Updating..." with spinner
+			pollingView := pollingSpinner.View()
+			titleText = "Updating...  " + pollingView
+		} else {
+			// Not polling or not loading - just show "Updates"
+			titleText = constants.PanelUpdates
+		}
 		updatesTitle := lipgloss.NewStyle().
 			Foreground(neonCyan).
 			Bold(true).
@@ -531,29 +547,22 @@ func renderMatchDetailsPanelWithTitle(width, height int, details *api.MatchDetai
 			BorderStyle(lipgloss.NormalBorder()).
 			BorderForeground(lipgloss.Color("239")).
 			Width(width - 6).
-			Render(constants.PanelUpdates)
+			Render(titleText)
 		content.WriteString(updatesTitle)
 		content.WriteString("\n")
 
-		// Show spinner if loading
-		if loading {
-			spinnerText := spinnerStyle.Render(sp.View() + " " + constants.LoadingFetching)
-			content.WriteString(spinnerText)
-			content.WriteString("\n")
-		}
-
-		// Display live updates (newest first)
-		if len(liveUpdates) == 0 && !loading {
+		// Display live updates (already sorted by minute descending - newest first)
+		if len(liveUpdates) == 0 && !loading && !isPolling {
 			emptyUpdates := lipgloss.NewStyle().
 				Foreground(neonDim).
 				Padding(0, 0).
 				Render(constants.EmptyNoUpdates)
 			content.WriteString(emptyUpdates)
 		} else if len(liveUpdates) > 0 {
-			// Show updates in reverse order (newest at top)
+			// Events are already sorted descending by minute
 			var updatesList []string
-			for i := len(liveUpdates) - 1; i >= 0; i-- {
-				updateLine := liveUpdateStyle.Render(liveUpdates[i])
+			for _, update := range liveUpdates {
+				updateLine := renderStyledLiveUpdate(update)
 				updatesList = append(updatesList, updateLine)
 			}
 			content.WriteString(strings.Join(updatesList, "\n"))
@@ -649,6 +658,165 @@ func renderEvent(event api.MatchEvent, width int) string {
 
 // formatMatchEventForDisplay formats a match event for display in the stats view
 // Uses neon styling with red/cyan theme and no emojis
+// renderStyledLiveUpdate renders a live update string with appropriate colors based on symbol prefix.
+// Uses minimal symbol styling: ● gradient for goals, ▪ cyan for yellow cards, ■ red for red cards,
+// ↔ dim for substitutions, · dim for other events.
+func renderStyledLiveUpdate(update string) string {
+	if len(update) == 0 {
+		return update
+	}
+
+	// Get the first rune (symbol prefix)
+	runes := []rune(update)
+	symbol := string(runes[0])
+	rest := string(runes[1:])
+
+	// Neon colors matching theme
+	neonRed := lipgloss.Color("196")
+	neonDim := lipgloss.Color("244")
+	neonWhite := lipgloss.Color("255")
+
+	switch symbol {
+	case "●": // Goal - gradient on [GOAL] label, white text for rest
+		return renderGoalWithGradient(update)
+	case "▪": // Yellow card - yellow up to [CARD], white for rest
+		neonYellow := lipgloss.Color("226") // Bright yellow
+		return renderCardWithColor(update, neonYellow)
+	case "■": // Red card - red up to [CARD], white for rest
+		return renderCardWithColor(update, neonRed)
+	case "↔": // Substitution - color coded players
+		return renderSubstitutionWithColors(update)
+	case "·": // Other - dim symbol and text
+		symbolStyle := lipgloss.NewStyle().Foreground(neonDim)
+		textStyle := lipgloss.NewStyle().Foreground(neonDim)
+		return symbolStyle.Render(symbol) + textStyle.Render(rest)
+	default:
+		// Unknown prefix, render as-is with default style
+		return lipgloss.NewStyle().Foreground(neonWhite).Render(update)
+	}
+}
+
+// renderSubstitutionWithColors renders a substitution event with color-coded players.
+// Cyan ← arrow = player coming IN (entering the pitch)
+// Red → arrow = player going OUT (leaving the pitch)
+// Format: ↔ 45' [SUB] {OUT}PlayerOut {IN}PlayerIn - Team
+func renderSubstitutionWithColors(update string) string {
+	neonRed := lipgloss.Color("196")
+	neonCyan := lipgloss.Color("51")
+	neonDim := lipgloss.Color("244")
+	neonWhite := lipgloss.Color("255")
+
+	dimStyle := lipgloss.NewStyle().Foreground(neonDim)
+	whiteStyle := lipgloss.NewStyle().Foreground(neonWhite)
+	outStyle := lipgloss.NewStyle().Foreground(neonRed) // Red = going OUT
+	inStyle := lipgloss.NewStyle().Foreground(neonCyan) // Cyan = coming IN
+
+	// Find the markers
+	outIdx := strings.Index(update, "{OUT}")
+	inIdx := strings.Index(update, "{IN}")
+	teamIdx := strings.LastIndex(update, " - ")
+
+	if outIdx == -1 || inIdx == -1 {
+		// Fallback to dim rendering if markers not found
+		return dimStyle.Render(update)
+	}
+
+	// Split the string into parts
+	prefix := update[:outIdx]             // "↔ 45' [SUB] "
+	playerOut := update[outIdx+5 : inIdx] // Player going OUT (after {OUT}, before {IN})
+	playerIn := update[inIdx+4 : teamIdx] // Player coming IN (after {IN}, before " - ")
+	suffix := update[teamIdx:]            // " - Team"
+
+	// Render prefix (symbol, time, [SUB]) in dim
+	result := dimStyle.Render(prefix)
+
+	// Render player coming IN with cyan ← arrow (entering the pitch)
+	result += inStyle.Render("← " + strings.TrimSpace(playerIn))
+	result += whiteStyle.Render(" ")
+
+	// Render player going OUT with red → arrow (leaving the pitch)
+	result += outStyle.Render("→ " + strings.TrimSpace(playerOut))
+
+	// Render suffix (team) in white
+	result += whiteStyle.Render(suffix)
+
+	return result
+}
+
+// renderCardWithColor renders a card event with color on symbol, time, and [CARD] label.
+// The rest of the text (player, team) is rendered in white.
+func renderCardWithColor(update string, color lipgloss.Color) string {
+	neonWhite := lipgloss.Color("255")
+	colorStyle := lipgloss.NewStyle().Foreground(color).Bold(true)
+	whiteStyle := lipgloss.NewStyle().Foreground(neonWhite)
+
+	// Find [CARD] in the string
+	cardEnd := strings.Index(update, "[CARD]")
+	if cardEnd == -1 {
+		// No [CARD] found, color entire line
+		return colorStyle.Render(update)
+	}
+	cardEnd += len("[CARD]")
+
+	// Split: colored prefix (symbol + time + [CARD]) and white suffix (player + team)
+	prefix := update[:cardEnd]
+	suffix := update[cardEnd:]
+
+	return colorStyle.Render(prefix) + whiteStyle.Render(suffix)
+}
+
+// renderGoalWithGradient renders a goal event with gradient on the [GOAL] label.
+// The gradient matches the spinner theme (cyan → red).
+func renderGoalWithGradient(update string) string {
+	// Parse gradient colors
+	startColor, _ := colorful.Hex(constants.GradientStartColor) // Cyan
+	endColor, _ := colorful.Hex(constants.GradientEndColor)     // Red
+
+	neonWhite := lipgloss.Color("255")
+	whiteStyle := lipgloss.NewStyle().Foreground(neonWhite)
+
+	// Find [GOAL] in the string and apply gradient to it
+	goalStart := strings.Index(update, "[GOAL]")
+	if goalStart == -1 {
+		// No [GOAL] found, just render with gradient on first part
+		return applyGradientToText(update, startColor, endColor)
+	}
+
+	goalEnd := goalStart + len("[GOAL]")
+
+	// Build: prefix + gradient[GOAL] + suffix
+	prefix := update[:goalStart]
+	goalText := update[goalStart:goalEnd]
+	suffix := update[goalEnd:]
+
+	// Apply gradient to [GOAL] text character by character
+	gradientGoal := applyGradientToText(goalText, startColor, endColor)
+
+	// Render prefix (● and time) with gradient too for cohesion
+	gradientPrefix := applyGradientToText(prefix, startColor, endColor)
+
+	return gradientPrefix + gradientGoal + whiteStyle.Render(suffix)
+}
+
+// applyGradientToText applies a cyan→red gradient to text, character by character.
+func applyGradientToText(text string, startColor, endColor colorful.Color) string {
+	runes := []rune(text)
+	if len(runes) == 0 {
+		return text
+	}
+
+	var result strings.Builder
+	for i, char := range runes {
+		ratio := float64(i) / float64(max(len(runes)-1, 1))
+		color := startColor.BlendLab(endColor, ratio)
+		hexColor := color.Hex()
+		charStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(hexColor)).Bold(true)
+		result.WriteString(charStyle.Render(string(char)))
+	}
+
+	return result.String()
+}
+
 func formatMatchEventForDisplay(event api.MatchEvent, homeTeam, awayTeam string) string {
 	// Neon colors
 	neonRed := lipgloss.Color("196")

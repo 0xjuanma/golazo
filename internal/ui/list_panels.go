@@ -140,7 +140,8 @@ func renderDateRangeSelector(width int, selected int) string {
 
 // RenderMultiPanelViewWithList renders the live matches view with list component.
 // leaguesLoaded and totalLeagues show loading progress during progressive loading.
-func RenderMultiPanelViewWithList(width, height int, listModel list.Model, details *api.MatchDetails, liveUpdates []string, sp spinner.Model, loading bool, randomSpinner *RandomCharSpinner, viewLoading bool, leaguesLoaded int, totalLeagues int) string {
+// pollingSpinner and isPolling control the small polling indicator in the right panel.
+func RenderMultiPanelViewWithList(width, height int, listModel list.Model, details *api.MatchDetails, liveUpdates []string, sp spinner.Model, loading bool, randomSpinner *RandomCharSpinner, viewLoading bool, leaguesLoaded int, totalLeagues int, pollingSpinner *RandomCharSpinner, isPolling bool) string {
 	// Handle edge case: if width/height not set, use defaults
 	if width <= 0 {
 		width = 80
@@ -205,7 +206,7 @@ func RenderMultiPanelViewWithList(width, height int, listModel list.Model, detai
 	leftPanel := RenderLiveMatchesListPanel(leftWidth, panelHeight, listModel)
 
 	// Render right panel (match details with live updates) - shifted down
-	rightPanel := renderMatchDetailsPanel(rightWidth, panelHeight, details, liveUpdates, sp, loading)
+	rightPanel := renderMatchDetailsPanelWithPolling(rightWidth, panelHeight, details, liveUpdates, sp, loading, pollingSpinner, isPolling)
 
 	// Create separator with neon red accent
 	separatorStyle := neonSeparatorStyle.Height(panelHeight)

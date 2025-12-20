@@ -3,6 +3,7 @@ package fotmob
 import (
 	"context"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -98,10 +99,17 @@ func NewLiveUpdateParser() *LiveUpdateParser {
 }
 
 // ParseEvents converts match events into human-readable update strings.
+// Events are sorted by minute in descending order (most recent first).
 func (p *LiveUpdateParser) ParseEvents(events []api.MatchEvent, homeTeam, awayTeam api.Team) []string {
-	updates := make([]string, 0, len(events))
+	// Sort events by minute descending (most recent first)
+	sorted := make([]api.MatchEvent, len(events))
+	copy(sorted, events)
+	sort.Slice(sorted, func(i, j int) bool {
+		return sorted[i].Minute > sorted[j].Minute
+	})
 
-	for _, event := range events {
+	updates := make([]string, 0, len(sorted))
+	for _, event := range sorted {
 		update := p.formatEvent(event, homeTeam, awayTeam)
 		if update != "" {
 			updates = append(updates, update)
@@ -111,7 +119,18 @@ func (p *LiveUpdateParser) ParseEvents(events []api.MatchEvent, homeTeam, awayTe
 	return updates
 }
 
-// formatEvent formats a single event into a readable string.
+// Event type prefixes for visual identification (used by UI for coloring)
+const (
+	EventPrefixGoal        = "●" // Solid circle - goals (red)
+	EventPrefixYellowCard  = "▪" // Square - yellow card (cyan)
+	EventPrefixRedCard     = "■" // Filled square - red card (red)
+	EventPrefixSubstitution = "↔" // Arrow - substitution (dim)
+	EventPrefixOther       = "·" // Small dot - other events (dim)
+)
+
+// formatEvent formats a single event into a readable string with symbol prefix and label.
+// Format: SYMBOL TIME' [LABEL] details - [ACRONYM]
+// Symbol prefixes are used by the UI to apply appropriate colors.
 func (p *LiveUpdateParser) formatEvent(event api.MatchEvent, homeTeam, awayTeam api.Team) string {
 	teamName := event.Team.ShortName
 	if teamName == "" {
@@ -122,6 +141,8 @@ func (p *LiveUpdateParser) formatEvent(event api.MatchEvent, homeTeam, awayTeam 
 			teamName = awayTeam.ShortName
 		}
 	}
+	// Convert team name to acronym in brackets
+	teamAcronym := "[" + getTeamAcronym(teamName) + "]"
 
 	switch strings.ToLower(event.Type) {
 	case "goal":
@@ -131,9 +152,9 @@ func (p *LiveUpdateParser) formatEvent(event api.MatchEvent, homeTeam, awayTeam 
 		}
 		assistText := ""
 		if event.Assist != nil && *event.Assist != "" {
-			assistText = fmt.Sprintf(" (assist: %s)", *event.Assist)
+			assistText = fmt.Sprintf(" (%s)", *event.Assist)
 		}
-		return fmt.Sprintf("%d' Goal: %s%s - %s", event.Minute, player, assistText, teamName)
+		return fmt.Sprintf("%s %d' [GOAL] %s%s - %s", EventPrefixGoal, event.Minute, player, assistText, teamAcronym)
 
 	case "card":
 		player := "Unknown"
@@ -142,24 +163,31 @@ func (p *LiveUpdateParser) formatEvent(event api.MatchEvent, homeTeam, awayTeam 
 		}
 		cardType := "yellow"
 		if event.EventType != nil {
-			cardType = *event.EventType
+			cardType = strings.ToLower(*event.EventType)
 		}
-		return fmt.Sprintf("%d' Card (%s): %s - %s", event.Minute, cardType, player, teamName)
+		prefix := EventPrefixYellowCard
+		if cardType == "red" || cardType == "redcard" || cardType == "secondyellow" {
+			prefix = EventPrefixRedCard
+		}
+		return fmt.Sprintf("%s %d' [CARD] %s - %s", prefix, event.Minute, player, teamAcronym)
 
 	case "substitution":
-		player := "Unknown"
-		if event.Player != nil {
-			player = *event.Player
+		// Player = player going out, Assist = player coming in (repurposed)
+		playerOut := "Unknown"
+		playerIn := "Unknown"
+		if event.Player != nil && *event.Player != "" {
+			playerOut = *event.Player
 		}
-		subType := "substitution"
-		if event.EventType != nil {
-			subType = *event.EventType
+		if event.Assist != nil && *event.Assist != "" {
+			playerIn = *event.Assist
 		}
-		arrow := "→"
-		if subType == "in" {
-			arrow = "←"
-		}
-		return fmt.Sprintf("%d' Substitution: %s %s - %s", event.Minute, arrow, player, teamName)
+		// Format: show both players - "OUT→ Player | IN← Player"
+		// Using special markers for UI to color-code: {OUT} and {IN}
+		return fmt.Sprintf("%s %d' [SUB] {OUT}%s {IN}%s - %s", EventPrefixSubstitution, event.Minute, playerOut, playerIn, teamAcronym)
+
+	case "addedtime":
+		// Skip added time events - not useful
+		return ""
 
 	default:
 		player := ""
@@ -167,10 +195,40 @@ func (p *LiveUpdateParser) formatEvent(event api.MatchEvent, homeTeam, awayTeam 
 			player = *event.Player
 		}
 		if player != "" {
-			return fmt.Sprintf("%d' • %s - %s (%s)", event.Minute, player, teamName, event.Type)
+			return fmt.Sprintf("%s %d' %s - %s", EventPrefixOther, event.Minute, player, teamAcronym)
 		}
-		return fmt.Sprintf("%d' • %s - %s", event.Minute, event.Type, teamName)
+		return fmt.Sprintf("%s %d' %s - %s", EventPrefixOther, event.Minute, event.Type, teamAcronym)
 	}
+}
+
+// getTeamAcronym converts a team name to an acronym.
+// Examples: "Bayer Leverkusen" -> "BL", "Manchester United" -> "MU"
+func getTeamAcronym(teamName string) string {
+	if teamName == "" {
+		return "?"
+	}
+
+	words := strings.Fields(teamName)
+	if len(words) == 0 {
+		return "?"
+	}
+
+	// Build acronym from first letter of each word (up to 3 letters)
+	acronym := ""
+	for i, word := range words {
+		if i >= 3 {
+			break
+		}
+		if len(word) > 0 {
+			acronym += strings.ToUpper(string(word[0]))
+		}
+	}
+
+	if acronym == "" {
+		return "?"
+	}
+
+	return acronym
 }
 
 // NewEvents compares two event lists and returns only new events.

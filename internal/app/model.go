@@ -54,6 +54,7 @@ type model struct {
 	spinner          spinner.Model
 	randomSpinner    *ui.RandomCharSpinner
 	statsViewSpinner *ui.RandomCharSpinner // Separate spinner for stats view
+	pollingSpinner   *ui.RandomCharSpinner // Small spinner for polling indicator
 
 	// List components
 	liveMatchesList     list.Model
@@ -61,12 +62,14 @@ type model struct {
 	upcomingMatchesList list.Model
 
 	// Loading states
-	loading          bool
-	mainViewLoading  bool
-	liveViewLoading  bool
-	statsViewLoading bool
-	polling          bool
-	pendingSelection int // Tracks which view is being preloaded (-1 = none, 0 = stats, 1 = live)
+	loading            bool
+	mainViewLoading    bool
+	liveViewLoading    bool
+	statsViewLoading   bool
+	polling            bool
+	pendingSelection   int  // Tracks which view is being preloaded (-1 = none, 0 = stats, 1 = live)
+	pollDataReceived   bool // True when poll API response received
+	pollDisplayElapsed bool // True when minimum display time has elapsed
 
 	// Configuration
 	useMockData    bool
@@ -90,6 +93,9 @@ func New(useMockData bool) model {
 
 	statsViewSpinner := ui.NewRandomCharSpinner()
 	statsViewSpinner.SetWidth(30)
+
+	pollingSpinner := ui.NewRandomCharSpinner()
+	pollingSpinner.SetWidth(10) // Small spinner for polling indicator
 
 	// Initialize list models with custom delegate
 	delegate := ui.NewMatchListDelegate()
@@ -118,6 +124,7 @@ func New(useMockData bool) model {
 		spinner:             s,
 		randomSpinner:       randomSpinner,
 		statsViewSpinner:    statsViewSpinner,
+		pollingSpinner:      pollingSpinner,
 		liveMatchesList:     liveList,
 		statsMatchesList:    statsList,
 		upcomingMatchesList: upcomingList,

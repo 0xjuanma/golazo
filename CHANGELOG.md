@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Kick-off Time** 🎯 - Live matches now display kick-off time (KO) in the match list
 
 ### Changed
+- **Event Styling** 🔄 - Live events now use minimal symbols with color coding (● goals, ▪ cards, ↔ subs)
 
 ### Fixed
 - **Live Events Order** 🐛 - Events now sorted by time (descending) with proper uniqueness

@@ -30,20 +30,24 @@ func (m MatchDisplay) Title() string {
 // Description returns a formatted description for the match.
 // Shows score, league, live time on first line; KO time on second line.
 func (m MatchDisplay) Description() string {
-	var line1 string
+	var parts []string
+
+	// Add score if available
 	if m.HomeScore != nil && m.AwayScore != nil {
-		line1 = fmt.Sprintf("%d - %d", *m.HomeScore, *m.AwayScore)
-	} else {
-		line1 = "vs"
+		parts = append(parts, fmt.Sprintf("%d - %d", *m.HomeScore, *m.AwayScore))
 	}
 
+	// Add league name
 	if m.League.Name != "" {
-		line1 += " • " + m.League.Name
+		parts = append(parts, m.League.Name)
 	}
 
+	// Add live time
 	if m.LiveTime != nil {
-		line1 += " • " + *m.LiveTime
+		parts = append(parts, *m.LiveTime)
 	}
+
+	line1 := strings.Join(parts, " • ")
 
 	// Add start time (kick-off time) on second line
 	if m.MatchTime != nil {

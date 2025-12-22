@@ -99,17 +99,17 @@ func New(useMockData bool) model {
 	delegate := ui.NewMatchListDelegate()
 
 	liveList := list.New([]list.Item{}, delegate, 0, 0)
-	liveList.Title = "Live Matches"
+	liveList.SetShowTitle(false)
 	liveList.SetShowStatusBar(false)
 	liveList.SetFilteringEnabled(false)
 
 	statsList := list.New([]list.Item{}, delegate, 0, 0)
-	statsList.Title = "Finished Matches"
+	statsList.SetShowTitle(false)
 	statsList.SetShowStatusBar(false)
 	statsList.SetFilteringEnabled(false)
 
 	upcomingList := list.New([]list.Item{}, delegate, 0, 0)
-	upcomingList.Title = "Upcoming Matches"
+	upcomingList.SetShowTitle(false)
 	upcomingList.SetShowStatusBar(false)
 	upcomingList.SetFilteringEnabled(false)
 

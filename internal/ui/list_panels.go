@@ -361,38 +361,25 @@ func renderStatsMatchDetailsPanel(width, height int, details *api.MatchDetails) 
 	lines = append(lines, neonHeaderStyle.Render("Match Info"))
 	lines = append(lines, "")
 
-	// Score line - centered with large emphasis
-	var scoreDisplay string
-	if details.HomeScore != nil && details.AwayScore != nil {
-		scoreDisplay = fmt.Sprintf("%s  %s  %s",
-			neonTeamStyle.Render(homeTeam),
-			neonScoreStyle.Render(fmt.Sprintf("%d - %d", *details.HomeScore, *details.AwayScore)),
-			neonTeamStyle.Render(awayTeam))
-	} else {
-		scoreDisplay = fmt.Sprintf("%s  vs  %s",
-			neonTeamStyle.Render(homeTeam),
-			neonTeamStyle.Render(awayTeam))
-	}
-	lines = append(lines, lipgloss.NewStyle().Width(contentWidth).Align(lipgloss.Center).Render(scoreDisplay))
+	// Line 1: Team A vs Team B (centered)
+	teamsDisplay := fmt.Sprintf("%s  vs  %s",
+		neonTeamStyle.Render(homeTeam),
+		neonTeamStyle.Render(awayTeam))
+	lines = append(lines, lipgloss.NewStyle().Width(contentWidth).Align(lipgloss.Center).Render(teamsDisplay))
+	lines = append(lines, "")
 
-	// Status + Half-time in one line
-	var statusLine string
-	switch details.Status {
-	case api.MatchStatusFinished:
-		statusLine = neonFinishedStyle.Render("FT")
-	case api.MatchStatusLive:
-		if details.LiveTime != nil {
-			statusLine = neonLiveStyle.Render(*details.LiveTime)
-		} else {
-			statusLine = neonLiveStyle.Render("LIVE")
-		}
-	default:
-		statusLine = neonDimStyle.Render(string(details.Status))
+	// Line 2: Large score (like live view)
+	if details.HomeScore != nil && details.AwayScore != nil {
+		largeScore := renderLargeScore(*details.HomeScore, *details.AwayScore, contentWidth)
+		lines = append(lines, largeScore)
+	} else {
+		vsText := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("244")).
+			Width(contentWidth).
+			Align(lipgloss.Center).
+			Render("vs")
+		lines = append(lines, vsText)
 	}
-	if details.HalfTimeScore != nil && details.HalfTimeScore.Home != nil && details.HalfTimeScore.Away != nil {
-		statusLine += neonDimStyle.Render(fmt.Sprintf("  (HT: %d-%d)", *details.HalfTimeScore.Home, *details.HalfTimeScore.Away))
-	}
-	lines = append(lines, lipgloss.NewStyle().Width(contentWidth).Align(lipgloss.Center).Render(statusLine))
 	lines = append(lines, "")
 
 	// Match context row

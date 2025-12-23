@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+
+## [0.3.0] - 2025-12-23
+
+### Added
 - **League Selection** - New settings customization to select and persist league preferences
 - **Result List Filtering** - New / filtering command for all result lists
 

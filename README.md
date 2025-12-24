@@ -14,7 +14,7 @@ A minimalist terminal user interface (TUI) for following football matches in rea
 </div>
 
 <div align="center">
-  <img src="assets/golazo-ss.png" alt="Golazo screenshot" width="600">
+  <img src="assets/golazo-ss-v0.4.0.png" alt="Golazo screenshot" width="600">
 </div>
 
 ## Installation/Update
@@ -30,7 +30,7 @@ curl -fsSL https://raw.githubusercontent.com/0xjuanma/golazo/main/scripts/instal
 ```
 
 **Windows (PowerShell):**
-```powershell
+```powershellq
 irm https://raw.githubusercontent.com/0xjuanma/golazo/main/scripts/install.ps1 | iex
 ```
 

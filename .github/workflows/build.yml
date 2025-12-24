@@ -15,12 +15,22 @@ jobs:
         include:
           - goos: darwin
             goarch: amd64
+            extension: ''
           - goos: darwin
             goarch: arm64
+            extension: ''
           - goos: linux
             goarch: amd64
+            extension: ''
           - goos: linux
             goarch: arm64
+            extension: ''
+          - goos: windows
+            goarch: amd64
+            extension: '.exe'
+          - goos: windows
+            goarch: arm64
+            extension: '.exe'
 
     steps:
       - uses: actions/checkout@v4
@@ -35,13 +45,13 @@ jobs:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
         run: |
-          go build -ldflags="-s -w" -o golazo-${{ matrix.goos }}-${{ matrix.goarch }} .
+          go build -ldflags="-s -w" -o golazo-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.extension }} .
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: golazo-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: golazo-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: golazo-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.extension }}
 
   release:
     needs: build

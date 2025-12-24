@@ -24,11 +24,17 @@ A minimalist terminal user interface (TUI) for following football matches in rea
 
 ### Using the install script (recommended)
 
+**macOS / Linux:**
 ```bash
 curl -fsSL https://raw.githubusercontent.com/0xjuanma/golazo/main/scripts/install.sh | bash
 ```
 
-or build from source,
+**Windows (PowerShell):**
+```powershell
+irm https://raw.githubusercontent.com/0xjuanma/golazo/main/scripts/install.ps1 | iex
+```
+
+### Build from source
 
 ```bash
 git clone https://github.com/0xjuanma/golazo.git

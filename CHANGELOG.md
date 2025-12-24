@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Windows Support** - Added Windows builds (amd64, arm64) and PowerShell install script
 
 ### Changed
 

@@ -42,6 +42,8 @@ func (m model) handleMainViewKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.matchDetails = nil
 		m.liveUpdates = nil
 		m.lastEvents = nil
+		m.lastHomeScore = 0
+		m.lastAwayScore = 0
 		m.polling = false
 		m.upcomingMatchesList.SetItems([]list.Item{})
 		m.matchDetailsCache = make(map[int]*api.MatchDetails)
@@ -150,6 +152,8 @@ func (m model) handleStatsViewKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (m model) loadMatchDetails(matchID int) (tea.Model, tea.Cmd) {
 	m.liveUpdates = nil
 	m.lastEvents = nil
+	m.lastHomeScore = 0
+	m.lastAwayScore = 0
 	m.loading = true
 	m.liveViewLoading = true
 	m.polling = false // Reset polling state - this is a new match load, not a poll refresh

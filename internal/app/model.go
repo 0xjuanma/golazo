@@ -39,6 +39,8 @@ type model struct {
 	matchDetailsCache map[int]*api.MatchDetails // Cache to avoid repeated API calls
 	liveUpdates       []string
 	lastEvents        []api.MatchEvent
+	lastHomeScore     int // Track last known home score for goal notifications
+	lastAwayScore     int // Track last known away score for goal notifications
 
 	// Stats data cache - stores 5 days of data, filtered client-side for Today/3d/5d views
 	statsData *fotmob.StatsData

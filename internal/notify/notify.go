@@ -4,6 +4,7 @@ package notify
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/0xjuanma/golazo/internal/api"
 	"github.com/0xjuanma/golazo/internal/constants"
@@ -42,19 +43,23 @@ func (n *DesktopNotifier) Enabled() bool {
 
 // Goal sends a desktop notification for a new goal event.
 // Includes scorer name, minute, team, and current score.
+// Always plays a terminal beep as a fallback notification.
 func (n *DesktopNotifier) Goal(event api.MatchEvent, homeTeam, awayTeam api.Team, homeScore, awayScore int) error {
 	if !n.enabled {
 		return nil
 	}
+
+	// Play terminal beep via stderr (bypasses bubbletea's stdout capture)
+	// This works even when the TUI is active
+	_, _ = os.Stderr.WriteString("\a")
 
 	// Build notification content
 	title := constants.NotificationTitleGoal
 	message := formatGoalMessage(event, homeTeam, awayTeam, homeScore, awayScore)
 
 	// Send notification via beeep (cross-platform)
-	if err := beeep.Notify(title, message, ""); err != nil {
-		return fmt.Errorf("send goal notification: %w", err)
-	}
+	// Errors are ignored - OS notification is best-effort, beep already played
+	_ = beeep.Notify(title, message, "")
 
 	return nil
 }
@@ -90,5 +95,3 @@ func formatGoalMessage(event api.MatchEvent, homeTeam, awayTeam api.Team, homeSc
 		awayTeam.ShortName,
 	)
 }
-
-

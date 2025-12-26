@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- **Goal Notifications** - Desktop notifications for new goals in live matches (macOS, Linux, Windows)
+- **Goal Notifications** - Desktop notifications and terminal beep for new goals in live matches using score-based detection (macOS, Linux, Windows)
 
 ### Changed
 - **Poll Spinner Duration** - Increased "Updating..." spinner display time to 1 second for better visibility

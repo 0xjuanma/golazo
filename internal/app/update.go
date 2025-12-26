@@ -178,11 +178,26 @@ func (m model) handleMatchDetails(msg matchDetailsMsg) (tea.Model, tea.Cmd) {
 	if m.currentView == viewLiveMatches || m.pendingSelection == 1 {
 		m.liveViewLoading = false
 
+		// Get current scores
+		homeScore := 0
+		awayScore := 0
+		if msg.details.HomeScore != nil {
+			homeScore = *msg.details.HomeScore
+		}
+		if msg.details.AwayScore != nil {
+			awayScore = *msg.details.AwayScore
+		}
+
 		// Detect new goals during poll refresh (not initial load)
-		// Only notify when: polling is active AND we have previous events to compare
-		if m.polling && len(m.lastEvents) > 0 {
+		// Only notify when: polling is active AND we have previous score data
+		hasScoreData := m.lastHomeScore > 0 || m.lastAwayScore > 0 || len(m.lastEvents) > 0
+		if m.polling && hasScoreData {
 			m.notifyNewGoals(msg.details)
 		}
+
+		// Update tracked scores for next comparison
+		m.lastHomeScore = homeScore
+		m.lastAwayScore = awayScore
 
 		// Parse ALL events to rebuild the live updates list
 		// This ensures proper ordering (descending by minute) and uniqueness
@@ -271,6 +286,8 @@ func (m model) resetToMainView() (tea.Model, tea.Cmd) {
 	m.matchDetailsCache = make(map[int]*api.MatchDetails)
 	m.liveUpdates = nil
 	m.lastEvents = nil
+	m.lastHomeScore = 0
+	m.lastAwayScore = 0
 	m.loading = false
 	m.polling = false
 	m.matches = nil
@@ -874,18 +891,15 @@ func (m model) handleFilterMatches(msg list.FilterMatchesMsg) (tea.Model, tea.Cm
 	return m, cmd
 }
 
-// notifyNewGoals sends desktop notifications for new goal events.
-// Only called during poll refreshes when comparing against previous events.
-// Errors are silently ignored to avoid disrupting the main application flow.
+// notifyNewGoals sends desktop notifications when a goal is scored.
+// Uses score-based detection (more reliable than event ID comparison).
+// Only called during poll refreshes when we have previous score data.
 func (m *model) notifyNewGoals(details *api.MatchDetails) {
 	if m.notifier == nil || details == nil {
 		return
 	}
 
-	// Find events that are new since the last poll
-	newEvents := m.parser.NewEvents(m.lastEvents, details.Events)
-
-	// Get current score for notification
+	// Get current scores
 	homeScore := 0
 	awayScore := 0
 	if details.HomeScore != nil {
@@ -895,12 +909,34 @@ func (m *model) notifyNewGoals(details *api.MatchDetails) {
 		awayScore = *details.AwayScore
 	}
 
-	// Notify for each new goal
-	for _, event := range newEvents {
+	// Check if score increased (goal scored)
+	homeGoalScored := homeScore > m.lastHomeScore
+	awayGoalScored := awayScore > m.lastAwayScore
+
+	if !homeGoalScored && !awayGoalScored {
+		return
+	}
+
+	// Find the most recent goal event to get player details
+	var goalEvent *api.MatchEvent
+	for i := len(details.Events) - 1; i >= 0; i-- {
+		event := details.Events[i]
 		if strings.ToLower(event.Type) == "goal" {
-			// Send notification - errors are ignored to not disrupt the app
-			_ = m.notifier.Goal(event, details.HomeTeam, details.AwayTeam, homeScore, awayScore)
+			// Check if this goal matches the team that scored
+			if homeGoalScored && event.Team.ID == details.HomeTeam.ID {
+				goalEvent = &event
+				break
+			}
+			if awayGoalScored && event.Team.ID == details.AwayTeam.ID {
+				goalEvent = &event
+				break
+			}
 		}
+	}
+
+	if goalEvent != nil {
+		// Send notification - errors are silently ignored to not disrupt the app
+		_ = m.notifier.Goal(*goalEvent, details.HomeTeam, details.AwayTeam, homeScore, awayScore)
 	}
 }
 

@@ -97,6 +97,12 @@ func RenderMainMenu(width, height, selected int, sp spinner.Model, randomSpinner
 	)
 }
 
+// RenderGradientText applies a gradient (cyan to red) to multi-line text.
+// Exported wrapper for external use.
+func RenderGradientText(text string) string {
+	return renderGradientText(text)
+}
+
 // renderGradientText applies a gradient (cyan to red) to multi-line text.
 func renderGradientText(text string) string {
 	lines := strings.Split(text, "\n")

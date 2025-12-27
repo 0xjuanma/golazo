@@ -45,7 +45,7 @@ jobs:
           GOOS: ${{ matrix.goos }}
           GOARCH: ${{ matrix.goarch }}
         run: |
-          go build -ldflags="-s -w" -o golazo-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.extension }} .
+          go build -ldflags="-s -w -X github.com/0xjuanma/golazo/cmd.Version=${{ github.ref_name }}" -o golazo-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.extension }} .
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

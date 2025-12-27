@@ -2,7 +2,7 @@ package constants
 
 // Menu items
 const (
-	MenuStats       = "Stats"
+	MenuStats       = "Finished Matches"
 	MenuLiveMatches = "Live Matches"
 	MenuSettings    = "Settings"
 )

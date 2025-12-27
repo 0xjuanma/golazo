@@ -20,9 +20,12 @@ A minimalist terminal user interface (TUI) for following football matches in rea
 ## Installation/Update
 
 > [!IMPORTANT]
-> Tool is in active development.
+> As of v0.6.0, you can update golazo to the latest version by running:
+> ```bash
+> golazo --update
+> ```
 
-### Using the install script (recommended)
+### Using the install/update script (recommended)
 
 **macOS / Linux:**
 ```bash

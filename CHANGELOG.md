@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+
+## [0.6.0] - 2025-12-26
+
+### Added
 - **Goal Notifications** - Desktop notifications and terminal beep for new goals in live matches using score-based detection (macOS, Linux, Windows)
 - **New CLI Flags** - Added `--version/-v` to display version info and `--update/-u` to self-update to latest release
 

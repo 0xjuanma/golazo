@@ -25,6 +25,12 @@ var AllSupportedLeagues = []LeagueInfo{
 	{ID: 54, Name: "Bundesliga", Country: "Germany"},
 	{ID: 55, Name: "Serie A", Country: "Italy"},
 	{ID: 53, Name: "Ligue 1", Country: "France"},
+	// Top 5 Women's Leagues
+	{ID: 9227, Name: "Women's Super League", Country: "England"},
+	{ID: 9907, Name: "Liga F", Country: "Spain"},
+	{ID: 9676, Name: "Frauen-Bundesliga", Country: "Germany"},
+	{ID: 10178, Name: "Serie A Femminile", Country: "Italy"},
+	{ID: 9667, Name: "Première Ligue Féminine", Country: "France"},
 	// Second Tier European Leagues
 	{ID: 48, Name: "EFL Championship", Country: "England"},
 	{ID: 57, Name: "Eredivisie", Country: "Netherlands"},
@@ -37,12 +43,15 @@ var AllSupportedLeagues = []LeagueInfo{
 	{ID: 52, Name: "Ekstraklasa", Country: "Poland"},
 	// European Competitions
 	{ID: 42, Name: "UEFA Champions League", Country: "Europe"},
+	{ID: 9375, Name: "Women's UEFA Champions League", Country: "Europe"},
 	{ID: 73, Name: "UEFA Europa League", Country: "Europe"},
 	{ID: 50, Name: "UEFA Euro", Country: "Europe"},
+	{ID: 292, Name: "UEFA Women's Euro", Country: "Europe"},
 	// Domestic Cups
 	{ID: 138, Name: "Copa del Rey", Country: "Spain"},
 	{ID: 132, Name: "FA Cup", Country: "England"},
 	{ID: 209, Name: "DFB Pokal", Country: "Germany"},
+	{ID: 10650, Name: "Women's DFB Pokal", Country: "Germany"},
 	{ID: 141, Name: "Coppa Italia", Country: "Italy"},
 	{ID: 134, Name: "Coupe de France", Country: "France"},
 	// South America
@@ -52,11 +61,13 @@ var AllSupportedLeagues = []LeagueInfo{
 	{ID: 44, Name: "Copa America", Country: "South America"},
 	// North America
 	{ID: 130, Name: "MLS", Country: "USA"},
+	{ID: 9134, Name: "NWSL", Country: "USA"},
 	{ID: 230, Name: "Liga MX", Country: "Mexico"},
 	// Middle East
 	{ID: 536, Name: "Saudi Pro League", Country: "Saudi Arabia"},
 	// International
 	{ID: 77, Name: "FIFA World Cup", Country: "International"},
+	{ID: 76, Name: "Women's FIFA World Cup", Country: "International"},
 	{ID: 289, Name: "Africa Cup of Nations", Country: "Africa"},
 }
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"time"
 )
 
@@ -14,13 +15,29 @@ const (
 )
 
 // ConfigDir returns the path to the golazo config directory.
+// On Linux, follows XDG Base Directory spec (~/.config/golazo).
+// On other systems (macOS, Windows), uses ~/.golazo.
 func ConfigDir() (string, error) {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("get home directory: %w", err)
+	var configPath string
+
+	if runtime.GOOS == "linux" {
+		if xdgConfig := os.Getenv("XDG_CONFIG_HOME"); xdgConfig != "" {
+			configPath = filepath.Join(xdgConfig, "golazo")
+		} else {
+			homeDir, err := os.UserHomeDir()
+			if err != nil {
+				return "", fmt.Errorf("get home directory: %w", err)
+			}
+			configPath = filepath.Join(homeDir, ".config", "golazo")
+		}
+	} else {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return "", fmt.Errorf("get home directory: %w", err)
+		}
+		configPath = filepath.Join(homeDir, configDir)
 	}
 
-	configPath := filepath.Join(homeDir, configDir)
 	if err := os.MkdirAll(configPath, 0755); err != nil {
 		return "", fmt.Errorf("create config directory: %w", err)
 	}

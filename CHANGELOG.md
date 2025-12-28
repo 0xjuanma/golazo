@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Women's Leagues** - 10 new leagues: WSL, Liga F, Frauen-Bundesliga, Serie A Femminile, Première Ligue Féminine, NWSL, Women's UCL, UEFA Women's Euro, Women's DFB Pokal, Women's World Cup (Thanks @fkr!)
 
 ### Changed
+- **Linux config location** - Now follows XDG spec at `~/.config/golazo`
+
+  > [!NOTE]
+  > **Existing Linux users, choose one:**
+  > - **Keep your settings**: `mv ~/.golazo ~/.config/golazo`
+  > - **Start fresh**: `rm -rf ~/.golazo` (old location will be ignored)
 
 ### Fixed
 

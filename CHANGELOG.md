@@ -10,6 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 ### Changed
+
+### Fixed
+
+## [0.8.0] - 2025-12-31
+
+### Added
+
+### Changed
 - **Upcoming Matches in Live View** - Today's upcoming matches now display at the bottom of the Live View instead of the Finished Matches view
 
 ### Fixed

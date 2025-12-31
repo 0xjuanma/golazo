@@ -108,6 +108,7 @@ func renderMatchDetailsPanelFull(width, height int, details *api.MatchDetails, l
 		return detailsPanelStyle.
 			Width(width).
 			Height(height).
+			MaxHeight(height).
 			Render(content)
 	}
 
@@ -378,6 +379,7 @@ func renderMatchDetailsPanelFull(width, height int, details *api.MatchDetails, l
 	panel := detailsPanelStyle.
 		Width(width).
 		Height(height).
+		MaxHeight(height).
 		Render(panelContent)
 
 	return panel

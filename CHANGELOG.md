@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **Windows Self-Update** - Fixed `--update` failing when golazo is already running
+- **Small Terminal Layout Overflow** - Fixed panel layout corruption when terminal window is too small to display all content
 
 ## [0.7.0] - 2025-12-28
 

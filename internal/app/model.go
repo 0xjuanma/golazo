@@ -8,6 +8,7 @@ import (
 	"github.com/0xjuanma/golazo/internal/ui"
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
+	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -60,6 +61,7 @@ type model struct {
 	randomSpinner    *ui.RandomCharSpinner
 	statsViewSpinner *ui.RandomCharSpinner // Separate spinner for stats view
 	pollingSpinner   *ui.RandomCharSpinner // Small spinner for polling indicator
+	detailsViewport  viewport.Model        // Viewport for scrolling match details panel
 
 	// List components
 	liveMatchesList     list.Model
@@ -105,6 +107,10 @@ func New(useMockData bool) model {
 
 	pollingSpinner := ui.NewRandomCharSpinner()
 	pollingSpinner.SetWidth(10) // Small spinner for polling indicator
+
+	// Initialize viewport for match details scrolling
+	detailsViewport := viewport.New(0, 0)
+	detailsViewport.SetContent("")
 
 	// Initialize list models with custom delegate
 	delegate := ui.NewMatchListDelegate()
@@ -153,6 +159,7 @@ func New(useMockData bool) model {
 		randomSpinner:       randomSpinner,
 		statsViewSpinner:    statsViewSpinner,
 		pollingSpinner:      pollingSpinner,
+		detailsViewport:     detailsViewport,
 		liveMatchesList:     liveList,
 		statsMatchesList:    statsList,
 		upcomingMatchesList: upcomingList,

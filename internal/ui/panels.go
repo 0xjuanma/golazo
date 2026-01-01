@@ -69,6 +69,343 @@ func renderMatchDetailsPanel(width, height int, details *api.MatchDetails, liveU
 	return renderMatchDetailsPanelFull(width, height, details, liveUpdates, sp, loading, true, nil, false)
 }
 
+// RenderMatchDetailsHeader renders only the static header portion of match details
+// (status, teams, and score) that should not scroll.
+func RenderMatchDetailsHeader(width int, details *api.MatchDetails) string {
+	if details == nil {
+		return ""
+	}
+
+	neonRed := lipgloss.Color("196")
+	neonCyan := lipgloss.Color("51")
+	neonDim := lipgloss.Color("244")
+
+	contentWidth := width - 6
+
+	var content strings.Builder
+
+	// 1. Status/Minute and League info (centered)
+	infoStyle := lipgloss.NewStyle().Foreground(neonDim)
+	var statusText string
+	if details.Status == api.MatchStatusLive {
+		liveTime := constants.StatusLive
+		if details.LiveTime != nil {
+			liveTime = *details.LiveTime
+		}
+		statusText = lipgloss.NewStyle().Foreground(neonRed).Bold(true).Render(liveTime)
+	} else if details.Status == api.MatchStatusFinished {
+		statusText = lipgloss.NewStyle().Foreground(neonCyan).Render(constants.StatusFinished)
+	} else {
+		statusText = infoStyle.Render(constants.StatusNotStartedShort)
+	}
+
+	leagueText := infoStyle.Italic(true).Render(details.League.Name)
+	statusLine := lipgloss.NewStyle().
+		Width(contentWidth).
+		Align(lipgloss.Center).
+		Render(statusText + " • " + leagueText)
+	content.WriteString(statusLine)
+	content.WriteString("\n")
+
+	// 2. Teams section (centered)
+	teamStyle := lipgloss.NewStyle().Foreground(neonCyan).Bold(true)
+	vsStyle := lipgloss.NewStyle().Foreground(neonDim)
+	teamsDisplay := lipgloss.JoinHorizontal(lipgloss.Center,
+		teamStyle.Render(details.HomeTeam.ShortName),
+		vsStyle.Render("  vs  "),
+		teamStyle.Render(details.AwayTeam.ShortName),
+	)
+	teamsLine := lipgloss.NewStyle().
+		Width(contentWidth).
+		Align(lipgloss.Center).
+		Render(teamsDisplay)
+	content.WriteString(teamsLine)
+	content.WriteString("\n\n")
+
+	// 3. Large Score section (centered, prominent)
+	if details.HomeScore != nil && details.AwayScore != nil {
+		largeScore := renderLargeScore(*details.HomeScore, *details.AwayScore, contentWidth)
+		content.WriteString(largeScore)
+	} else {
+		vsText := lipgloss.NewStyle().
+			Foreground(neonDim).
+			Bold(true).
+			Width(contentWidth).
+			Align(lipgloss.Center).
+			Render("vs")
+		content.WriteString(vsText)
+	}
+	content.WriteString("\n")
+
+	return content.String()
+}
+
+// RenderMatchDetailsScrollableContent renders only the scrollable content portion
+// of match details (events, goals, cards, etc.) without the header.
+func RenderMatchDetailsScrollableContent(width int, details *api.MatchDetails, liveUpdates []string, pollingSpinner *RandomCharSpinner, isPolling bool, loading bool) string {
+	if details == nil {
+		return ""
+	}
+
+	neonRed := lipgloss.Color("196")
+	neonCyan := lipgloss.Color("51")
+	neonDim := lipgloss.Color("244")
+	neonWhite := lipgloss.Color("255")
+
+	contentWidth := width - 6
+	infoStyle := lipgloss.NewStyle().Foreground(neonDim)
+
+	var content strings.Builder
+
+	// For finished matches, show detailed match information
+	// For live matches, show live updates
+	if details.Status == api.MatchStatusFinished {
+		// Match Information section
+		var infoSection []string
+
+		// Venue
+		if details.Venue != "" {
+			infoSection = append(infoSection, details.Venue)
+		}
+
+		// Half-time score
+		if details.HalfTimeScore != nil && details.HalfTimeScore.Home != nil && details.HalfTimeScore.Away != nil {
+			htText := fmt.Sprintf("HT: %d - %d", *details.HalfTimeScore.Home, *details.HalfTimeScore.Away)
+			infoSection = append(infoSection, infoStyle.Render(htText))
+		}
+
+		// Match duration
+		if details.ExtraTime {
+			infoSection = append(infoSection, infoStyle.Render("AET"))
+		}
+		if details.Penalties != nil && details.Penalties.Home != nil && details.Penalties.Away != nil {
+			penText := fmt.Sprintf("Pens: %d - %d", *details.Penalties.Home, *details.Penalties.Away)
+			infoSection = append(infoSection, infoStyle.Render(penText))
+		}
+
+		if len(infoSection) > 0 {
+			content.WriteString(strings.Join(infoSection, " | "))
+			content.WriteString("\n\n")
+		}
+
+		// Goals Timeline section with neon styling
+		var goals []api.MatchEvent
+		for _, event := range details.Events {
+			if event.Type == "goal" {
+				goals = append(goals, event)
+			}
+		}
+
+		if len(goals) > 0 {
+			goalsTitle := lipgloss.NewStyle().
+				Foreground(neonCyan).
+				Bold(true).
+				PaddingTop(0).
+				BorderBottom(true).
+				BorderStyle(lipgloss.NormalBorder()).
+				BorderForeground(lipgloss.Color("239")).
+				Width(width - 6).
+				Render("Goals")
+			content.WriteString(goalsTitle)
+			content.WriteString("\n")
+
+			minuteStyle := lipgloss.NewStyle().Foreground(neonRed).Bold(true)
+			for _, goal := range goals {
+				player := "Unknown"
+				if goal.Player != nil {
+					player = *goal.Player
+				}
+				teamName := goal.Team.ShortName
+				assistText := ""
+				if goal.Assist != nil && *goal.Assist != "" {
+					assistText = fmt.Sprintf(" (assist: %s)", *goal.Assist)
+				}
+				goalLine := lipgloss.JoinHorizontal(lipgloss.Left,
+					minuteStyle.Render(fmt.Sprintf("%d'", goal.Minute)),
+					lipgloss.NewStyle().Foreground(neonWhite).Render(fmt.Sprintf(" %s - %s%s", teamName, player, assistText)),
+				)
+				content.WriteString(goalLine)
+				content.WriteString("\n")
+			}
+			content.WriteString("\n")
+		}
+
+		// Cards section with neon styling
+		var cardEvents []api.MatchEvent
+		for _, event := range details.Events {
+			if event.Type == "card" {
+				cardEvents = append(cardEvents, event)
+			}
+		}
+
+		if len(cardEvents) > 0 {
+			cardsTitle := lipgloss.NewStyle().
+				Foreground(neonCyan).
+				Bold(true).
+				PaddingTop(0).
+				BorderBottom(true).
+				BorderStyle(lipgloss.NormalBorder()).
+				BorderForeground(lipgloss.Color("239")).
+				Width(width - 6).
+				Render("Cards")
+			content.WriteString(cardsTitle)
+			content.WriteString("\n")
+
+			for _, card := range cardEvents {
+				player := "Unknown"
+				if card.Player != nil {
+					player = *card.Player
+				}
+				teamName := card.Team.ShortName
+
+				cardSymbol := CardSymbolYellow
+				cardStyle := neonYellowCardStyle
+				if card.EventType != nil && *card.EventType == "red" {
+					cardSymbol = CardSymbolRed
+					cardStyle = neonRedCardStyle
+				}
+
+				cardLine := lipgloss.JoinHorizontal(lipgloss.Left,
+					cardStyle.Render(cardSymbol),
+					lipgloss.NewStyle().Foreground(neonRed).Bold(true).Render(fmt.Sprintf(" %d' ", card.Minute)),
+					lipgloss.NewStyle().Foreground(neonWhite).Render(fmt.Sprintf("%s (%s)", player, teamName)),
+				)
+				content.WriteString(cardLine)
+				content.WriteString("\n")
+			}
+			content.WriteString("\n")
+		}
+
+		// Match Events section with neon styling
+		eventsTitle := lipgloss.NewStyle().
+			Foreground(neonCyan).
+			Bold(true).
+			PaddingTop(0).
+			BorderBottom(true).
+			BorderStyle(lipgloss.NormalBorder()).
+			BorderForeground(lipgloss.Color("239")).
+			Width(width - 6).
+			Render("All Events")
+		content.WriteString(eventsTitle)
+		content.WriteString("\n")
+
+		if len(details.Events) == 0 {
+			emptyEvents := lipgloss.NewStyle().
+				Foreground(neonDim).
+				Padding(0, 0).
+				Render("No events recorded")
+			content.WriteString(emptyEvents)
+		} else {
+			var eventsList []string
+			for _, event := range details.Events {
+				eventLine := formatMatchEventForDisplay(event, details.HomeTeam.ShortName, details.AwayTeam.ShortName)
+				eventsList = append(eventsList, eventLine)
+			}
+			content.WriteString(strings.Join(eventsList, "\n"))
+		}
+	} else {
+		// Live Updates section for live/upcoming matches
+		var titleText string
+		if isPolling && loading && pollingSpinner != nil {
+			pollingView := pollingSpinner.View()
+			titleText = "Updating...  " + pollingView
+		} else {
+			titleText = constants.PanelUpdates
+		}
+		updatesTitle := lipgloss.NewStyle().
+			Foreground(neonCyan).
+			Bold(true).
+			PaddingTop(0).
+			BorderBottom(true).
+			BorderStyle(lipgloss.NormalBorder()).
+			BorderForeground(lipgloss.Color("239")).
+			Width(contentWidth).
+			Render(titleText)
+		content.WriteString(updatesTitle)
+		content.WriteString("\n")
+
+		if len(liveUpdates) == 0 && !loading && !isPolling {
+			emptyUpdates := lipgloss.NewStyle().
+				Foreground(neonDim).
+				Padding(0, 0).
+				Render(constants.EmptyNoUpdates)
+			content.WriteString(emptyUpdates)
+		} else if len(liveUpdates) > 0 {
+			var updatesList []string
+			for _, update := range liveUpdates {
+				updateLine := renderStyledLiveUpdate(update)
+				updatesList = append(updatesList, updateLine)
+			}
+			content.WriteString(strings.Join(updatesList, "\n"))
+		}
+	}
+
+	return content.String()
+}
+
+// RenderMatchDetailsPanelWithViewport renders the right panel with viewport scrolling.
+// The header (teams + score) stays fixed, while the content below scrolls.
+func RenderMatchDetailsPanelWithViewport(width, height int, details *api.MatchDetails, liveUpdates []string, sp spinner.Model, loading bool, pollingSpinner *RandomCharSpinner, isPolling bool, viewportView string, showTitle bool) string {
+	neonDim := lipgloss.Color("244")
+
+	// Details panel - no border, just padding for clean look
+	detailsPanelStyle := lipgloss.NewStyle().
+		Padding(0, 1)
+
+	if details == nil {
+		emptyMessage := lipgloss.NewStyle().
+			Foreground(neonDim).
+			Align(lipgloss.Center).
+			Width(width - 6).
+			PaddingTop(1).
+			Render(constants.EmptySelectMatch)
+
+		content := emptyMessage
+		if showTitle {
+			title := panelTitleStyle.Width(width - 6).Render(constants.PanelMinuteByMinute)
+			content = lipgloss.JoinVertical(
+				lipgloss.Left,
+				title,
+				emptyMessage,
+			)
+		}
+
+		return detailsPanelStyle.
+			Width(width).
+			Height(height).
+			MaxHeight(height).
+			Render(content)
+	}
+
+	// Render the static header
+	header := RenderMatchDetailsHeader(width, details)
+
+	// Combine header with viewport content
+	panelContent := lipgloss.JoinVertical(
+		lipgloss.Left,
+		header,
+		viewportView,
+	)
+
+	// Add title if needed
+	if showTitle {
+		title := panelTitleStyle.Width(width - 6).Render(constants.PanelMinuteByMinute)
+		panelContent = lipgloss.JoinVertical(
+			lipgloss.Left,
+			title,
+			panelContent,
+		)
+	}
+
+	panel := detailsPanelStyle.
+		Width(width).
+		Height(height).
+		MaxHeight(height).
+		Render(panelContent)
+
+	return panel
+}
+
 // renderMatchDetailsPanelWithPolling renders the right panel with polling spinner support.
 func renderMatchDetailsPanelWithPolling(width, height int, details *api.MatchDetails, liveUpdates []string, sp spinner.Model, loading bool, pollingSpinner *RandomCharSpinner, isPolling bool) string {
 	return renderMatchDetailsPanelFull(width, height, details, liveUpdates, sp, loading, true, pollingSpinner, isPolling)

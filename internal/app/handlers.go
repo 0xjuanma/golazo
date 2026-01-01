@@ -168,6 +168,9 @@ func (m model) loadMatchDetails(matchID int) (tea.Model, tea.Cmd) {
 	m.loading = true
 	m.liveViewLoading = true
 	m.polling = false // Reset polling state - this is a new match load, not a poll refresh
+	// Reset viewport for new match
+	m.detailsViewport.SetContent("")
+	m.detailsViewport.GotoTop()
 	return m, tea.Batch(m.spinner.Tick, ui.SpinnerTick(), fetchMatchDetails(m.fotmobClient, matchID, m.useMockData))
 }
 
@@ -177,6 +180,8 @@ func (m model) loadStatsMatchDetails(matchID int) (tea.Model, tea.Cmd) {
 	// Return cached details if available
 	if cached, ok := m.matchDetailsCache[matchID]; ok {
 		m.matchDetails = cached
+		m.updateDetailsViewportSize()
+		m.updateDetailsViewportContent()
 		return m, nil
 	}
 

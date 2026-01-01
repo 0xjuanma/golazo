@@ -85,6 +85,9 @@ func (m model) handleWindowSize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 		spinnerHeight = 3
 	)
 
+	// Update viewport size for match details panel
+	m.updateDetailsViewportSize()
+
 	switch m.currentView {
 	case viewLiveMatches:
 		leftWidth := max(m.width*35/100, 25)
@@ -116,6 +119,77 @@ func (m model) handleWindowSize(msg tea.WindowSizeMsg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+// updateDetailsViewportSize calculates and sets the viewport dimensions for the match details panel.
+func (m *model) updateDetailsViewportSize() {
+	if m.width <= 0 || m.height <= 0 {
+		return
+	}
+
+	// Calculate right panel dimensions (matches the render functions)
+	spinnerHeight := 3
+	availableHeight := m.height - spinnerHeight
+	if availableHeight < 10 {
+		availableHeight = 10
+	}
+
+	leftWidth := m.width * 35 / 100
+	if leftWidth < 25 {
+		leftWidth = 25
+	}
+	rightWidth := m.width - leftWidth - 1
+	if rightWidth < 35 {
+		rightWidth = 35
+	}
+
+	panelHeight := availableHeight - 2
+
+	// Header takes approximately 8 lines (status, teams, score block)
+	// Panel border/padding takes 4 lines, title takes 2 lines
+	headerHeight := 10
+	viewportHeight := panelHeight - headerHeight - 4
+	if viewportHeight < 3 {
+		viewportHeight = 3
+	}
+
+	viewportWidth := rightWidth - 6 // Account for panel padding
+	if viewportWidth < 10 {
+		viewportWidth = 10
+	}
+
+	m.detailsViewport.Width = viewportWidth
+	m.detailsViewport.Height = viewportHeight
+}
+
+// updateDetailsViewportContent updates the viewport content based on current match details.
+func (m *model) updateDetailsViewportContent() {
+	if m.matchDetails == nil {
+		m.detailsViewport.SetContent("")
+		return
+	}
+
+	// Calculate right panel width for content rendering
+	leftWidth := m.width * 35 / 100
+	if leftWidth < 25 {
+		leftWidth = 25
+	}
+	rightWidth := m.width - leftWidth - 1
+	if rightWidth < 35 {
+		rightWidth = 35
+	}
+
+	var content string
+	if m.currentView == viewStats || m.pendingSelection == 0 {
+		// Stats view - use stats scrollable content
+		content = ui.RenderStatsMatchDetailsScrollableContent(rightWidth, m.matchDetails)
+	} else {
+		// Live view - use live scrollable content
+		content = ui.RenderMatchDetailsScrollableContent(rightWidth, m.matchDetails, m.liveUpdates, m.pollingSpinner, m.polling, m.loading)
+	}
+
+	m.detailsViewport.SetContent(content)
+	m.detailsViewport.GotoTop()
 }
 
 // handleSpinnerTick updates the standard spinner animation.
@@ -151,6 +225,7 @@ func (m model) handleMatchDetails(msg matchDetailsMsg) (tea.Model, tea.Cmd) {
 	if msg.details == nil {
 		// Clear match details when API call fails so we don't show stale data
 		m.matchDetails = nil
+		m.detailsViewport.SetContent("")
 		m.loading = false
 		m.liveViewLoading = false
 		m.statsViewLoading = false
@@ -162,6 +237,8 @@ func (m model) handleMatchDetails(msg matchDetailsMsg) (tea.Model, tea.Cmd) {
 	// Cache for stats view (including during preload)
 	if m.currentView == viewStats || m.pendingSelection == 0 {
 		m.matchDetailsCache[msg.details.ID] = msg.details
+		m.updateDetailsViewportSize()
+		m.updateDetailsViewportContent()
 		m.loading = false
 		m.statsViewLoading = false
 		return m, nil
@@ -196,6 +273,10 @@ func (m model) handleMatchDetails(msg matchDetailsMsg) (tea.Model, tea.Cmd) {
 		// This ensures proper ordering (descending by minute) and uniqueness
 		m.liveUpdates = m.parser.ParseEvents(msg.details.Events, msg.details.HomeTeam, msg.details.AwayTeam)
 		m.lastEvents = msg.details.Events
+
+		// Update viewport with new content
+		m.updateDetailsViewportSize()
+		m.updateDetailsViewportContent()
 
 		// Continue polling if match is live
 		if msg.details.Status == api.MatchStatusLive {
@@ -253,6 +334,13 @@ func (m model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 		if m.currentView != viewMain {
 			return m.resetToMainView()
+		}
+	case "pgup", "pgdown":
+		// Handle PageUp/PageDown for viewport scrolling in live and stats views
+		if m.currentView == viewLiveMatches || m.currentView == viewStats {
+			var cmd tea.Cmd
+			m.detailsViewport, cmd = m.detailsViewport.Update(msg)
+			return m, cmd
 		}
 	}
 

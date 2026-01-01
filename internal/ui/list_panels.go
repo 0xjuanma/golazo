@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/bubbles/spinner"
+	"github.com/charmbracelet/bubbles/viewport"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -220,7 +221,8 @@ func renderDateRangeSelector(width int, selected int) string {
 // leaguesLoaded and totalLeagues show loading progress during progressive loading.
 // pollingSpinner and isPolling control the small polling indicator in the right panel.
 // upcomingMatches are displayed at the bottom of the left panel (fixed, not scrollable).
-func RenderMultiPanelViewWithList(width, height int, listModel list.Model, details *api.MatchDetails, liveUpdates []string, sp spinner.Model, loading bool, randomSpinner *RandomCharSpinner, viewLoading bool, leaguesLoaded int, totalLeagues int, pollingSpinner *RandomCharSpinner, isPolling bool, upcomingMatches []MatchDisplay) string {
+// detailsViewport provides scrolling for the match details content.
+func RenderMultiPanelViewWithList(width, height int, listModel list.Model, details *api.MatchDetails, liveUpdates []string, sp spinner.Model, loading bool, randomSpinner *RandomCharSpinner, viewLoading bool, leaguesLoaded int, totalLeagues int, pollingSpinner *RandomCharSpinner, isPolling bool, upcomingMatches []MatchDisplay, detailsViewport viewport.Model) string {
 	// Handle edge case: if width/height not set, use defaults
 	if width <= 0 {
 		width = 80
@@ -281,7 +283,8 @@ func RenderMultiPanelViewWithList(width, height int, listModel list.Model, detai
 	leftPanel := RenderLiveMatchesListPanel(leftWidth, panelHeight, listModel, upcomingMatches)
 
 	// Render right panel (match details with live updates) - shifted down
-	rightPanel := renderMatchDetailsPanelWithPolling(rightWidth, panelHeight, details, liveUpdates, sp, loading, pollingSpinner, isPolling)
+	// Use viewport for scrollable content
+	rightPanel := RenderMatchDetailsPanelWithViewport(rightWidth, panelHeight, details, liveUpdates, sp, loading, pollingSpinner, isPolling, detailsViewport.View(), true)
 
 	// Create separator with neon red accent
 	separatorStyle := neonSeparatorStyle.Height(panelHeight)
@@ -309,7 +312,8 @@ func RenderMultiPanelViewWithList(width, height int, listModel list.Model, detai
 // Rebuilt to match live view structure exactly: spinner at top, left panel (matches), right panel (details).
 // daysLoaded and totalDays show loading progress during progressive loading.
 // Note: Upcoming matches are now shown in the Live view instead.
-func RenderStatsViewWithList(width, height int, finishedList list.Model, details *api.MatchDetails, randomSpinner *RandomCharSpinner, viewLoading bool, dateRange int, daysLoaded int, totalDays int) string {
+// detailsViewport provides scrolling for the match details content.
+func RenderStatsViewWithList(width, height int, finishedList list.Model, details *api.MatchDetails, randomSpinner *RandomCharSpinner, viewLoading bool, dateRange int, daysLoaded int, totalDays int, detailsViewport viewport.Model) string {
 	// Handle edge case: if width/height not set, use defaults
 	if width <= 0 {
 		width = 80
@@ -369,8 +373,8 @@ func RenderStatsViewWithList(width, height int, finishedList list.Model, details
 	// Render left panel (finished matches list) - match live view structure
 	leftPanel := RenderStatsListPanel(leftWidth, panelHeight, finishedList, dateRange)
 
-	// Render right panel (match details) - use dedicated stats panel renderer
-	rightPanel := renderStatsMatchDetailsPanel(rightWidth, panelHeight, details)
+	// Render right panel (match details) - use viewport for scrollable content
+	rightPanel := renderStatsMatchDetailsPanelWithViewport(rightWidth, panelHeight, details, detailsViewport.View())
 
 	// Create separator with neon red accent
 	separatorStyle := neonSeparatorStyle.Height(panelHeight)
@@ -393,6 +397,246 @@ func RenderStatsViewWithList(width, height int, finishedList list.Model, details
 	)
 
 	return content
+}
+
+// RenderStatsMatchDetailsHeader renders only the static header portion of stats match details
+// (teams, score, and basic match info) that should not scroll.
+func RenderStatsMatchDetailsHeader(width int, details *api.MatchDetails) string {
+	if details == nil {
+		return ""
+	}
+
+	contentWidth := width - 6
+	var lines []string
+
+	// Team names
+	homeTeam := details.HomeTeam.ShortName
+	if homeTeam == "" {
+		homeTeam = details.HomeTeam.Name
+	}
+	awayTeam := details.AwayTeam.ShortName
+	if awayTeam == "" {
+		awayTeam = details.AwayTeam.Name
+	}
+
+	// Match Info header
+	lines = append(lines, neonHeaderStyle.Render("Match Info"))
+	lines = append(lines, "")
+
+	// Team A vs Team B (centered)
+	teamsDisplay := fmt.Sprintf("%s  vs  %s",
+		neonTeamStyle.Render(homeTeam),
+		neonTeamStyle.Render(awayTeam))
+	lines = append(lines, lipgloss.NewStyle().Width(contentWidth).Align(lipgloss.Center).Render(teamsDisplay))
+	lines = append(lines, "")
+
+	// Large score
+	if details.HomeScore != nil && details.AwayScore != nil {
+		largeScore := renderLargeScore(*details.HomeScore, *details.AwayScore, contentWidth)
+		lines = append(lines, largeScore)
+	} else {
+		vsText := lipgloss.NewStyle().
+			Foreground(lipgloss.Color("244")).
+			Width(contentWidth).
+			Align(lipgloss.Center).
+			Render("vs")
+		lines = append(lines, vsText)
+	}
+	lines = append(lines, "")
+
+	return lipgloss.JoinVertical(lipgloss.Left, lines...)
+}
+
+// RenderStatsMatchDetailsScrollableContent renders only the scrollable content portion
+// of stats match details (match context, goals, cards, statistics) without the header.
+func RenderStatsMatchDetailsScrollableContent(width int, details *api.MatchDetails) string {
+	if details == nil {
+		return ""
+	}
+
+	contentWidth := width - 6
+	var lines []string
+
+	// Team names for goal attribution
+	homeTeam := details.HomeTeam.ShortName
+	if homeTeam == "" {
+		homeTeam = details.HomeTeam.Name
+	}
+	awayTeam := details.AwayTeam.ShortName
+	if awayTeam == "" {
+		awayTeam = details.AwayTeam.Name
+	}
+
+	// Match context row
+	if details.League.Name != "" {
+		lines = append(lines, neonLabelStyle.Render("League:      ")+neonValueStyle.Render(details.League.Name))
+	}
+	if details.Venue != "" {
+		lines = append(lines, neonLabelStyle.Render("Venue:       ")+neonValueStyle.Render(truncateString(details.Venue, contentWidth-14)))
+	}
+	if details.MatchTime != nil {
+		lines = append(lines, neonLabelStyle.Render("Date:        ")+neonValueStyle.Render(details.MatchTime.Format("02 Jan 2006, 15:04")+" UTC"))
+	}
+	if details.Referee != "" {
+		lines = append(lines, neonLabelStyle.Render("Referee:     ")+neonValueStyle.Render(details.Referee))
+	}
+	if details.Attendance > 0 {
+		lines = append(lines, neonLabelStyle.Render("Attendance:  ")+neonValueStyle.Render(formatNumber(details.Attendance)))
+	}
+
+	// Goals Timeline
+	var homeGoals, awayGoals []api.MatchEvent
+	for _, event := range details.Events {
+		if event.Type == "goal" {
+			if event.Team.ID == details.HomeTeam.ID {
+				homeGoals = append(homeGoals, event)
+			} else {
+				awayGoals = append(awayGoals, event)
+			}
+		}
+	}
+
+	if len(homeGoals) > 0 || len(awayGoals) > 0 {
+		lines = append(lines, "")
+		lines = append(lines, neonHeaderStyle.Render("Goals"))
+
+		if len(homeGoals) > 0 {
+			lines = append(lines, neonTeamStyle.Render(homeTeam))
+			for _, g := range homeGoals {
+				goalLine := renderGoalLine(g, contentWidth-2)
+				lines = append(lines, "  "+goalLine)
+			}
+		}
+
+		if len(awayGoals) > 0 {
+			lines = append(lines, neonTeamStyle.Render(awayTeam))
+			for _, g := range awayGoals {
+				goalLine := renderGoalLine(g, contentWidth-2)
+				lines = append(lines, "  "+goalLine)
+			}
+		}
+	}
+
+	// Cards
+	var cardEvents []api.MatchEvent
+	for _, event := range details.Events {
+		if event.Type == "card" {
+			cardEvents = append(cardEvents, event)
+		}
+	}
+
+	if len(cardEvents) > 0 {
+		lines = append(lines, "")
+		lines = append(lines, neonHeaderStyle.Render("Cards"))
+
+		for _, card := range cardEvents {
+			player := "Unknown"
+			if card.Player != nil {
+				player = *card.Player
+			}
+			teamName := card.Team.ShortName
+			if teamName == "" {
+				teamName = card.Team.Name
+			}
+
+			cardSymbol := CardSymbolYellow
+			cardStyle := neonYellowCardStyle
+			if card.EventType != nil && (*card.EventType == "red" || *card.EventType == "redcard" || *card.EventType == "secondyellow") {
+				cardSymbol = CardSymbolRed
+				cardStyle = neonRedCardStyle
+			}
+
+			cardLine := fmt.Sprintf("  %s %s %s (%s)",
+				cardStyle.Render(cardSymbol),
+				neonScoreStyle.Render(fmt.Sprintf("%d'", card.Minute)),
+				neonValueStyle.Render(player),
+				neonDimStyle.Render(teamName))
+			lines = append(lines, cardLine)
+		}
+	}
+
+	// Statistics
+	if len(details.Statistics) > 0 {
+		lines = append(lines, "")
+		lines = append(lines, neonHeaderStyle.Render("Statistics"))
+
+		wantedStats := []struct {
+			patterns   []string
+			label      string
+			isProgress bool
+		}{
+			{[]string{"possession", "ball possession", "ballpossesion"}, "Possession", true},
+			{[]string{"total_shots", "total shots"}, "Total Shots", false},
+			{[]string{"shots_on_target", "on target", "shotsontarget"}, "Shots on Target", false},
+			{[]string{"accurate_passes", "accurate passes"}, "Accurate Passes", false},
+			{[]string{"fouls", "fouls committed"}, "Fouls", false},
+		}
+
+		centerStyle := lipgloss.NewStyle().Width(contentWidth).Align(lipgloss.Center)
+
+		for _, wanted := range wantedStats {
+			for _, stat := range details.Statistics {
+				keyLower := strings.ToLower(stat.Key)
+				labelLower := strings.ToLower(stat.Label)
+
+				matched := false
+				for _, pattern := range wanted.patterns {
+					if strings.Contains(keyLower, pattern) || strings.Contains(labelLower, pattern) {
+						matched = true
+						break
+					}
+				}
+
+				if matched {
+					lines = append(lines, "")
+					if wanted.isProgress {
+						statLine := renderStatProgressBar(wanted.label, stat.HomeValue, stat.AwayValue, contentWidth, homeTeam, awayTeam)
+						lines = append(lines, centerStyle.Render(statLine))
+					} else {
+						statLine := renderStatComparison(wanted.label, stat.HomeValue, stat.AwayValue, contentWidth)
+						lines = append(lines, centerStyle.Render(statLine))
+					}
+					break
+				}
+			}
+		}
+	}
+
+	return lipgloss.JoinVertical(lipgloss.Left, lines...)
+}
+
+// renderStatsMatchDetailsPanelWithViewport renders the right panel for stats view with viewport scrolling.
+// The header (teams + score) stays fixed, while the content below scrolls.
+func renderStatsMatchDetailsPanelWithViewport(width, height int, details *api.MatchDetails, viewportView string) string {
+	if details == nil {
+		emptyMessage := neonDimStyle.
+			Align(lipgloss.Center).
+			Width(width - 6).
+			PaddingTop(height / 4).
+			Render("Select a match to view details")
+
+		return neonPanelCyanStyle.
+			Width(width).
+			Height(height).
+			MaxHeight(height).
+			Render(emptyMessage)
+	}
+
+	// Render static header
+	header := RenderStatsMatchDetailsHeader(width, details)
+
+	// Combine header with viewport content
+	content := lipgloss.JoinVertical(
+		lipgloss.Left,
+		header,
+		viewportView,
+	)
+
+	return neonPanelCyanStyle.
+		Width(width).
+		Height(height).
+		MaxHeight(height).
+		Render(content)
 }
 
 // renderStatsMatchDetailsPanel renders the right panel for stats view with match details.

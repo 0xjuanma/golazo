@@ -642,6 +642,7 @@ func renderStatsMatchDetailsPanelWithViewport(width, height int, details *api.Ma
 // renderStatsMatchDetailsPanel renders the right panel for stats view with match details.
 // Uses Neon design with Golazo red/cyan theme.
 // Displays expanded match information including statistics, lineups, and more.
+// This is now a convenience wrapper that combines header and scrollable content.
 func renderStatsMatchDetailsPanel(width, height int, details *api.MatchDetails) string {
 	if details == nil {
 		emptyMessage := neonDimStyle.
@@ -657,196 +658,14 @@ func renderStatsMatchDetailsPanel(width, height int, details *api.MatchDetails) 
 			Render(emptyMessage)
 	}
 
-	contentWidth := width - 6 // Account for border padding
-	var lines []string
-
-	// Team names
-	homeTeam := details.HomeTeam.ShortName
-	if homeTeam == "" {
-		homeTeam = details.HomeTeam.Name
-	}
-	awayTeam := details.AwayTeam.ShortName
-	if awayTeam == "" {
-		awayTeam = details.AwayTeam.Name
-	}
-
-	// ═══════════════════════════════════════════════
-	// MATCH HEADER
-	// ═══════════════════════════════════════════════
-	lines = append(lines, neonHeaderStyle.Render("Match Info"))
-	lines = append(lines, "")
-
-	// Line 1: Team A vs Team B (centered)
-	teamsDisplay := fmt.Sprintf("%s  vs  %s",
-		neonTeamStyle.Render(homeTeam),
-		neonTeamStyle.Render(awayTeam))
-	lines = append(lines, lipgloss.NewStyle().Width(contentWidth).Align(lipgloss.Center).Render(teamsDisplay))
-	lines = append(lines, "")
-
-	// Line 2: Large score (like live view)
-	if details.HomeScore != nil && details.AwayScore != nil {
-		largeScore := renderLargeScore(*details.HomeScore, *details.AwayScore, contentWidth)
-		lines = append(lines, largeScore)
-	} else {
-		vsText := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("244")).
-			Width(contentWidth).
-			Align(lipgloss.Center).
-			Render("vs")
-		lines = append(lines, vsText)
-	}
-	lines = append(lines, "")
-
-	// Match context row
-	if details.League.Name != "" {
-		lines = append(lines, neonLabelStyle.Render("League:      ")+neonValueStyle.Render(details.League.Name))
-	}
-	if details.Venue != "" {
-		lines = append(lines, neonLabelStyle.Render("Venue:       ")+neonValueStyle.Render(truncateString(details.Venue, contentWidth-14)))
-	}
-	if details.MatchTime != nil {
-		lines = append(lines, neonLabelStyle.Render("Date:        ")+neonValueStyle.Render(details.MatchTime.Format("02 Jan 2006, 15:04")+" UTC"))
-	}
-	if details.Referee != "" {
-		lines = append(lines, neonLabelStyle.Render("Referee:     ")+neonValueStyle.Render(details.Referee))
-	}
-	if details.Attendance > 0 {
-		lines = append(lines, neonLabelStyle.Render("Attendance:  ")+neonValueStyle.Render(formatNumber(details.Attendance)))
-	}
-
-	// ═══════════════════════════════════════════════
-	// GOALS TIMELINE
-	// ═══════════════════════════════════════════════
-	var homeGoals, awayGoals []api.MatchEvent
-	for _, event := range details.Events {
-		if event.Type == "goal" {
-			if event.Team.ID == details.HomeTeam.ID {
-				homeGoals = append(homeGoals, event)
-			} else {
-				awayGoals = append(awayGoals, event)
-			}
-		}
-	}
-
-	if len(homeGoals) > 0 || len(awayGoals) > 0 {
-		lines = append(lines, "")
-		lines = append(lines, neonHeaderStyle.Render("Goals"))
-
-		if len(homeGoals) > 0 {
-			lines = append(lines, neonTeamStyle.Render(homeTeam))
-			for _, g := range homeGoals {
-				goalLine := renderGoalLine(g, contentWidth-2)
-				lines = append(lines, "  "+goalLine)
-			}
-		}
-
-		if len(awayGoals) > 0 {
-			lines = append(lines, neonTeamStyle.Render(awayTeam))
-			for _, g := range awayGoals {
-				goalLine := renderGoalLine(g, contentWidth-2)
-				lines = append(lines, "  "+goalLine)
-			}
-		}
-	}
-
-	// ═══════════════════════════════════════════════
-	// CARDS - Detailed list with player, minute, team
-	// ═══════════════════════════════════════════════
-	var cardEvents []api.MatchEvent
-	for _, event := range details.Events {
-		if event.Type == "card" {
-			cardEvents = append(cardEvents, event)
-		}
-	}
-
-	if len(cardEvents) > 0 {
-		lines = append(lines, "")
-		lines = append(lines, neonHeaderStyle.Render("Cards"))
-
-		for _, card := range cardEvents {
-			player := "Unknown"
-			if card.Player != nil {
-				player = *card.Player
-			}
-			teamName := card.Team.ShortName
-			if teamName == "" {
-				teamName = card.Team.Name
-			}
-
-			// Determine card type and apply appropriate color (using shared styles)
-			cardSymbol := CardSymbolYellow
-			cardStyle := neonYellowCardStyle
-			if card.EventType != nil && (*card.EventType == "red" || *card.EventType == "redcard" || *card.EventType == "secondyellow") {
-				cardSymbol = CardSymbolRed
-				cardStyle = neonRedCardStyle
-			}
-
-			// Format: ▪ 28' PlayerName (Team)
-			cardLine := fmt.Sprintf("  %s %s %s (%s)",
-				cardStyle.Render(cardSymbol),
-				neonScoreStyle.Render(fmt.Sprintf("%d'", card.Minute)),
-				neonValueStyle.Render(player),
-				neonDimStyle.Render(teamName))
-			lines = append(lines, cardLine)
-		}
-	}
-
-	// ═══════════════════════════════════════════════
-	// MATCH STATISTICS (Visual Progress Bars)
-	// ═══════════════════════════════════════════════
-	if len(details.Statistics) > 0 {
-		lines = append(lines, "")
-		lines = append(lines, neonHeaderStyle.Render("Statistics"))
-
-		// Only show these 5 specific stats
-		wantedStats := []struct {
-			patterns   []string
-			label      string
-			isProgress bool // true = show as progress bar
-		}{
-			{[]string{"possession", "ball possession", "ballpossesion"}, "Possession", true},
-			{[]string{"total_shots", "total shots"}, "Total Shots", false},
-			{[]string{"shots_on_target", "on target", "shotsontarget"}, "Shots on Target", false},
-			{[]string{"accurate_passes", "accurate passes"}, "Accurate Passes", false},
-			{[]string{"fouls", "fouls committed"}, "Fouls", false},
-		}
-
-		// Style for centering stat blocks
-		centerStyle := lipgloss.NewStyle().Width(contentWidth).Align(lipgloss.Center)
-
-		for _, wanted := range wantedStats {
-			for _, stat := range details.Statistics {
-				keyLower := strings.ToLower(stat.Key)
-				labelLower := strings.ToLower(stat.Label)
-
-				matched := false
-				for _, pattern := range wanted.patterns {
-					if strings.Contains(keyLower, pattern) || strings.Contains(labelLower, pattern) {
-						matched = true
-						break
-					}
-				}
-
-				if matched {
-					// Add spacing before each stat
-					lines = append(lines, "")
-
-					if wanted.isProgress {
-						// Render as visual progress bar (centered)
-						statLine := renderStatProgressBar(wanted.label, stat.HomeValue, stat.AwayValue, contentWidth, homeTeam, awayTeam)
-						lines = append(lines, centerStyle.Render(statLine))
-					} else {
-						// Render as comparison bar (centered)
-						statLine := renderStatComparison(wanted.label, stat.HomeValue, stat.AwayValue, contentWidth)
-						lines = append(lines, centerStyle.Render(statLine))
-					}
-					break
-				}
-			}
-		}
-	}
-
-	content := lipgloss.JoinVertical(lipgloss.Left, lines...)
+	// Combine header and scrollable content
+	header := RenderStatsMatchDetailsHeader(width, details)
+	scrollableContent := RenderStatsMatchDetailsScrollableContent(width, details)
+	content := lipgloss.JoinVertical(
+		lipgloss.Left,
+		header,
+		scrollableContent,
+	)
 
 	return neonPanelCyanStyle.
 		Width(width).

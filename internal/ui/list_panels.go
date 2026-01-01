@@ -401,12 +401,13 @@ func RenderStatsViewWithList(width, height int, finishedList list.Model, details
 
 // RenderStatsMatchDetailsHeader renders only the static header portion of stats match details
 // (teams, score, and basic match info) that should not scroll.
+// Uses Neon design with Golazo red/cyan theme.
 func RenderStatsMatchDetailsHeader(width int, details *api.MatchDetails) string {
 	if details == nil {
 		return ""
 	}
 
-	contentWidth := width - 6
+	contentWidth := width - 6 // Account for border padding
 	var lines []string
 
 	// Team names
@@ -419,18 +420,20 @@ func RenderStatsMatchDetailsHeader(width int, details *api.MatchDetails) string 
 		awayTeam = details.AwayTeam.Name
 	}
 
-	// Match Info header
+	// ═══════════════════════════════════════════════
+	// MATCH HEADER
+	// ═══════════════════════════════════════════════
 	lines = append(lines, neonHeaderStyle.Render("Match Info"))
 	lines = append(lines, "")
 
-	// Team A vs Team B (centered)
+	// Line 1: Team A vs Team B (centered)
 	teamsDisplay := fmt.Sprintf("%s  vs  %s",
 		neonTeamStyle.Render(homeTeam),
 		neonTeamStyle.Render(awayTeam))
 	lines = append(lines, lipgloss.NewStyle().Width(contentWidth).Align(lipgloss.Center).Render(teamsDisplay))
 	lines = append(lines, "")
 
-	// Large score
+	// Line 2: Large score (like live view)
 	if details.HomeScore != nil && details.AwayScore != nil {
 		largeScore := renderLargeScore(*details.HomeScore, *details.AwayScore, contentWidth)
 		lines = append(lines, largeScore)
@@ -484,7 +487,9 @@ func RenderStatsMatchDetailsScrollableContent(width int, details *api.MatchDetai
 		lines = append(lines, neonLabelStyle.Render("Attendance:  ")+neonValueStyle.Render(formatNumber(details.Attendance)))
 	}
 
-	// Goals Timeline
+	// ═══════════════════════════════════════════════
+	// GOALS TIMELINE
+	// ═══════════════════════════════════════════════
 	var homeGoals, awayGoals []api.MatchEvent
 	for _, event := range details.Events {
 		if event.Type == "goal" {
@@ -517,7 +522,9 @@ func RenderStatsMatchDetailsScrollableContent(width int, details *api.MatchDetai
 		}
 	}
 
-	// Cards
+	// ═══════════════════════════════════════════════
+	// CARDS - Detailed list with player, minute, team
+	// ═══════════════════════════════════════════════
 	var cardEvents []api.MatchEvent
 	for _, event := range details.Events {
 		if event.Type == "card" {
@@ -539,6 +546,7 @@ func RenderStatsMatchDetailsScrollableContent(width int, details *api.MatchDetai
 				teamName = card.Team.Name
 			}
 
+			// Determine card type and apply appropriate color (using shared styles)
 			cardSymbol := CardSymbolYellow
 			cardStyle := neonYellowCardStyle
 			if card.EventType != nil && (*card.EventType == "red" || *card.EventType == "redcard" || *card.EventType == "secondyellow") {
@@ -546,6 +554,7 @@ func RenderStatsMatchDetailsScrollableContent(width int, details *api.MatchDetai
 				cardStyle = neonRedCardStyle
 			}
 
+			// Format: ▪ 28' PlayerName (Team)
 			cardLine := fmt.Sprintf("  %s %s %s (%s)",
 				cardStyle.Render(cardSymbol),
 				neonScoreStyle.Render(fmt.Sprintf("%d'", card.Minute)),
@@ -555,15 +564,18 @@ func RenderStatsMatchDetailsScrollableContent(width int, details *api.MatchDetai
 		}
 	}
 
-	// Statistics
+	// ═══════════════════════════════════════════════
+	// MATCH STATISTICS (Visual Progress Bars)
+	// ═══════════════════════════════════════════════
 	if len(details.Statistics) > 0 {
 		lines = append(lines, "")
 		lines = append(lines, neonHeaderStyle.Render("Statistics"))
 
+		// Only show these 5 specific stats
 		wantedStats := []struct {
 			patterns   []string
 			label      string
-			isProgress bool
+			isProgress bool // true = show as progress bar
 		}{
 			{[]string{"possession", "ball possession", "ballpossesion"}, "Possession", true},
 			{[]string{"total_shots", "total shots"}, "Total Shots", false},
@@ -572,6 +584,7 @@ func RenderStatsMatchDetailsScrollableContent(width int, details *api.MatchDetai
 			{[]string{"fouls", "fouls committed"}, "Fouls", false},
 		}
 
+		// Style for centering stat blocks
 		centerStyle := lipgloss.NewStyle().Width(contentWidth).Align(lipgloss.Center)
 
 		for _, wanted := range wantedStats {
@@ -588,11 +601,14 @@ func RenderStatsMatchDetailsScrollableContent(width int, details *api.MatchDetai
 				}
 
 				if matched {
+					// Add spacing before each stat
 					lines = append(lines, "")
 					if wanted.isProgress {
+						// Render as visual progress bar (centered)
 						statLine := renderStatProgressBar(wanted.label, stat.HomeValue, stat.AwayValue, contentWidth, homeTeam, awayTeam)
 						lines = append(lines, centerStyle.Render(statLine))
 					} else {
+						// Render as comparison bar (centered)
 						statLine := renderStatComparison(wanted.label, stat.HomeValue, stat.AwayValue, contentWidth)
 						lines = append(lines, centerStyle.Render(statLine))
 					}

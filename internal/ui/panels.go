@@ -253,6 +253,7 @@ func RenderMatchDetailsScrollableContent(width int, details *api.MatchDetails, l
 				}
 				teamName := card.Team.ShortName
 
+				// Determine card type and apply appropriate color (using shared styles)
 				cardSymbol := CardSymbolYellow
 				cardStyle := neonYellowCardStyle
 				if card.EventType != nil && *card.EventType == "red" {
@@ -260,6 +261,7 @@ func RenderMatchDetailsScrollableContent(width int, details *api.MatchDetails, l
 					cardStyle = neonRedCardStyle
 				}
 
+				// Format: ▪ 28' PlayerName (Team)
 				cardLine := lipgloss.JoinHorizontal(lipgloss.Left,
 					cardStyle.Render(cardSymbol),
 					lipgloss.NewStyle().Foreground(neonRed).Bold(true).Render(fmt.Sprintf(" %d' ", card.Minute)),
@@ -284,6 +286,7 @@ func RenderMatchDetailsScrollableContent(width int, details *api.MatchDetails, l
 		content.WriteString(eventsTitle)
 		content.WriteString("\n")
 
+		// Display match events (goals, cards, substitutions)
 		if len(details.Events) == 0 {
 			emptyEvents := lipgloss.NewStyle().
 				Foreground(neonDim).
@@ -291,6 +294,7 @@ func RenderMatchDetailsScrollableContent(width int, details *api.MatchDetails, l
 				Render("No events recorded")
 			content.WriteString(emptyEvents)
 		} else {
+			// Show events in chronological order (oldest first)
 			var eventsList []string
 			for _, event := range details.Events {
 				eventLine := formatMatchEventForDisplay(event, details.HomeTeam.ShortName, details.AwayTeam.ShortName)
@@ -299,12 +303,15 @@ func RenderMatchDetailsScrollableContent(width int, details *api.MatchDetails, l
 			content.WriteString(strings.Join(eventsList, "\n"))
 		}
 	} else {
-		// Live Updates section for live/upcoming matches
+		// Live Updates section for live/upcoming matches with neon styling
+		// Build title - show "Updating..." with spinner only during poll API calls
 		var titleText string
 		if isPolling && loading && pollingSpinner != nil {
+			// Poll API call in progress - show "Updating..." with spinner
 			pollingView := pollingSpinner.View()
 			titleText = "Updating...  " + pollingView
 		} else {
+			// Not polling or not loading - just show "Updates"
 			titleText = constants.PanelUpdates
 		}
 		updatesTitle := lipgloss.NewStyle().
@@ -319,6 +326,7 @@ func RenderMatchDetailsScrollableContent(width int, details *api.MatchDetails, l
 		content.WriteString(updatesTitle)
 		content.WriteString("\n")
 
+		// Display live updates (already sorted by minute descending - newest first)
 		if len(liveUpdates) == 0 && !loading && !isPolling {
 			emptyUpdates := lipgloss.NewStyle().
 				Foreground(neonDim).
@@ -326,6 +334,7 @@ func RenderMatchDetailsScrollableContent(width int, details *api.MatchDetails, l
 				Render(constants.EmptyNoUpdates)
 			content.WriteString(emptyUpdates)
 		} else if len(liveUpdates) > 0 {
+			// Events are already sorted descending by minute
 			var updatesList []string
 			for _, update := range liveUpdates {
 				updateLine := renderStyledLiveUpdate(update)

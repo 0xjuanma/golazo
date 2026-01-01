@@ -111,8 +111,8 @@ func (m model) handleLiveMatchesKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 // Uses client-side filtering from cached data - no new API calls needed!
 func (m model) handleStatsViewKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
-	case "h", "left", "l", "right":
-		// Cycle date range: 1 -> 3 -> 5 -> 1
+	case "l", "right":
+		// Cycle date range forward: 1 -> 3 -> 5 -> 1
 		switch m.statsDateRange {
 		case 1:
 			m.statsDateRange = 3
@@ -121,30 +121,41 @@ func (m model) handleStatsViewKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		default:
 			m.statsDateRange = 1
 		}
-
-		// If we have cached stats data, just filter client-side (instant!)
-		if m.statsData != nil {
-			m.matchDetails = nil
-			m.matchDetailsCache = make(map[int]*api.MatchDetails)
-			m.applyStatsDateFilter()
-			m.selected = 0
-
-			// Load details for first match if available
-			if len(m.matches) > 0 {
-				m.statsMatchesList.Select(0)
-				return m.loadStatsMatchDetails(m.matches[0].ID)
-			}
-			return m, nil
+	case "h", "left":
+		// Cycle date range backward: 1 -> 5 -> 3 -> 1
+		switch m.statsDateRange {
+		case 1:
+			m.statsDateRange = 5
+		case 5:
+			m.statsDateRange = 3
+		default:
+			m.statsDateRange = 1
 		}
-
-		// No cached data - need to fetch (shouldn't happen normally)
-		m.statsViewLoading = true
-		m.loading = true
-		m.statsDaysLoaded = 0
-		m.statsTotalDays = fotmob.StatsDataDays
-		return m, tea.Batch(m.spinner.Tick, ui.SpinnerTick(), fetchStatsDayData(m.fotmobClient, m.useMockData, 0, fotmob.StatsDataDays))
+	default:
+		return m, nil
 	}
-	return m, nil
+
+	// If we have cached stats data, just filter client-side (instant!)
+	if m.statsData != nil {
+		m.matchDetails = nil
+		m.matchDetailsCache = make(map[int]*api.MatchDetails)
+		m.applyStatsDateFilter()
+		m.selected = 0
+
+		// Load details for first match if available
+		if len(m.matches) > 0 {
+			m.statsMatchesList.Select(0)
+			return m.loadStatsMatchDetails(m.matches[0].ID)
+		}
+		return m, nil
+	}
+
+	// No cached data - need to fetch (shouldn't happen normally)
+	m.statsViewLoading = true
+	m.loading = true
+	m.statsDaysLoaded = 0
+	m.statsTotalDays = fotmob.StatsDataDays
+	return m, tea.Batch(m.spinner.Tick, ui.SpinnerTick(), fetchStatsDayData(m.fotmobClient, m.useMockData, 0, fotmob.StatsDataDays))
 }
 
 // loadMatchDetails loads match details for the live matches view.

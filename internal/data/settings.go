@@ -41,6 +41,9 @@ var AllSupportedLeagues = []LeagueInfo{
 	{ID: 66, Name: "Swiss Super League", Country: "Switzerland"},
 	{ID: 109, Name: "Austrian Bundesliga", Country: "Austria"},
 	{ID: 52, Name: "Ekstraklasa", Country: "Poland"},
+	// Ireland
+	{ID: 126, Name: "League of Ireland Premier Division", Country: "Ireland"},
+	{ID: 218, Name: "League of Ireland First Division", Country: "Ireland"},
 	// European Competitions
 	{ID: 42, Name: "UEFA Champions League", Country: "Europe"},
 	{ID: 9375, Name: "Women's UEFA Champions League", Country: "Europe"},

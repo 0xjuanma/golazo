@@ -373,7 +373,7 @@ func RenderStatsViewWithList(width, height int, finishedList list.Model, details
 	// Render left panel (finished matches list) - match live view structure
 	leftPanel := RenderStatsListPanel(leftWidth, panelHeight, finishedList, dateRange)
 
-	// Render right panel (match details) - use viewport for scrollable content
+	// Render right panel (match details) - use static header with scrollable viewport for stats
 	rightPanel := renderStatsMatchDetailsPanelWithViewport(rightWidth, panelHeight, details, detailsViewport.View())
 
 	// Create separator with neon red accent
@@ -625,17 +625,7 @@ func RenderStatsMatchDetailsScrollableContent(width int, details *api.MatchDetai
 // The header (teams + score) stays fixed, while the content below scrolls.
 func renderStatsMatchDetailsPanelWithViewport(width, height int, details *api.MatchDetails, viewportView string) string {
 	if details == nil {
-		emptyMessage := neonDimStyle.
-			Align(lipgloss.Center).
-			Width(width - 6).
-			PaddingTop(height / 4).
-			Render("Select a match to view details")
-
-		return neonPanelCyanStyle.
-			Width(width).
-			Height(height).
-			MaxHeight(height).
-			Render(emptyMessage)
+		return renderNoMatchesMessage(width, height)
 	}
 
 	// Render static header
@@ -661,17 +651,7 @@ func renderStatsMatchDetailsPanelWithViewport(width, height int, details *api.Ma
 // This is now a convenience wrapper that combines header and scrollable content.
 func renderStatsMatchDetailsPanel(width, height int, details *api.MatchDetails) string {
 	if details == nil {
-		emptyMessage := neonDimStyle.
-			Align(lipgloss.Center).
-			Width(width - 6).
-			PaddingTop(height / 4).
-			Render("Select a match to view details")
-
-		return neonPanelCyanStyle.
-			Width(width).
-			Height(height).
-			MaxHeight(height).
-			Render(emptyMessage)
+		return renderNoMatchesMessage(width, height)
 	}
 
 	// Combine header and scrollable content
@@ -694,6 +674,21 @@ func renderStatsMatchDetailsPanel(width, height int, details *api.MatchDetails) 
 // for use by debug scripts. Renders match details in the Golazo stats view style.
 func RenderMatchDetailsPanel(width, height int, details *api.MatchDetails) string {
 	return renderStatsMatchDetailsPanel(width, height, details)
+}
+
+// renderNoMatchesMessage renders a centered message indicating no matches are available.
+func renderNoMatchesMessage(width, height int) string {
+	emptyMessage := neonDimStyle.
+		Align(lipgloss.Center).
+		Width(width - 6).
+		PaddingTop(height / 4).
+		Render("Select a match to view details")
+
+	return neonPanelCyanStyle.
+		Width(width).
+		Height(height).
+		MaxHeight(height).
+		Render(emptyMessage)
 }
 
 // renderGoalLine renders a single goal with scorer, minute, and assist

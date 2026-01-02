@@ -24,6 +24,7 @@ func (m model) View() string {
 			m.pollingSpinner,
 			m.polling,
 			m.liveUpcomingMatches,
+			m.detailsViewport,
 		)
 
 	case viewStats:
@@ -38,6 +39,7 @@ func (m model) View() string {
 			m.statsDateRange,
 			m.statsDaysLoaded,
 			m.statsTotalDays,
+			m.detailsViewport,
 		)
 
 	case viewSettings:

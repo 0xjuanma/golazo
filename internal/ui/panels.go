@@ -15,111 +15,65 @@ var (
 	// Panel styles - Neon design with thick red borders
 	panelStyle = lipgloss.NewStyle().
 			Border(lipgloss.NormalBorder()).
-			BorderForeground(lipgloss.Color("196")). // neon red
+			BorderForeground(neonRed).
 			Padding(0, 1)
 
 	// Header style - Neon with red accent
 	panelTitleStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("196")). // neon red
+			Foreground(neonRed).
 			Bold(true).
 			PaddingBottom(0).
 			BorderBottom(true).
 			BorderStyle(lipgloss.NormalBorder()).
-			BorderForeground(lipgloss.Color("239")). // dark dim
+			BorderForeground(neonDarkDim).
 			MarginBottom(0)
 
 	// Selection styling - Neon with red highlight
 	matchListItemStyle = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("255")). // neon white
+				Foreground(neonWhite).
 				Padding(0, 1)
 
 	matchListItemSelectedStyle = lipgloss.NewStyle().
-					Foreground(lipgloss.Color("196")). // neon red
+					Foreground(neonRed).
 					Bold(true).
 					Padding(0, 1)
 
 	// Match details styles - Neon typography
 	matchTitleStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("255")). // neon white
+			Foreground(neonWhite).
 			Bold(true).
 			MarginBottom(0)
 
 	matchScoreStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("196")). // neon red for scores
+			Foreground(neonRed). // neon red for scores
 			Bold(true).
 			Margin(0, 0).
-			Background(lipgloss.Color("0")).
+			Background(neonBlack).
 			Padding(0, 0)
 
 	matchStatusStyle = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("196")). // neon red for live
+				Foreground(neonRed). // neon red for live
 				Bold(true)
 
 	// Live update styles - Neon
 	liveUpdateStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("255")). // neon white
+			Foreground(neonWhite).
 			Padding(0, 0)
 
 	spinnerStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("51")) // neon cyan
+			Foreground(neonCyan)
 )
 
-// renderMatchDetailsPanel renders the right panel with match details and live updates.
-func renderMatchDetailsPanel(width, height int, details *api.MatchDetails, liveUpdates []string, sp spinner.Model, loading bool) string {
-	return renderMatchDetailsPanelFull(width, height, details, liveUpdates, sp, loading, true, nil, false)
-}
-
-// renderMatchDetailsPanelWithPolling renders the right panel with polling spinner support.
-func renderMatchDetailsPanelWithPolling(width, height int, details *api.MatchDetails, liveUpdates []string, sp spinner.Model, loading bool, pollingSpinner *RandomCharSpinner, isPolling bool) string {
-	return renderMatchDetailsPanelFull(width, height, details, liveUpdates, sp, loading, true, pollingSpinner, isPolling)
-}
-
-// renderMatchDetailsPanelFull renders the right panel with optional title and polling spinner.
-// Uses Neon design with Golazo red/cyan theme.
-func renderMatchDetailsPanelFull(width, height int, details *api.MatchDetails, liveUpdates []string, sp spinner.Model, loading bool, showTitle bool, pollingSpinner *RandomCharSpinner, isPolling bool) string {
-	// Neon color constants
-	neonRed := lipgloss.Color("196")
-	neonCyan := lipgloss.Color("51")
-	neonDim := lipgloss.Color("244")
-	neonWhite := lipgloss.Color("255")
-
-	// Details panel - no border, just padding for clean look
-	detailsPanelStyle := lipgloss.NewStyle().
-		Padding(0, 1)
-
+// RenderMatchDetailsHeader renders only the static header portion of match details
+// (status, teams, and score) that should not scroll.
+func RenderMatchDetailsHeader(width int, details *api.MatchDetails) string {
 	if details == nil {
-		emptyMessage := lipgloss.NewStyle().
-			Foreground(neonDim).
-			Align(lipgloss.Center).
-			Width(width - 6).
-			PaddingTop(1).
-			Render(constants.EmptySelectMatch)
-
-		content := emptyMessage
-		if showTitle {
-			title := panelTitleStyle.Width(width - 6).Render(constants.PanelMinuteByMinute)
-			content = lipgloss.JoinVertical(
-				lipgloss.Left,
-				title,
-				emptyMessage,
-			)
-		}
-
-		return detailsPanelStyle.
-			Width(width).
-			Height(height).
-			MaxHeight(height).
-			Render(content)
+		return ""
 	}
 
-	// Panel title (only if showTitle is true)
-	var title string
-	if showTitle {
-		title = panelTitleStyle.Width(width - 6).Render(constants.PanelMinuteByMinute)
-	}
+	contentWidth := width - 6
 
 	var content strings.Builder
-	contentWidth := width - 6
 
 	// 1. Status/Minute and League info (centered)
 	infoStyle := lipgloss.NewStyle().Foreground(neonDim)
@@ -172,7 +126,22 @@ func renderMatchDetailsPanelFull(width, height int, details *api.MatchDetails, l
 			Render("vs")
 		content.WriteString(vsText)
 	}
-	content.WriteString("\n\n")
+	content.WriteString("\n")
+
+	return content.String()
+}
+
+// RenderMatchDetailsScrollableContent renders only the scrollable content portion
+// of match details (events, goals, cards, etc.) without the header.
+func RenderMatchDetailsScrollableContent(width int, details *api.MatchDetails, liveUpdates []string, pollingSpinner *RandomCharSpinner, isPolling bool, loading bool) string {
+	if details == nil {
+		return ""
+	}
+
+	contentWidth := width - 6
+	infoStyle := lipgloss.NewStyle().Foreground(neonDim)
+
+	var content strings.Builder
 
 	// For finished matches, show detailed match information
 	// For live matches, show live updates
@@ -220,7 +189,7 @@ func renderMatchDetailsPanelFull(width, height int, details *api.MatchDetails, l
 				PaddingTop(0).
 				BorderBottom(true).
 				BorderStyle(lipgloss.NormalBorder()).
-				BorderForeground(lipgloss.Color("239")).
+				BorderForeground(neonDarkDim).
 				Width(width - 6).
 				Render("Goals")
 			content.WriteString(goalsTitle)
@@ -247,7 +216,7 @@ func renderMatchDetailsPanelFull(width, height int, details *api.MatchDetails, l
 			content.WriteString("\n")
 		}
 
-		// Cards section with neon styling - detailed list with player, minute, team
+		// Cards section with neon styling
 		var cardEvents []api.MatchEvent
 		for _, event := range details.Events {
 			if event.Type == "card" {
@@ -262,7 +231,7 @@ func renderMatchDetailsPanelFull(width, height int, details *api.MatchDetails, l
 				PaddingTop(0).
 				BorderBottom(true).
 				BorderStyle(lipgloss.NormalBorder()).
-				BorderForeground(lipgloss.Color("239")).
+				BorderForeground(neonDarkDim).
 				Width(width - 6).
 				Render("Cards")
 			content.WriteString(cardsTitle)
@@ -302,7 +271,7 @@ func renderMatchDetailsPanelFull(width, height int, details *api.MatchDetails, l
 			PaddingTop(0).
 			BorderBottom(true).
 			BorderStyle(lipgloss.NormalBorder()).
-			BorderForeground(lipgloss.Color("239")).
+			BorderForeground(neonDarkDim).
 			Width(width - 6).
 			Render("All Events")
 		content.WriteString(eventsTitle)
@@ -342,8 +311,8 @@ func renderMatchDetailsPanelFull(width, height int, details *api.MatchDetails, l
 			PaddingTop(0).
 			BorderBottom(true).
 			BorderStyle(lipgloss.NormalBorder()).
-			BorderForeground(lipgloss.Color("239")).
-			Width(width - 6).
+			BorderForeground(neonDarkDim).
+			Width(contentWidth).
 			Render(titleText)
 		content.WriteString(updatesTitle)
 		content.WriteString("\n")
@@ -366,13 +335,58 @@ func renderMatchDetailsPanelFull(width, height int, details *api.MatchDetails, l
 		}
 	}
 
-	// Combine title and content (only include title if showTitle is true)
-	panelContent := content.String()
-	if showTitle && title != "" {
+	return content.String()
+}
+
+// RenderMatchDetailsPanelWithViewport renders the right panel with viewport scrolling.
+// The header (teams + score) stays fixed, while the content below scrolls.
+func RenderMatchDetailsPanelWithViewport(width, height int, details *api.MatchDetails, liveUpdates []string, sp spinner.Model, loading bool, pollingSpinner *RandomCharSpinner, isPolling bool, viewportView string, showTitle bool) string {
+	// Details panel - no border, just padding for clean look
+	detailsPanelStyle := lipgloss.NewStyle().
+		Padding(0, 1)
+
+	if details == nil {
+		emptyMessage := lipgloss.NewStyle().
+			Foreground(neonDim).
+			Align(lipgloss.Center).
+			Width(width - 6).
+			PaddingTop(1).
+			Render(constants.EmptySelectMatch)
+
+		content := emptyMessage
+		if showTitle {
+			title := panelTitleStyle.Width(width - 6).Render(constants.PanelMinuteByMinute)
+			content = lipgloss.JoinVertical(
+				lipgloss.Left,
+				title,
+				emptyMessage,
+			)
+		}
+
+		return detailsPanelStyle.
+			Width(width).
+			Height(height).
+			MaxHeight(height).
+			Render(content)
+	}
+
+	// Render the static header
+	header := RenderMatchDetailsHeader(width, details)
+
+	// Combine header with viewport content
+	panelContent := lipgloss.JoinVertical(
+		lipgloss.Left,
+		header,
+		viewportView,
+	)
+
+	// Add title if needed
+	if showTitle {
+		title := panelTitleStyle.Width(width - 6).Render(constants.PanelMinuteByMinute)
 		panelContent = lipgloss.JoinVertical(
 			lipgloss.Left,
 			title,
-			content.String(),
+			panelContent,
 		)
 	}
 
@@ -400,16 +414,10 @@ func renderStyledLiveUpdate(update string) string {
 	symbol := string(runes[0])
 	rest := string(runes[1:])
 
-	// Neon colors matching theme
-	neonRed := lipgloss.Color("196")
-	neonDim := lipgloss.Color("244")
-	neonWhite := lipgloss.Color("255")
-
 	switch symbol {
 	case "●": // Goal - gradient on [GOAL] label, white text for rest
 		return renderGoalWithGradient(update)
 	case "▪": // Yellow card - yellow up to [CARD], white for rest
-		neonYellow := lipgloss.Color("226") // Bright yellow
 		return renderCardWithColor(update, neonYellow)
 	case "■": // Red card - red up to [CARD], white for rest
 		return renderCardWithColor(update, neonRed)
@@ -430,11 +438,6 @@ func renderStyledLiveUpdate(update string) string {
 // Red → arrow = player going OUT (leaving the pitch)
 // Format: ↔ 45' [SUB] {OUT}PlayerOut {IN}PlayerIn - Team
 func renderSubstitutionWithColors(update string) string {
-	neonRed := lipgloss.Color("196")
-	neonCyan := lipgloss.Color("51")
-	neonDim := lipgloss.Color("244")
-	neonWhite := lipgloss.Color("255")
-
 	dimStyle := lipgloss.NewStyle().Foreground(neonDim)
 	whiteStyle := lipgloss.NewStyle().Foreground(neonWhite)
 	outStyle := lipgloss.NewStyle().Foreground(neonRed) // Red = going OUT
@@ -475,7 +478,6 @@ func renderSubstitutionWithColors(update string) string {
 // renderCardWithColor renders a card event with color on symbol, time, and [CARD] label.
 // The rest of the text (player, team) is rendered in white.
 func renderCardWithColor(update string, color lipgloss.Color) string {
-	neonWhite := lipgloss.Color("255")
 	colorStyle := lipgloss.NewStyle().Foreground(color).Bold(true)
 	whiteStyle := lipgloss.NewStyle().Foreground(neonWhite)
 
@@ -501,7 +503,6 @@ func renderGoalWithGradient(update string) string {
 	startColor, _ := colorful.Hex(constants.GradientStartColor) // Cyan
 	endColor, _ := colorful.Hex(constants.GradientEndColor)     // Red
 
-	neonWhite := lipgloss.Color("255")
 	whiteStyle := lipgloss.NewStyle().Foreground(neonWhite)
 
 	// Find [GOAL] in the string and apply gradient to it
@@ -667,7 +668,6 @@ func renderLargeScore(homeScore, awayScore int, width int) string {
 
 	// Build 3-line score display
 	var lines []string
-	neonRed := lipgloss.Color("196")
 	scoreStyle := lipgloss.NewStyle().Foreground(neonRed).Bold(true)
 
 	for i := 0; i < 3; i++ {

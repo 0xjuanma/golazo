@@ -15,6 +15,7 @@ const (
 
 var (
 	// Neon color palette - Golazo brand
+	neonBlack   = lipgloss.Color("0")   // Blackest black
 	neonRed     = lipgloss.Color("196") // Bright red
 	neonCyan    = lipgloss.Color("51")  // Electric cyan
 	neonYellow  = lipgloss.Color("226") // Bright yellow for cards
@@ -22,6 +23,7 @@ var (
 	neonDark    = lipgloss.Color("236") // Dark background
 	neonDim     = lipgloss.Color("244") // Gray dim text
 	neonDarkDim = lipgloss.Color("239") // Slightly lighter dark
+	neonGray    = lipgloss.Color("244") // Gray
 
 	// Card styles - reusable across all views
 	neonYellowCardStyle = lipgloss.NewStyle().Foreground(neonYellow).Bold(true)

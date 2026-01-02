@@ -7,15 +7,20 @@ import (
 )
 
 // MockFinishedMatches returns finished matches for the stats view.
-// These are realistic matches from recent fixtures.
+// 6 matches from preferred leagues: Premier League, La Liga, Champions League
 func MockFinishedMatches() []api.Match {
 	now := time.Now()
 
 	return []api.Match{
+		// ═══════════════════════════════════════════════
+		// PREMIER LEAGUE (2 matches)
+		// ═══════════════════════════════════════════════
+
+		// Match 1: Man City 2-1 Arsenal (2 days ago)
 		{
 			ID: 1001,
 			League: api.League{
-				ID:   39,
+				ID:   47,
 				Name: "Premier League",
 			},
 			HomeTeam: api.Team{
@@ -34,10 +39,40 @@ func MockFinishedMatches() []api.Match {
 			MatchTime: timePtr(now.AddDate(0, 0, -2)),
 			Round:     "Matchday 16",
 		},
+
+		// Match 2: Man Utd 0-3 Liverpool (3 days ago)
 		{
 			ID: 1002,
 			League: api.League{
-				ID:   140,
+				ID:   47,
+				Name: "Premier League",
+			},
+			HomeTeam: api.Team{
+				ID:        33,
+				Name:      "Manchester United",
+				ShortName: "Man Utd",
+			},
+			AwayTeam: api.Team{
+				ID:        40,
+				Name:      "Liverpool",
+				ShortName: "Liverpool",
+			},
+			Status:    api.MatchStatusFinished,
+			HomeScore: intPtr(0),
+			AwayScore: intPtr(3),
+			MatchTime: timePtr(now.AddDate(0, 0, -3)),
+			Round:     "Matchday 15",
+		},
+
+		// ═══════════════════════════════════════════════
+		// LA LIGA (2 matches)
+		// ═══════════════════════════════════════════════
+
+		// Match 3: Real Madrid 3-2 Barcelona - El Clasico (1 day ago)
+		{
+			ID: 1003,
+			League: api.League{
+				ID:   87,
 				Name: "La Liga",
 			},
 			HomeTeam: api.Team{
@@ -56,55 +91,41 @@ func MockFinishedMatches() []api.Match {
 			MatchTime: timePtr(now.AddDate(0, 0, -1)),
 			Round:     "Matchday 17",
 		},
-		{
-			ID: 1003,
-			League: api.League{
-				ID:   78,
-				Name: "Bundesliga",
-			},
-			HomeTeam: api.Team{
-				ID:        157,
-				Name:      "Bayern Munich",
-				ShortName: "Bayern",
-			},
-			AwayTeam: api.Team{
-				ID:        165,
-				Name:      "Borussia Dortmund",
-				ShortName: "Dortmund",
-			},
-			Status:    api.MatchStatusFinished,
-			HomeScore: intPtr(4),
-			AwayScore: intPtr(0),
-			MatchTime: timePtr(now.AddDate(0, 0, -3)),
-			Round:     "Matchday 14",
-		},
+
+		// Match 4: Atletico 1-1 Sevilla (4 days ago)
 		{
 			ID: 1004,
 			League: api.League{
-				ID:   135,
-				Name: "Serie A",
+				ID:   87,
+				Name: "La Liga",
 			},
 			HomeTeam: api.Team{
-				ID:        489,
-				Name:      "AC Milan",
-				ShortName: "AC Milan",
+				ID:        531,
+				Name:      "Atletico Madrid",
+				ShortName: "Atletico",
 			},
 			AwayTeam: api.Team{
-				ID:        108,
-				Name:      "Inter Milan",
-				ShortName: "Inter",
+				ID:        536,
+				Name:      "Sevilla",
+				ShortName: "Sevilla",
 			},
 			Status:    api.MatchStatusFinished,
 			HomeScore: intPtr(1),
-			AwayScore: intPtr(0),
+			AwayScore: intPtr(1),
 			MatchTime: timePtr(now.AddDate(0, 0, -4)),
-			Round:     "Matchday 15",
+			Round:     "Matchday 16",
 		},
+
+		// ═══════════════════════════════════════════════
+		// UEFA CHAMPIONS LEAGUE (2 matches)
+		// ═══════════════════════════════════════════════
+
+		// Match 5: PSG 2-3 Bayern (5 days ago)
 		{
 			ID: 1005,
 			League: api.League{
-				ID:   61,
-				Name: "Ligue 1",
+				ID:   42,
+				Name: "UEFA Champions League",
 			},
 			HomeTeam: api.Team{
 				ID:        85,
@@ -112,59 +133,39 @@ func MockFinishedMatches() []api.Match {
 				ShortName: "PSG",
 			},
 			AwayTeam: api.Team{
-				ID:        516,
-				Name:      "Marseille",
-				ShortName: "Marseille",
-			},
-			Status:    api.MatchStatusFinished,
-			HomeScore: intPtr(2),
-			AwayScore: intPtr(2),
-			MatchTime: timePtr(now.AddDate(0, 0, -5)),
-			Round:     "Matchday 16",
-		},
-		{
-			ID: 1006,
-			League: api.League{
-				ID:   2,
-				Name: "UEFA Champions League",
-			},
-			HomeTeam: api.Team{
-				ID:        50,
-				Name:      "Manchester City",
-				ShortName: "Man City",
-			},
-			AwayTeam: api.Team{
 				ID:        157,
 				Name:      "Bayern Munich",
 				ShortName: "Bayern",
 			},
 			Status:    api.MatchStatusFinished,
-			HomeScore: intPtr(1),
-			AwayScore: intPtr(1),
-			MatchTime: timePtr(now.AddDate(0, 0, -6)),
-			Round:     "Group Stage - Matchday 5",
+			HomeScore: intPtr(2),
+			AwayScore: intPtr(3),
+			MatchTime: timePtr(now.AddDate(0, 0, -5)),
+			Round:     "Round of 16 - 1st Leg",
 		},
+
+		// Match 6: Inter 1-0 Dortmund (6 days ago)
 		{
-			ID: 1007,
+			ID: 1006,
 			League: api.League{
-				ID:   39,
-				Name: "Premier League",
+				ID:   42,
+				Name: "UEFA Champions League",
 			},
 			HomeTeam: api.Team{
-				ID:        33,
-				Name:      "Manchester United",
-				ShortName: "Man Utd",
+				ID:        108,
+				Name:      "Inter Milan",
+				ShortName: "Inter",
 			},
 			AwayTeam: api.Team{
-				ID:        40,
-				Name:      "Liverpool",
-				ShortName: "Liverpool",
+				ID:        165,
+				Name:      "Borussia Dortmund",
+				ShortName: "Dortmund",
 			},
 			Status:    api.MatchStatusFinished,
-			HomeScore: intPtr(0),
-			AwayScore: intPtr(3),
-			MatchTime: timePtr(now.AddDate(0, 0, -7)),
-			Round:     "Matchday 15",
+			HomeScore: intPtr(1),
+			AwayScore: intPtr(0),
+			MatchTime: timePtr(now.AddDate(0, 0, -6)),
+			Round:     "Round of 16 - 1st Leg",
 		},
 	}
 }

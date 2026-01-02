@@ -62,6 +62,9 @@ var AllSupportedLeagues = []LeagueInfo{
 	{ID: 112, Name: "Liga Profesional", Country: "Argentina"},
 	{ID: 14, Name: "Copa Libertadores", Country: "South America"},
 	{ID: 44, Name: "Copa America", Country: "South America"},
+	{ID: 274, Name: "Primera A", Country: "Colombia"},
+	{ID: 9175, Name: "Primera B", Country: "Colombia"},
+	{ID: 9490, Name: "Copa Colombia", Country: "Colombia"},
 	// North America
 	{ID: 130, Name: "MLS", Country: "USA"},
 	{ID: 9134, Name: "NWSL", Country: "USA"},

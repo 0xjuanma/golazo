@@ -7,14 +7,20 @@ import (
 )
 
 // MockLiveMatches returns live matches for the live matches view.
+// 5 matches total: 3 ongoing with events, 2 just finished (showing "all events")
 func MockLiveMatches() []api.Match {
 	now := time.Now()
 
 	return []api.Match{
+		// ═══════════════════════════════════════════════
+		// ONGOING MATCHES (3) - with live events
+		// ═══════════════════════════════════════════════
+
+		// Match 1: Premier League - Chelsea vs Tottenham (67')
 		{
 			ID: 2001,
 			League: api.League{
-				ID:   39,
+				ID:   47,
 				Name: "Premier League",
 			},
 			HomeTeam: api.Team{
@@ -34,10 +40,12 @@ func MockLiveMatches() []api.Match {
 			MatchTime: &now,
 			Round:     "Matchday 17",
 		},
+
+		// Match 2: La Liga - Real Madrid vs Atletico (34')
 		{
 			ID: 2002,
 			League: api.League{
-				ID:   140,
+				ID:   87,
 				Name: "La Liga",
 			},
 			HomeTeam: api.Team{
@@ -52,61 +60,17 @@ func MockLiveMatches() []api.Match {
 			},
 			Status:    api.MatchStatusLive,
 			HomeScore: intPtr(1),
-			AwayScore: intPtr(0),
+			AwayScore: intPtr(1),
 			LiveTime:  stringPtr("34'"),
 			MatchTime: &now,
 			Round:     "Matchday 18",
 		},
+
+		// Match 3: Champions League - Man City vs Bayern (56')
 		{
 			ID: 2003,
 			League: api.League{
-				ID:   78,
-				Name: "Bundesliga",
-			},
-			HomeTeam: api.Team{
-				ID:        173,
-				Name:      "RB Leipzig",
-				ShortName: "Leipzig",
-			},
-			AwayTeam: api.Team{
-				ID:        165,
-				Name:      "Borussia Dortmund",
-				ShortName: "Dortmund",
-			},
-			Status:    api.MatchStatusLive,
-			HomeScore: intPtr(0),
-			AwayScore: intPtr(0),
-			LiveTime:  stringPtr("23'"),
-			MatchTime: &now,
-			Round:     "Matchday 15",
-		},
-		{
-			ID: 2004,
-			League: api.League{
-				ID:   135,
-				Name: "Serie A",
-			},
-			HomeTeam: api.Team{
-				ID:        109,
-				Name:      "Juventus",
-				ShortName: "Juventus",
-			},
-			AwayTeam: api.Team{
-				ID:        489,
-				Name:      "AC Milan",
-				ShortName: "AC Milan",
-			},
-			Status:    api.MatchStatusLive,
-			HomeScore: intPtr(2),
-			AwayScore: intPtr(2),
-			LiveTime:  stringPtr("78'"),
-			MatchTime: &now,
-			Round:     "Matchday 16",
-		},
-		{
-			ID: 2005,
-			League: api.League{
-				ID:   2,
+				ID:   42,
 				Name: "UEFA Champions League",
 			},
 			HomeTeam: api.Team{
@@ -121,56 +85,64 @@ func MockLiveMatches() []api.Match {
 			},
 			Status:    api.MatchStatusLive,
 			HomeScore: intPtr(3),
-			AwayScore: intPtr(1),
+			AwayScore: intPtr(2),
 			LiveTime:  stringPtr("56'"),
 			MatchTime: &now,
 			Round:     "Round of 16",
 		},
+
+		// ═══════════════════════════════════════════════
+		// JUST FINISHED MATCHES (2) - for "all events" view
+		// ═══════════════════════════════════════════════
+
+		// Match 4: Premier League - Arsenal vs Liverpool (FT)
 		{
-			ID: 2006,
+			ID: 2004,
 			League: api.League{
-				ID:   39,
+				ID:   47,
 				Name: "Premier League",
 			},
 			HomeTeam: api.Team{
-				ID:        33,
-				Name:      "Manchester United",
-				ShortName: "Man Utd",
+				ID:        42,
+				Name:      "Arsenal",
+				ShortName: "Arsenal",
 			},
 			AwayTeam: api.Team{
 				ID:        40,
 				Name:      "Liverpool",
 				ShortName: "Liverpool",
 			},
-			Status:    api.MatchStatusLive,
-			HomeScore: intPtr(1),
-			AwayScore: intPtr(1),
-			LiveTime:  stringPtr("45'"),
+			Status:    api.MatchStatusFinished,
+			HomeScore: intPtr(2),
+			AwayScore: intPtr(3),
+			LiveTime:  stringPtr("FT"),
 			MatchTime: &now,
 			Round:     "Matchday 17",
 		},
+
+		// Match 5: La Liga - Barcelona vs Sevilla (FT)
 		{
-			ID: 2007,
+			ID: 2005,
 			League: api.League{
-				ID:   253,
-				Name: "MLS",
+				ID:   87,
+				Name: "La Liga",
 			},
 			HomeTeam: api.Team{
-				ID:        2285,
-				Name:      "LA Galaxy",
-				ShortName: "LA Galaxy",
+				ID:        529,
+				Name:      "Barcelona",
+				ShortName: "Barcelona",
 			},
 			AwayTeam: api.Team{
-				ID:        2286,
-				Name:      "Inter Miami",
-				ShortName: "Inter Miami",
+				ID:        536,
+				Name:      "Sevilla",
+				ShortName: "Sevilla",
 			},
-			Status:    api.MatchStatusLive,
-			HomeScore: intPtr(2),
-			AwayScore: intPtr(0),
-			LiveTime:  stringPtr("12'"),
+			Status:    api.MatchStatusFinished,
+			HomeScore: intPtr(4),
+			AwayScore: intPtr(1),
+			LiveTime:  stringPtr("FT"),
 			MatchTime: &now,
-			Round:     "Matchday 8",
+			Round:     "Matchday 18",
 		},
 	}
 }

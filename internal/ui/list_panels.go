@@ -471,42 +471,38 @@ func renderStatsMatchDetailsPanel(width, height int, details *api.MatchDetails) 
 	}
 
 	// ═══════════════════════════════════════════════
-	// GOALS TIMELINE
+	// GOALS TIMELINE (chronological with home/away alignment)
 	// ═══════════════════════════════════════════════
-	var homeGoals, awayGoals []api.MatchEvent
+	var goals []api.MatchEvent
 	for _, event := range details.Events {
 		if event.Type == "goal" {
-			if event.Team.ID == details.HomeTeam.ID {
-				homeGoals = append(homeGoals, event)
-			} else {
-				awayGoals = append(awayGoals, event)
-			}
+			goals = append(goals, event)
 		}
 	}
 
-	if len(homeGoals) > 0 || len(awayGoals) > 0 {
+	if len(goals) > 0 {
 		lines = append(lines, "")
 		lines = append(lines, neonHeaderStyle.Render("Goals"))
 
-		if len(homeGoals) > 0 {
-			lines = append(lines, neonTeamStyle.Render(homeTeam))
-			for _, g := range homeGoals {
-				goalLine := renderGoalLine(g, contentWidth-2)
-				lines = append(lines, "  "+goalLine)
+		for _, g := range goals {
+			isHome := g.Team.ID == details.HomeTeam.ID
+			// Build goal content with symbol+type adjacent to center time
+			player := "Unknown"
+			if g.Player != nil {
+				player = *g.Player
 			}
-		}
-
-		if len(awayGoals) > 0 {
-			lines = append(lines, neonTeamStyle.Render(awayTeam))
-			for _, g := range awayGoals {
-				goalLine := renderGoalLine(g, contentWidth-2)
-				lines = append(lines, "  "+goalLine)
+			playerDetails := neonValueStyle.Render(player)
+			if g.Assist != nil && *g.Assist != "" {
+				playerDetails += neonDimStyle.Render(fmt.Sprintf(" (%s)", *g.Assist))
 			}
+			goalContent := buildEventContent(playerDetails, "●", neonScoreStyle.Render("GOAL"), isHome)
+			goalLine := renderCenterAlignedEvent(fmt.Sprintf("%d'", g.Minute), goalContent, isHome, contentWidth)
+			lines = append(lines, goalLine)
 		}
 	}
 
 	// ═══════════════════════════════════════════════
-	// CARDS - Detailed list with player, minute, team
+	// CARDS - Detailed list with player, minute (aligned by team)
 	// ═══════════════════════════════════════════════
 	var cardEvents []api.MatchEvent
 	for _, event := range details.Events {
@@ -524,10 +520,7 @@ func renderStatsMatchDetailsPanel(width, height int, details *api.MatchDetails) 
 			if card.Player != nil {
 				player = *card.Player
 			}
-			teamName := card.Team.ShortName
-			if teamName == "" {
-				teamName = card.Team.Name
-			}
+			isHome := card.Team.ID == details.HomeTeam.ID
 
 			// Determine card type and apply appropriate color (using shared styles)
 			cardSymbol := CardSymbolYellow
@@ -537,12 +530,10 @@ func renderStatsMatchDetailsPanel(width, height int, details *api.MatchDetails) 
 				cardStyle = neonRedCardStyle
 			}
 
-			// Format: ▪ 28' PlayerName (Team)
-			cardLine := fmt.Sprintf("  %s %s %s (%s)",
-				cardStyle.Render(cardSymbol),
-				neonScoreStyle.Render(fmt.Sprintf("%d'", card.Minute)),
-				neonValueStyle.Render(player),
-				neonDimStyle.Render(teamName))
+			// Build card content with symbol+type adjacent to center time
+			playerDetails := neonValueStyle.Render(player)
+			cardContent := buildEventContent(playerDetails, cardSymbol, cardStyle.Render("CARD"), isHome)
+			cardLine := renderCenterAlignedEvent(fmt.Sprintf("%d'", card.Minute), cardContent, isHome, contentWidth)
 			lines = append(lines, cardLine)
 		}
 	}
@@ -615,26 +606,6 @@ func renderStatsMatchDetailsPanel(width, height int, details *api.MatchDetails) 
 // for use by debug scripts. Renders match details in the Golazo stats view style.
 func RenderMatchDetailsPanel(width, height int, details *api.MatchDetails) string {
 	return renderStatsMatchDetailsPanel(width, height, details)
-}
-
-// renderGoalLine renders a single goal with scorer, minute, and assist
-func renderGoalLine(g api.MatchEvent, maxWidth int) string {
-	player := "Unknown"
-	if g.Player != nil {
-		player = *g.Player
-	}
-
-	minuteStr := neonScoreStyle.Render(fmt.Sprintf("%d'", g.Minute))
-	playerStr := neonValueStyle.Render(truncateString(player, maxWidth-10))
-
-	line := fmt.Sprintf("%s %s", minuteStr, playerStr)
-
-	// Add assist if available
-	if g.Assist != nil && *g.Assist != "" {
-		line += neonDimStyle.Render(fmt.Sprintf(" (%s)", truncateString(*g.Assist, 15)))
-	}
-
-	return line
 }
 
 // Fixed bar width for consistent UI

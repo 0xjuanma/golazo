@@ -8,70 +8,73 @@ Golazo supports **42 leagues and competitions**. Customize your selection in Set
 
 | | League |
 |---|--------|
-| 🏴󠁧󠁢󠁥󠁮󠁧󠁿 | Premier League |
-| 🏴󠁧󠁢󠁥󠁮󠁧󠁿 | Women's Super League |
-| 🇪🇸 | La Liga |
-| 🇪🇸 | Liga F |
 | 🇩🇪 | Bundesliga |
 | 🇩🇪 | Frauen-Bundesliga |
-| 🇮🇹 | Serie A |
-| 🇮🇹 | Serie A Femminile |
+| 🇪🇸 | La Liga |
+| 🇪🇸 | Liga F |
 | 🇫🇷 | Ligue 1 |
 | 🇫🇷 | Première Ligue Féminine |
+| 🏴󠁧󠁢󠁥󠁮󠁧󠁿 | Premier League |
+| 🇮🇹 | Serie A |
+| 🇮🇹 | Serie A Femminile |
+| 🏴󠁧󠁢󠁥󠁮󠁧󠁿 | Women's Super League |
 
 ## Europe — Other Leagues
 
 | | League |
 |---|--------|
-| 🏴󠁧󠁢󠁥󠁮󠁧󠁿 | EFL Championship |
-| 🇳🇱 | Eredivisie |
-| 🇵🇹 | Primeira Liga |
+| 🇦🇹 | Austrian Bundesliga |
 | 🇧🇪 | Belgian Pro League |
+| 🏴󠁧󠁢󠁥󠁮󠁧󠁿 | EFL Championship |
+| 🇵🇱 | Ekstraklasa |
+| 🇳🇱 | Eredivisie |
+| 🇮🇪 | League of Ireland Premier Division |
+| 🇮🇪 | League of Ireland First Division |
+| 🇵🇹 | Primeira Liga |
 | 🏴󠁧󠁢󠁳󠁣󠁴󠁿 | Scottish Premiership |
 | 🇹🇷 | Süper Lig |
 | 🇨🇭 | Swiss Super League |
-| 🇦🇹 | Austrian Bundesliga |
-| 🇵🇱 | Ekstraklasa |
-| 🇮🇪 | League of Ireland Premier Division |
-| 🇮🇪 | League of Ireland First Division |
 
 ## European Competitions
 
 | | Competition |
 |---|-------------|
 | 🏆 | UEFA Champions League |
-| 🏆 | Women's UEFA Champions League |
-| 🏆 | UEFA Europa League |
 | 🇪🇺 | UEFA Euro |
+| 🏆 | UEFA Europa League |
 | 🇪🇺 | UEFA Women's Euro |
+| 🏆 | Women's UEFA Champions League |
 
 ## Domestic Cups
 
 | | Cup |
 |---|-----|
-| 🏴󠁧󠁢󠁥󠁮󠁧󠁿 | FA Cup |
-| 🇩🇪 | DFB Pokal |
-| 🇩🇪 | Women's DFB Pokal |
+| 🇨🇴 | Copa Colombia |
+| 🇪🇸 | Copa del Rey |
 | 🇮🇹 | Coppa Italia |
 | 🇫🇷 | Coupe de France |
-| 🇪🇸 | Copa del Rey |
+| 🇩🇪 | DFB Pokal |
+| 🏴󠁧󠁢󠁥󠁮󠁧󠁿 | FA Cup |
+| 🇩🇪 | Women's DFB Pokal |
 
 ## South America
 
 | | League/Competition |
 |---|-------------------|
 | 🇧🇷 | Brasileirão Série A |
-| 🇦🇷 | Liga Profesional |
-| 🏆 | Copa Libertadores |
 | 🏆 | Copa America |
+| 🏆 | Copa Libertadores |
+| 🇦🇷 | Liga Profesional |
+| 🇨🇴 | Primera A |
+| 🇨🇴 | Primera B |
 
 ## North America
 
 | | League |
 |---|--------|
+| 🇲🇽 | Liga MX |
 | 🇺🇸 | MLS |
 | 🇺🇸 | NWSL |
-| 🇲🇽 | Liga MX |
 
 ## Middle East
 
@@ -83,6 +86,6 @@ Golazo supports **42 leagues and competitions**. Customize your selection in Set
 
 | | Competition |
 |---|-------------|
+| 🌍 | Africa Cup of Nations |
 | 🌍 | FIFA World Cup |
 | 🌍 | Women's FIFA World Cup |
-| 🌍 | Africa Cup of Nations |

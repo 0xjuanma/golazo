@@ -1,6 +1,6 @@
 # Supported Leagues
 
-Golazo supports **40 leagues and competitions**. Customize your selection in Settings.
+Golazo supports **42 leagues and competitions**. Customize your selection in Settings.
 
 > **Missing your favourite league?** [Create an issue](https://github.com/0xjuanma/golazo/issues/new) and we'll add it!
 
@@ -28,6 +28,8 @@ Golazo supports **40 leagues and competitions**. Customize your selection in Set
 | 🏴󠁧󠁢󠁥󠁮󠁧󠁿 | EFL Championship |
 | 🇵🇱 | Ekstraklasa |
 | 🇳🇱 | Eredivisie |
+| 🇮🇪 | League of Ireland Premier Division |
+| 🇮🇪 | League of Ireland First Division |
 | 🇵🇹 | Primeira Liga |
 | 🏴󠁧󠁢󠁳󠁣󠁴󠁿 | Scottish Premiership |
 | 🇹🇷 | Süper Lig |

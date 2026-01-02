@@ -48,7 +48,7 @@ var (
 			Foreground(neonRed). // neon red for scores
 			Bold(true).
 			Margin(0, 0).
-			Background(lipgloss.Color("0")).
+			Background(neonBlack).
 			Padding(0, 0)
 
 	matchStatusStyle = lipgloss.NewStyle().
@@ -189,7 +189,7 @@ func RenderMatchDetailsScrollableContent(width int, details *api.MatchDetails, l
 				PaddingTop(0).
 				BorderBottom(true).
 				BorderStyle(lipgloss.NormalBorder()).
-				BorderForeground(lipgloss.Color("239")).
+				BorderForeground(neonDarkDim).
 				Width(width - 6).
 				Render("Goals")
 			content.WriteString(goalsTitle)
@@ -231,7 +231,7 @@ func RenderMatchDetailsScrollableContent(width int, details *api.MatchDetails, l
 				PaddingTop(0).
 				BorderBottom(true).
 				BorderStyle(lipgloss.NormalBorder()).
-				BorderForeground(lipgloss.Color("239")).
+				BorderForeground(neonDarkDim).
 				Width(width - 6).
 				Render("Cards")
 			content.WriteString(cardsTitle)
@@ -271,7 +271,7 @@ func RenderMatchDetailsScrollableContent(width int, details *api.MatchDetails, l
 			PaddingTop(0).
 			BorderBottom(true).
 			BorderStyle(lipgloss.NormalBorder()).
-			BorderForeground(lipgloss.Color("239")).
+			BorderForeground(neonDarkDim).
 			Width(width - 6).
 			Render("All Events")
 		content.WriteString(eventsTitle)
@@ -311,7 +311,7 @@ func RenderMatchDetailsScrollableContent(width int, details *api.MatchDetails, l
 			PaddingTop(0).
 			BorderBottom(true).
 			BorderStyle(lipgloss.NormalBorder()).
-			BorderForeground(lipgloss.Color("239")).
+			BorderForeground(neonDarkDim).
 			Width(contentWidth).
 			Render(titleText)
 		content.WriteString(updatesTitle)
@@ -668,7 +668,6 @@ func renderLargeScore(homeScore, awayScore int, width int) string {
 
 	// Build 3-line score display
 	var lines []string
-	neonRed := lipgloss.Color("196")
 	scoreStyle := lipgloss.NewStyle().Foreground(neonRed).Bold(true)
 
 	for i := 0; i < 3; i++ {

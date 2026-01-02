@@ -446,7 +446,7 @@ func RenderStatsMatchDetailsHeader(width int, details *api.MatchDetails) string 
 		lines = append(lines, largeScore)
 	} else {
 		vsText := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("244")).
+			Foreground(neonDim).
 			Width(contentWidth).
 			Align(lipgloss.Center).
 			Render("vs")
@@ -803,7 +803,8 @@ func renderStatComparison(label, homeVal, awayVal string, maxWidth int) string {
 	}
 	awayEmpty := halfBar - awayFilled
 	awayBar := strings.Repeat("▪", awayFilled) + strings.Repeat(" ", awayEmpty)
-	awayBarStyled := lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render(awayBar)
+	awayColor := lipgloss.Color("240")
+	awayBarStyled := lipgloss.NewStyle().Foreground(awayColor).Render(awayBar)
 
 	// Line 1: Label (centered via parent, no width constraint)
 	labelStyle := lipgloss.NewStyle().Foreground(neonDim)

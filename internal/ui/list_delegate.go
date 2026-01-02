@@ -7,11 +7,11 @@ import (
 
 // Neon colors used across delegates.
 var (
-	delegateNeonRed   = lipgloss.Color("196")
-	delegateNeonCyan  = lipgloss.Color("51")
-	delegateNeonWhite = lipgloss.Color("255")
-	delegateNeonGray  = lipgloss.Color("244")
-	delegateNeonDim   = lipgloss.Color("238")
+	delegateNeonRed   = neonRed
+	delegateNeonCyan  = neonCyan
+	delegateNeonWhite = neonWhite
+	delegateNeonGray  = lipgloss.Color("244") // neonDim
+	delegateNeonDim   = lipgloss.Color("238") // unique, but close to neonDarkDim
 )
 
 // NewMatchListDelegate creates a custom list delegate for match items.
@@ -22,13 +22,6 @@ func NewMatchListDelegate() list.DefaultDelegate {
 
 	// Set height to 3 lines: title (1) + description with KO time (2)
 	d.SetHeight(3)
-
-	// Neon colors
-	neonRed := lipgloss.Color("196")
-	neonCyan := lipgloss.Color("51")
-	neonWhite := lipgloss.Color("255")
-	neonGray := lipgloss.Color("244")
-	neonDim := lipgloss.Color("238")
 
 	// Selected items: Neon red title, cyan description, red left border
 	d.Styles.SelectedTitle = lipgloss.NewStyle().

@@ -145,10 +145,23 @@ func (m *model) updateDetailsViewportSize() {
 
 	panelHeight := availableHeight - 2
 
-	// Header takes approximately 8 lines (status, teams, score block)
-	// Panel border/padding takes 4 lines, title takes 2 lines
-	headerHeight := 10
-	viewportHeight := panelHeight - headerHeight - 4
+	// Header breakdown (both views have similar headers):
+	//   - "Match Info" or status line: 1
+	//   - blank line: 1
+	//   - teams line: 1
+	//   - blank line: 1
+	//   - large score (3 lines): 3
+	//   - blank line: 1
+	// Total: 8 lines
+	headerHeight := 8
+
+	// Live view has "Minute by Minute" title (2 lines), stats view has no title
+	titleHeight := 0
+	if m.currentView == viewLiveMatches || m.pendingSelection == 1 {
+		titleHeight = 2
+	}
+
+	viewportHeight := panelHeight - headerHeight - titleHeight
 	if viewportHeight < 3 {
 		viewportHeight = 3
 	}

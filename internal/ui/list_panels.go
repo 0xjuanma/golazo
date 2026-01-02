@@ -23,7 +23,14 @@ func RenderLiveMatchesListPanel(width, height int, listModel list.Model, upcomin
 
 	// Wrap list in panel with neon styling
 	title := neonPanelTitleStyle.Width(contentWidth).Render(constants.PanelLiveMatches)
-	listView := listModel.View()
+
+	// Check if list is empty - show custom message instead of list view to avoid duplicate "no items"
+	var listView string
+	if len(listModel.Items()) == 0 {
+		listView = neonEmptyStyle.Width(contentWidth).Render(constants.EmptyNoLiveMatches)
+	} else {
+		listView = listModel.View()
+	}
 
 	// Calculate available inner height (minus borders)
 	borderHeight := 2

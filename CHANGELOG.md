@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+
+## [0.9.0] - 2026-01-01
+
+### Added
 - **New Leagues** - Add Colombian division A & B leagues, Ireland Premier & First Division. (Thanks @jcmuller & @ryandeering)
 
 ### Changed

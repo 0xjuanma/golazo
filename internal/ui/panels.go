@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/0xjuanma/golazo/internal/api"
@@ -430,7 +431,7 @@ func renderMatchDetailsPanelFull(width, height int, details *api.MatchDetails, l
 			// Events are already sorted descending by minute
 			var updatesList []string
 			for _, update := range liveUpdates {
-				updateLine := renderStyledLiveUpdate(update, contentWidth)
+				updateLine := renderStyledLiveUpdate(update, contentWidth, details, goalLinks)
 				updatesList = append(updatesList, updateLine)
 			}
 			content.WriteString(strings.Join(updatesList, "\n"))
@@ -499,7 +500,7 @@ func extractMinuteFromUpdate(update string) (minute string, rest string) {
 // Uses minimal symbol styling: ● gradient for goals, ▪ cyan for yellow cards, ■ red for red cards,
 // ↔ dim for substitutions, · dim for other events.
 // Applies center-aligned timeline with time in middle, symbol+type adjacent to center.
-func renderStyledLiveUpdate(update string, contentWidth int) string {
+func renderStyledLiveUpdate(update string, contentWidth int, details *api.MatchDetails, goalLinks GoalLinksMap) string {
 	if len(update) == 0 {
 		return update
 	}
@@ -529,7 +530,21 @@ func renderStyledLiveUpdate(update string, contentWidth int) string {
 		playerDetails, _ := extractPlayerAndType(contentWithoutMinute, "[GOAL]")
 		styledType := applyGradientToText("GOAL", startColor, endColor)
 		styledPlayer := whiteStyle.Render(playerDetails)
-		styledContent = buildEventContent(styledPlayer, "", symbol, styledType, isHome)
+
+		// Check for replay link for live goals
+		replayIndicator := ""
+		if details != nil && goalLinks != nil {
+			// Extract minute from the update to look up replay URL
+			minuteStr := strings.TrimSuffix(minute, "'")
+			if minuteInt, err := strconv.Atoi(minuteStr); err == nil {
+				replayURL := goalLinks.GetReplayURL(details.ID, minuteInt)
+				if replayURL != "" {
+					replayIndicator = CreateGoalLinkDisplay("", replayURL)
+				}
+			}
+		}
+
+		styledContent = buildEventContent(styledPlayer, replayIndicator, symbol, styledType, isHome)
 	case "▪": // Yellow card
 		cardStyle := lipgloss.NewStyle().Foreground(neonYellow).Bold(true)
 		playerDetails, _ := extractPlayerAndType(contentWithoutMinute, "[CARD]")

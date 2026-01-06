@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+
+## [0.12.0] - 2026-01-05
+
+### Added
 - **Debug Mode** - New `--debug` CLI flag with automatic log rotation, UI indicators, and comprehensive API failure logging
 - **Version Update Banner** - Automatic version checking with banner notifications when new Golazo versions are available
 

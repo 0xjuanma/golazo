@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **Stale Cached Banner** – Resolved incorrect banner persistence when using stale cached versions
+- **Settings Filter Cursor Position** – Fixed filter cursor shift when filtering leagues in settings view by rendering checkbox independently
 
 ## [0.12.0] - 2026-01-05
 

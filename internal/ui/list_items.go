@@ -1,8 +1,6 @@
 package ui
 
 import (
-	"fmt"
-
 	"github.com/0xjuanma/golazo/internal/api"
 	"github.com/0xjuanma/golazo/internal/data"
 	"github.com/charmbracelet/bubbles/list"
@@ -22,11 +20,7 @@ type LeagueListItem struct {
 
 // Title returns the league name with selection indicator.
 func (l LeagueListItem) Title() string {
-	checkbox := "[ ]"
-	if l.Selected {
-		checkbox = "[x]"
-	}
-	return fmt.Sprintf("%s %s", checkbox, l.League.Name)
+	return l.League.Name
 }
 
 // Description returns the country.

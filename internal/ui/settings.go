@@ -237,7 +237,7 @@ func RenderSettingsView(width, height int, state *SettingsState, bannerType cons
 	// Render the tab bar
 	tabs := renderTabBar(state.Regions, state.CurrentRegion, settingsBoxWidth)
 
-	// Render the list and constrain its width
+	// Render the list
 	listContent := state.List.View()
 	listContainerStyle := lipgloss.NewStyle().Width(settingsBoxWidth)
 	listContent = listContainerStyle.Render(listContent)
@@ -258,7 +258,7 @@ func RenderSettingsView(width, height int, state *SettingsState, bannerType cons
 	helpStyle := neonDimStyle.Width(settingsBoxWidth).Align(lipgloss.Center)
 	help := helpStyle.Render(helpText)
 
-	// Combine content (minimal, no borders) - ensure all elements are consistently sized
+	// Combine content (minimal, no borders)
 	content := lipgloss.JoinVertical(
 		lipgloss.Left,
 		statusBanner,

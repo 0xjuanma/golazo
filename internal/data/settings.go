@@ -85,6 +85,10 @@ var AllSupportedLeagues = map[string][]LeagueInfo{
 		{ID: 112, Name: "Liga Profesional", Country: "Argentina"},
 		{ID: 274, Name: "Primera A", Country: "Colombia"},
 		{ID: 9125, Name: "Primera B", Country: "Colombia"},
+		{ID: 161, Name: "Primera Division", Country: "Uruguay"},
+		{ID: 273, Name: "Primera Division", Country: "Chile"},
+		{ID: 131, Name: "Liga 1", Country: "Peru"},
+		{ID: 246, Name: "Serie A", Country: "Ecuador"},
 		// North America
 		{ID: 130, Name: "MLS", Country: "USA"},
 		{ID: 9134, Name: "NWSL", Country: "USA"},

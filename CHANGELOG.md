@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **South American Leagues** - Added support for Chilean Primera Division, Peruvian Liga 1, Ecuadorian Serie A, and Uruguayan Primera Division
 
 ### Changed
 

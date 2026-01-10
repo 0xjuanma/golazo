@@ -713,13 +713,37 @@ func (m model) handleStatsDayData(msg statsDayDataMsg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-	// Accumulate finished matches (prepend older matches)
+	// Accumulate finished matches (deduplicate by match ID)
 	if len(msg.finished) > 0 {
-		m.statsData.AllFinished = append(m.statsData.AllFinished, msg.finished...)
+		// Build a set of existing IDs to avoid duplicates
+		existingIDs := make(map[int]bool)
+		for _, match := range m.statsData.AllFinished {
+			existingIDs[match.ID] = true
+		}
+
+		// Only add matches that aren't already in the list
+		for _, match := range msg.finished {
+			if !existingIDs[match.ID] {
+				m.statsData.AllFinished = append(m.statsData.AllFinished, match)
+				existingIDs[match.ID] = true
+			}
+		}
 
 		// Track today's finished separately
 		if msg.isToday {
-			m.statsData.TodayFinished = append(m.statsData.TodayFinished, msg.finished...)
+			// Reset existing IDs for today's finished
+			existingIDs = make(map[int]bool)
+			for _, match := range m.statsData.TodayFinished {
+				existingIDs[match.ID] = true
+			}
+
+			// Only add matches that aren't already in today's finished
+			for _, match := range msg.finished {
+				if !existingIDs[match.ID] {
+					m.statsData.TodayFinished = append(m.statsData.TodayFinished, match)
+					existingIDs[match.ID] = true
+				}
+			}
 		}
 	}
 

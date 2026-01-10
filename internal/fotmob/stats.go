@@ -42,9 +42,10 @@ func (c *Client) StatsData(ctx context.Context) (*StatsData, error) {
 	today := time.Now().UTC()
 	todayStr := today.Format("2006-01-02")
 
-	var allFinished []api.Match
-	var todayFinished []api.Match
-	var todayUpcoming []api.Match
+	// Use maps to deduplicate matches by ID
+	allFinishedMap := make(map[int]api.Match)
+	todayFinishedMap := make(map[int]api.Match)
+	todayUpcomingMap := make(map[int]api.Match)
 	var lastErr error
 	successCount := 0
 
@@ -71,17 +72,17 @@ func (c *Client) StatsData(ctx context.Context) (*StatsData, error) {
 		}
 		successCount++
 
-		// Process matches for this day
+		// Process matches for this day - deduplicate by match ID
 		for _, match := range matches {
 			if match.Status == api.MatchStatusFinished {
-				allFinished = append(allFinished, match)
+				allFinishedMap[match.ID] = match
 				// Also track today's finished separately
 				if isToday {
-					todayFinished = append(todayFinished, match)
+					todayFinishedMap[match.ID] = match
 				}
 			} else if match.Status == api.MatchStatusNotStarted && isToday {
 				// Only today has upcoming matches
-				todayUpcoming = append(todayUpcoming, match)
+				todayUpcomingMap[match.ID] = match
 			}
 		}
 	}
@@ -89,6 +90,22 @@ func (c *Client) StatsData(ctx context.Context) (*StatsData, error) {
 	// Return error only if all days failed
 	if successCount == 0 {
 		return nil, fmt.Errorf("failed to fetch matches for any date: %w", lastErr)
+	}
+
+	// Convert maps to slices
+	allFinished := make([]api.Match, 0, len(allFinishedMap))
+	for _, match := range allFinishedMap {
+		allFinished = append(allFinished, match)
+	}
+
+	todayFinished := make([]api.Match, 0, len(todayFinishedMap))
+	for _, match := range todayFinishedMap {
+		todayFinished = append(todayFinished, match)
+	}
+
+	todayUpcoming := make([]api.Match, 0, len(todayUpcomingMap))
+	for _, match := range todayUpcomingMap {
+		todayUpcoming = append(todayUpcoming, match)
 	}
 
 	return &StatsData{

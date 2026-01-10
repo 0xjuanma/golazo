@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 ### Fixed
+- **League IDs** - Corrected a few league IDs that were outdated
 
 ## [0.13.1] - 2026-01-08
 

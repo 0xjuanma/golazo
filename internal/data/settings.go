@@ -18,9 +18,12 @@ type LeagueInfo struct {
 
 // Region constants for organizing leagues
 const (
-	RegionEurope  = "Europe"
-	RegionAmerica = "Americas"
-	RegionGlobal  = "Global"
+	RegionEurope        = "Europe"
+	RegionAmerica       = "Americas"
+	RegionAsia          = "Asia"
+	RegionAfrica        = "Africa"
+	RegionOceania       = "Oceania"
+	RegionInternational = "International"
 )
 
 // AllSupportedLeagues contains all leagues that Golazo supports organized by region.
@@ -43,14 +46,32 @@ var AllSupportedLeagues = map[string][]LeagueInfo{
 		{ID: 67, Name: "Allsvenskan", Country: "Sweden"},
 		{ID: 38, Name: "Austrian Bundesliga", Country: "Austria"},
 		{ID: 40, Name: "Belgian First Division", Country: "Belgium"},
+		// England
 		{ID: 48, Name: "EFL Championship", Country: "England"},
 		{ID: 108, Name: "EFL League One", Country: "England"},
 		{ID: 109, Name: "EFL League Two", Country: "England"},
+		// France
+		{ID: 110, Name: "Ligue 2", Country: "France"},
+		{ID: 8970, Name: "National 1", Country: "France"},
+		// Germany
+		{ID: 146, Name: "2. Bundesliga", Country: "Germany"},
+		{ID: 208, Name: "3. Liga", Country: "Germany"},
+		// -------
 		{ID: 196, Name: "Ekstraklasa", Country: "Poland"},
+		// The Netherlands
 		{ID: 57, Name: "Eredivisie", Country: "Netherlands"},
-		{ID: 218, Name: "League of Ireland First Division", Country: "Ireland"},
+		{ID: 111, Name: "Eerste Divisie", Country: "Netherlands"},
+		// Republic of Ireland
 		{ID: 126, Name: "League of Ireland Premier Division", Country: "Ireland"},
-		{ID: 61, Name: "Primeira Liga", Country: "Portugal"},
+		{ID: 218, Name: "League of Ireland First Division", Country: "Ireland"},
+		// Portugal
+		{ID: 61, Name: "Liga Portugal", Country: "Portugal"},
+		{ID: 185, Name: "Liga Portugal 2", Country: "Portugal"},
+		{ID: 9112, Name: "Liga 3", Country: "Portugal"},
+		// Spain
+		{ID: 140, Name: "La Liga 2", Country: "Spain"},
+		{ID: 8968, Name: "Primera Federación", Country: "Spain"},
+		// -----
 		{ID: 64, Name: "Scottish Premiership", Country: "Scotland"},
 		{ID: 135, Name: "Super League 1", Country: "Greece"},
 		{ID: 46, Name: "Superligaen", Country: "Denmark"},
@@ -58,6 +79,8 @@ var AllSupportedLeagues = map[string][]LeagueInfo{
 		{ID: 69, Name: "Swiss Super League", Country: "Switzerland"},
 		{ID: 63, Name: "Russian Premier League", Country: "Russia"},
 		{ID: 441, Name: "Ukrainian Premier League", Country: "Ukraine"},
+		// Other Women's Leagues
+		{ID: 10449, Name: "Nacional Feminino", Country: "Portugal"},
 		// European Competitions
 		{ID: 42, Name: "UEFA Champions League", Country: "Europe"},
 		{ID: 10216, Name: "UEFA Conference League", Country: "Europe"},
@@ -66,51 +89,82 @@ var AllSupportedLeagues = map[string][]LeagueInfo{
 		{ID: 292, Name: "UEFA Women's Euro", Country: "Europe"},
 		{ID: 9375, Name: "Women's UEFA Champions League", Country: "Europe"},
 		// Domestic Cups
+		// Spain
 		{ID: 138, Name: "Copa del Rey", Country: "Spain"},
 		{ID: 139, Name: "Supercopa de España", Country: "Spain"},
+		// England
 		{ID: 132, Name: "FA Cup", Country: "England"},
+		// Germany
 		{ID: 209, Name: "DFB Pokal", Country: "Germany"},
 		{ID: 10650, Name: "Women's DFB Pokal", Country: "Germany"},
+		// -------
 		{ID: 141, Name: "Coppa Italia", Country: "Italy"},
 		{ID: 134, Name: "Coupe de France", Country: "France"},
+		// Portugal
+		{ID: 186, Name: "Taça de Portugal", Country: "Portugal"},
+		{ID: 187, Name: "Taça da Liga", Country: "Portugal"},
+		{ID: 188, Name: "Supertaça Cândido de Oliveira", Country: "Portugal"},
 	},
 	RegionAmerica: {
 		// South America
+		// Brazil
 		{ID: 268, Name: "Brasileirão Série A", Country: "Brazil"},
 		{ID: 8814, Name: "Brasileirão Série B", Country: "Brazil"},
-		{ID: 44, Name: "Copa America", Country: "South America"},
-		{ID: 9490, Name: "Copa Colombia", Country: "Colombia"},
-		{ID: 45, Name: "Copa Libertadores", Country: "South America"},
-		{ID: 299, Name: "Copa Sudamericana", Country: "South America"},
+		{ID: 8971, Name: "Brasileirão Série C", Country: "Brazil"},
+		{ID: 9464, Name: "Brasileirão Série D", Country: "Brazil"},
+		{ID: 9067, Name: "Copa do Brasil", Country: "Brazil"},
+		// Argentina
 		{ID: 112, Name: "Liga Profesional", Country: "Argentina"},
+		{ID: 8965, Name: "Primera B Nacional", Country: "Argentina"},
+		// Colombia
 		{ID: 274, Name: "Primera A", Country: "Colombia"},
 		{ID: 9125, Name: "Primera B", Country: "Colombia"},
+		{ID: 9490, Name: "Copa Colombia", Country: "Colombia"},
+		// ------
 		{ID: 161, Name: "Primera Division", Country: "Uruguay"},
 		{ID: 273, Name: "Primera Division", Country: "Chile"},
 		{ID: 131, Name: "Liga 1", Country: "Peru"},
 		{ID: 246, Name: "Serie A", Country: "Ecuador"},
+		// South American Competitions
+		{ID: 44, Name: "Copa America", Country: "South America"},
+		{ID: 14, Name: "Copa Libertadores", Country: "South America"},
+		{ID: 299, Name: "Copa Sudamericana", Country: "South America"},
 		// North America
 		{ID: 130, Name: "MLS", Country: "USA"},
 		{ID: 9134, Name: "NWSL", Country: "USA"},
 		{ID: 230, Name: "Liga MX", Country: "Mexico"},
 	},
-	RegionGlobal: {
+	RegionAsia: {
 		// Middle East
 		{ID: 536, Name: "Saudi Pro League", Country: "Saudi Arabia"},
+		{ID: 535, Name: "Qatar Stars League", Country: "Qatar"},
 		// Asia
 		{ID: 9478, Name: "Indian Super League", Country: "India"},
+		// Japan
 		{ID: 223, Name: "J. League", Country: "Japan"},
+		{ID: 8974, Name: "J. League 2", Country: "Japan"},
+		{ID: 9136, Name: "J. League 3", Country: "Japan"},
+		{ID: 9011, Name: "Emperor Cup", Country: "Japan"},
+		// South Korea
 		{ID: 9080, Name: "K League 1", Country: "South Korea"},
-		{ID: 9137, Name: "Chinese League One", Country: "China"},
-		{ID: 535, Name: "Qatar Stars League", Country: "Qatar"},
-		// Oceania
-		{ID: 113, Name: "A-League", Country: "Australia"},
+		{ID: 9116, Name: "K League 2", Country: "South Korea"},
+		{ID: 9537, Name: "K League 3", Country: "South Korea"},
+		// ------
+		{ID: 9137, Name: "Chinese Super League", Country: "China"},
+	},
+	RegionAfrica: {
 		// Africa
 		{ID: 519, Name: "Egyptian Premier League", Country: "Egypt"},
 		{ID: 537, Name: "Premier Soccer League", Country: "South Africa"},
 		{ID: 530, Name: "Botola Pro", Country: "Morocco"},
 		// International Competitions
 		{ID: 289, Name: "Africa Cup of Nations", Country: "International"},
+	},
+	RegionOceania: {
+		// Oceania
+		{ID: 113, Name: "A-League", Country: "Australia"},
+	},
+	RegionInternational: {
 		{ID: 77, Name: "FIFA World Cup", Country: "International"},
 		{ID: 76, Name: "Women's FIFA World Cup", Country: "International"},
 		{ID: 78, Name: "FIFA Club World Cup", Country: "International"},
@@ -225,7 +279,7 @@ func (s *Settings) IsLeagueSelected(leagueID int) bool {
 
 // GetAllRegions returns a list of all available regions in order.
 func GetAllRegions() []string {
-	return []string{RegionEurope, RegionAmerica, RegionGlobal}
+	return []string{RegionEurope, RegionAmerica, RegionAsia, RegionAfrica, RegionOceania, RegionInternational}
 }
 
 // GetLeaguesForRegion returns all leagues for a specific region.

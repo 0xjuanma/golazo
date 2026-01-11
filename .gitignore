@@ -3,3 +3,10 @@ golazo
 test_api.go
 test_api_setup.sh
 scripts/test_api.go
+/.idea/.gitignore
+/.idea/active-tab-highlighter.xml
+/.idea/dbnavigator.xml
+/.idea/go.imports.xml
+/.idea/golazo.iml
+/.idea/modules.xml
+/.idea/vcs.xml

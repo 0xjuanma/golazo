@@ -406,26 +406,3 @@ func (c *Client) ClearCache() error {
 func (c *Client) Cache() *GoalLinkCache {
 	return c.cache
 }
-
-// isCaptchaResponse detects if Reddit is serving a CAPTCHA or bot detection page.
-// This happens when Reddit blocks automated requests.
-func isCaptchaResponse(body string) bool {
-	captchaIndicators := []string{
-		"prove your humanity",
-		"captcha",
-		"robot",
-		"automated",
-		"blocked",
-		"rate limit",
-		"too many requests",
-	}
-
-	bodyLower := strings.ToLower(body)
-	for _, indicator := range captchaIndicators {
-		if strings.Contains(bodyLower, indicator) {
-			return true
-		}
-	}
-
-	return false
-}

@@ -31,7 +31,7 @@ Golazo supports **60+ leagues and competitions**. Customize your selection in Se
 | 🏴󠁧󠁢󠁥󠁮󠁧󠁿 | EFL League Two |
 | 🇵🇱 | Ekstraklasa |
 | 🇳🇱 | Eredivisie |
-| 🇮🇪 | League of Ireland First Division   |
+| 🇮🇪 | League of Ireland First Division |
 | 🇮🇪 | League of Ireland Premier Division |
 | 🇵🇹 | Primeira Liga |
 | 🇵🇹 | Primeira Liga Qualification |
@@ -73,8 +73,8 @@ Golazo supports **60+ leagues and competitions**. Customize your selection in Se
 
 ## South America
 
-| | League/Competition  |
-|---|---------------------|
+| | League/Competition |
+|---|-------------------|
 | 🇦🇷 | Liga Profesional |
 | 🇧🇷 | Brasileirão Série A |
 | 🇧🇷 | Brasileirão Série B |
@@ -93,7 +93,7 @@ Golazo supports **60+ leagues and competitions**. Customize your selection in Se
 
 | | League |
 |---|-------|
-| 🇲🇽 | Liga MX  |
+| 🇲🇽 | Liga MX |
 | 🇺🇸 | MLS |
 | 🇺🇸 | NWSL |
 
@@ -108,7 +108,7 @@ Golazo supports **60+ leagues and competitions**. Customize your selection in Se
 | | League |
 |---|-------|
 | 🇨🇳 | Chinese Super League |
-| 🇮🇳 | Indian Super League  |
+| 🇮🇳 | Indian Super League |
 | 🇯🇵 | J. League |
 | 🇰🇷 | K League 1 |
 | 🇶🇦 | Qatar Stars League |
@@ -117,7 +117,7 @@ Golazo supports **60+ leagues and competitions**. Customize your selection in Se
 
 | | League |
 |---|-------|
-| 🇦🇺 | A-League   |
+| 🇦🇺 | A-League |
 
 ## Africa
 

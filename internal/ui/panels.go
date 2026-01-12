@@ -479,11 +479,11 @@ func renderMatchDetailsPanelFull(width, height int, details *api.MatchDetails, l
 // extractTeamMarker extracts the [H] or [A] marker from the end of an update string.
 // Returns the cleaned update string (without marker) and whether it's a home team event.
 func extractTeamMarker(update string) (string, bool) {
-	if strings.HasSuffix(update, " [H]") {
-		return strings.TrimSuffix(update, " [H]"), true
+	if before, ok := strings.CutSuffix(update, " [H]"); ok {
+		return before, true
 	}
-	if strings.HasSuffix(update, " [A]") {
-		return strings.TrimSuffix(update, " [A]"), false
+	if before, ok := strings.CutSuffix(update, " [A]"); ok {
+		return before, false
 	}
 	// Default to home if no marker found
 	return update, true
@@ -597,8 +597,8 @@ func extractPlayerAndType(content string, typeMarker string) (string, string) {
 		return "", ""
 	}
 
-	idx := strings.Index(content, typeMarker)
-	if idx == -1 {
+	_, after, ok := strings.Cut(content, typeMarker)
+	if !ok {
 		// Type marker not found, return content after symbol
 		runes := []rune(content)
 		if len(runes) > 1 {
@@ -608,7 +608,7 @@ func extractPlayerAndType(content string, typeMarker string) (string, string) {
 	}
 
 	// Extract player details after the type marker
-	afterType := content[idx+len(typeMarker):]
+	afterType := after
 	return strings.TrimSpace(afterType), typeMarker
 }
 

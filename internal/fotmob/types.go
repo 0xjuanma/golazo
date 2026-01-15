@@ -146,7 +146,8 @@ type fotmobMatchDetails struct {
 	Content struct {
 		MatchFacts struct {
 			Events struct {
-				Events []fotmobEventDetail `json:"events"`
+				Events                []fotmobEventDetail `json:"events"`
+				PenaltyShootoutEvents interface{}         `json:"penaltyShootoutEvents,omitempty"`
 			} `json:"events"`
 			Highlights *struct {
 				URL    string `json:"url"`
@@ -390,6 +391,28 @@ func (m fotmobMatchDetails) toAPIMatchDetails() *api.MatchDetails {
 			URL:    m.Content.MatchFacts.Highlights.URL,
 			Image:  m.Content.MatchFacts.Highlights.Image,
 			Source: m.Content.MatchFacts.Highlights.Source,
+		}
+	}
+
+	// Parse penalty shootout results if available
+	if m.Content.MatchFacts.Events.PenaltyShootoutEvents != nil {
+		if penaltyEvents, ok := m.Content.MatchFacts.Events.PenaltyShootoutEvents.([]interface{}); ok && len(penaltyEvents) > 0 {
+			// Get the final penalty scores from the last event
+			lastEvent := penaltyEvents[len(penaltyEvents)-1]
+			if eventMap, ok := lastEvent.(map[string]interface{}); ok {
+				if penShootoutScore, exists := eventMap["penShootoutScore"].([]interface{}); exists && len(penShootoutScore) >= 2 {
+					if homeScoreFloat, ok := penShootoutScore[0].(float64); ok {
+						homeScore := int(homeScoreFloat)
+						if awayScoreFloat, ok := penShootoutScore[1].(float64); ok {
+							awayScore := int(awayScoreFloat)
+							details.Penalties = &struct {
+								Home *int `json:"home,omitempty"`
+								Away *int `json:"away,omitempty"`
+							}{Home: &homeScore, Away: &awayScore}
+						}
+					}
+				}
+			}
 		}
 	}
 

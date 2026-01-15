@@ -523,7 +523,7 @@ func RenderStatsViewWithList(width, height int, finishedList list.Model, details
 	return content
 }
 
-// renderStatsMatchDetailsPanel renders the right panel for stats view with match details.
+// renderStatsMatchDetailsPanel renders the right panel for finished matches view with match details.
 // Uses Neon design with Golazo red/cyan theme.
 // Returns fixed header and scrollable content separately for viewport scrolling.
 // Displays expanded match information including statistics, lineups, and more.
@@ -624,6 +624,10 @@ func renderStatsMatchDetailsPanel(width, height int, details *api.MatchDetails, 
 	}
 	if details.Attendance > 0 {
 		headerLines = append(headerLines, neonLabelStyle.Render("Attendance:  ")+neonValueStyle.Render(formatNumber(details.Attendance)))
+	}
+	if details.Penalties != nil && details.Penalties.Home != nil && details.Penalties.Away != nil {
+		penText := fmt.Sprintf("%d - %d", *details.Penalties.Home, *details.Penalties.Away)
+		headerLines = append(headerLines, neonLabelStyle.Render("Penalties:   ")+neonValueStyle.Render(penText))
 	}
 
 	// ═══════════════════════════════════════════════

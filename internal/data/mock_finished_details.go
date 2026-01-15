@@ -37,6 +37,11 @@ func MockFinishedMatchDetails(matchID int) (*api.MatchDetails, error) {
 		Attendance: getMockAttendance(matchID),
 	}
 
+	// Add mock penalties for some matches to demonstrate the feature
+	if penalties := getMockPenalties(matchID); penalties != nil {
+		details.Penalties = penalties
+	}
+
 	// Add mock highlights for some matches to demonstrate the feature
 	if highlight := getMockHighlight(matchID); highlight != nil {
 		details.Highlight = highlight
@@ -169,6 +174,25 @@ func generateFinishedMatchEvents(matchID int, match api.Match) []api.MatchEvent 
 	}
 
 	return events
+}
+
+// getMockPenalties returns mock penalty data for testing the penalties feature.
+// Only some matches have penalties to simulate real-world scenarios.
+func getMockPenalties(matchID int) *struct {
+	Home *int `json:"home,omitempty"`
+	Away *int `json:"away,omitempty"`
+} {
+	switch matchID {
+	case 1005: // PSG 2-3 Bayern (went to penalties)
+		home := 4
+		away := 5
+		return &struct {
+			Home *int `json:"home,omitempty"`
+			Away *int `json:"away,omitempty"`
+		}{Home: &home, Away: &away}
+	default:
+		return nil // No penalties for this match
+	}
 }
 
 // getMockHighlight returns mock highlight data for testing the highlights feature.

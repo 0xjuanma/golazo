@@ -625,9 +625,32 @@ func renderStatsMatchDetailsPanel(width, height int, details *api.MatchDetails, 
 	if details.Attendance > 0 {
 		headerLines = append(headerLines, neonLabelStyle.Render("Attendance:  ")+neonValueStyle.Render(formatNumber(details.Attendance)))
 	}
+	// ═══════════════════════════════════════════════
+	// PENALTIES - Prominent display when match went to shootout
+	// ═══════════════════════════════════════════════
 	if details.Penalties != nil && details.Penalties.Home != nil && details.Penalties.Away != nil {
-		penText := fmt.Sprintf("%d - %d", *details.Penalties.Home, *details.Penalties.Away)
-		headerLines = append(headerLines, neonLabelStyle.Render("Penalties:   ")+neonValueStyle.Render(penText))
+		headerLines = append(headerLines, "")
+
+		// Penalty header with special styling
+		penaltyHeader := lipgloss.NewStyle().
+			Foreground(neonRed).
+			Bold(true).
+			Width(contentWidth).
+			Align(lipgloss.Center).
+			Render("PENALTIES")
+		headerLines = append(headerLines, penaltyHeader)
+
+		// Penalty score with compact styling
+		penaltyScoreText := fmt.Sprintf("%d - %d", *details.Penalties.Home, *details.Penalties.Away)
+		penaltyScore := lipgloss.NewStyle().
+			Foreground(neonCyan).
+			Bold(true).
+			Width(contentWidth).
+			Align(lipgloss.Center).
+			Render(penaltyScoreText)
+		headerLines = append(headerLines, penaltyScore)
+
+		headerLines = append(headerLines, "")
 	}
 
 	// ═══════════════════════════════════════════════

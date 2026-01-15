@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Stoppage Time Display** - Goals in stoppage time now display properly (e.g., "45+2'")
 - **More Leagues Supported** - Added Gaucho Brasilian competition and multiple Portuguese leagues and competitions (Thanks @felipeolibon and @rmscoelho!)
 - **Official Match Highlights** - Finished matches now display clickable links to official highlight videos when available!
+- **New Contributing Docs** - Added documentation for contributors, including contributing guidelines and process
 
 ### Changed
 - **Go Version** - Updated minimum Go version 1.25

@@ -175,14 +175,14 @@ func generateFinishedMatchEvents(matchID int, match api.Match) []api.MatchEvent 
 // Only some matches have highlights to simulate real-world availability.
 func getMockHighlight(matchID int) *api.MatchHighlight {
 	switch matchID {
-	case 1001: // AC Milan vs Inter (finished with highlights)
+	case 1001: // Man City 2-1 Arsenal (finished with highlights)
 		return &api.MatchHighlight{
 			URL:    "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
 			Image:  "https://i.ytimg.com/vi/dQw4w9WgXcQ/maxresdefault.jpg",
 			Source: "www.youtube.com",
-			Title:  "AC Milan 2-1 Inter Milan | Full Highlights",
+			Title:  "Man City 2-1 Arsenal | Premier League Highlights",
 		}
-	case 1005: // PSG vs Bayern (Champions League highlights)
+	case 1005: // PSG 2-3 Bayern (Champions League highlights)
 		return &api.MatchHighlight{
 			URL:    "https://www.youtube.com/watch?v=example123",
 			Image:  "https://i.ytimg.com/vi/example123/maxresdefault.jpg",

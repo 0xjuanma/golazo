@@ -1,8 +1,8 @@
 name: Update Homebrew Tap
 
 on:
-  release:
-    types: [published]
+  repository_dispatch:
+    types: [release-published]
 
 permissions:
   contents: read

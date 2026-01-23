@@ -46,11 +46,12 @@ func IsOlder(versionA, versionB string) bool {
 
 // Print displays the ASCII logo with gradient and version information.
 func Print(version string) {
-	// Render ASCII title with gradient (same as main view)
+	// Render ASCII title with gradient (same as main view, adaptive)
 	title := ui.RenderGradientText(constants.ASCIITitle)
 
-	// Render version with gradient color (use the end color - red)
-	endColor, _ := colorful.Hex(constants.GradientEndColor)
+	// Render version with gradient color (use the end color - red, adaptive)
+	_, endHex := ui.AdaptiveGradientColors()
+	endColor, _ := colorful.Hex(endHex)
 	versionStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(endColor.Hex()))
 	versionText := versionStyle.Render(version)
 

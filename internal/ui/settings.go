@@ -178,13 +178,13 @@ func renderTabBar(regions []string, currentRegion int, width int) string {
 		if i == currentRegion {
 			// Active tab - neon cyan
 			tabStyle = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("86")).
+				Foreground(neonCyan).
 				Bold(true).
 				Padding(0, 2)
 		} else {
 			// Inactive tab - dim
 			tabStyle = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("240")).
+				Foreground(neonDim).
 				Padding(0, 2)
 		}
 

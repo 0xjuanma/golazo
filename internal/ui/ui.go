@@ -37,9 +37,10 @@ func renderStatusBanner(bannerType constants.StatusBannerType, width int) string
 	var styledMessage string
 
 	if bannerType == constants.StatusBannerNewVersion {
-		// Apply gradient to new version banner (cyan → red)
-		startColor, _ := colorful.Hex(constants.GradientStartColor)
-		endColor, _ := colorful.Hex(constants.GradientEndColor)
+		// Apply gradient to new version banner (cyan → red, adaptive)
+		startHex, endHex := AdaptiveGradientColors()
+		startColor, _ := colorful.Hex(startHex)
+		endColor, _ := colorful.Hex(endHex)
 		styledMessage = applyGradientToText(message, startColor, endColor)
 	} else {
 		// Use simple cyan styling for other banners

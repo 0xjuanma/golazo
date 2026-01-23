@@ -15,20 +15,22 @@ const (
 
 var (
 	// Neon color palette - Golazo brand
-	// Primary colors
-	neonRed      = lipgloss.Color("196") // Bright red
-	neonCyan     = lipgloss.Color("51")  // Electric cyan
-	neonYellow   = lipgloss.Color("226") // Bright yellow for cards
-	neonWhite    = lipgloss.Color("255") // Pure white (bright)
-	neonWhiteAlt = lipgloss.Color("15")  // Standard white
-	neonBlack    = lipgloss.Color("0")   // Black
+	// Primary colors - adaptive for light/dark terminals
+	neonRed    = lipgloss.AdaptiveColor{Light: "124", Dark: "196"} // Dark red / Bright red
+	neonCyan   = lipgloss.AdaptiveColor{Light: "23", Dark: "51"}   // Darker cyan / Electric cyan
+	neonYellow = lipgloss.AdaptiveColor{Light: "136", Dark: "226"} // Dark gold / Bright yellow for cards
+	// Adaptive white - dark gray on light terminals, white on dark terminals
+	neonWhite = lipgloss.AdaptiveColor{Light: "235", Dark: "255"} // Adaptive text color
+	// Adaptive white alt - slightly different shades for variety
+	neonWhiteAlt = lipgloss.AdaptiveColor{Light: "236", Dark: "15"} // Standard adaptive text
+	neonBlack    = lipgloss.Color("0")                              // Black
 
-	// Gray scale
-	neonDark    = lipgloss.Color("236") // Dark background
-	neonDarkDim = lipgloss.Color("239") // Slightly lighter dark
-	neonGray    = lipgloss.Color("240") // Medium gray
-	neonDim     = lipgloss.Color("244") // Gray dim text
-	neonDimGray = lipgloss.Color("238") // Dim gray (for delegates)
+	// Gray scale - adaptive for light/dark terminals
+	neonDark    = lipgloss.AdaptiveColor{Light: "252", Dark: "236"} // Light gray / Dark background
+	neonDarkDim = lipgloss.AdaptiveColor{Light: "249", Dark: "239"} // Light gray / Slightly lighter dark
+	neonGray    = lipgloss.AdaptiveColor{Light: "245", Dark: "240"} // Medium gray (visible on both)
+	neonDim     = lipgloss.AdaptiveColor{Light: "243", Dark: "244"} // Gray dim text
+	neonDimGray = lipgloss.AdaptiveColor{Light: "246", Dark: "238"} // Dim gray (for delegates)
 
 	// Card styles - reusable across all views
 	neonYellowCardStyle = lipgloss.NewStyle().Foreground(neonYellow).Bold(true)
@@ -143,4 +145,16 @@ func FilterInputStyles() (cursorStyle, promptStyle lipgloss.Style) {
 		Foreground(neonRed).
 		Bold(true)
 	return cursorStyle, promptStyle
+}
+
+// AdaptiveGradientColors returns the appropriate gradient start/end hex colors
+// based on the terminal background (light or dark).
+// Dark terminals get bright vibrant colors, light terminals get darker saturated colors.
+func AdaptiveGradientColors() (startHex, endHex string) {
+	if lipgloss.HasDarkBackground() {
+		// Dark terminal: bright cyan to bright red
+		return "#00FFFF", "#FF0000"
+	}
+	// Light terminal: darker cyan (30% darker) to darker red for better visibility
+	return "#006161", "#8B0000"
 }

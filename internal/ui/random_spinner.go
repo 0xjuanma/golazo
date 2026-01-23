@@ -5,7 +5,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/0xjuanma/golazo/internal/constants"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/lucasb-eyer/go-colorful"
@@ -30,11 +29,9 @@ func SpinnerTick() tea.Cmd {
 // RandomCharSpinner is a custom spinner that displays a wave of random characters.
 // Note: Spinners do NOT self-tick. The app manages the tick chain centrally.
 type RandomCharSpinner struct {
-	charPool   []rune // Pool of characters to choose from
-	display    []rune // Currently displayed characters (wave buffer)
-	width      int
-	startColor colorful.Color // Gradient start color (cyan)
-	endColor   colorful.Color // Gradient end color (red)
+	charPool []rune // Pool of characters to choose from
+	display  []rune // Currently displayed characters (wave buffer)
+	width    int
 }
 
 // NewRandomCharSpinner creates a new random character spinner.
@@ -51,10 +48,6 @@ func NewRandomCharSpinner() *RandomCharSpinner {
 			"·•°§", // Clean punctuation
 	)
 
-	// Create gradient: cyan to red (high energy theme)
-	startColor, _ := colorful.Hex(constants.GradientStartColor) // Bright cyan
-	endColor, _ := colorful.Hex(constants.GradientEndColor)     // Bright red
-
 	width := 20
 
 	// Initialize display buffer with random characters
@@ -64,11 +57,9 @@ func NewRandomCharSpinner() *RandomCharSpinner {
 	}
 
 	return &RandomCharSpinner{
-		charPool:   charPool,
-		display:    display,
-		width:      width,
-		startColor: startColor,
-		endColor:   endColor,
+		charPool: charPool,
+		display:  display,
+		width:    width,
 	}
 }
 
@@ -100,11 +91,16 @@ func (r *RandomCharSpinner) View() string {
 		}
 	}
 
+	// Get adaptive gradient colors based on terminal background
+	startHex, endHex := AdaptiveGradientColors()
+	startColor, _ := colorful.Hex(startHex)
+	endColor, _ := colorful.Hex(endHex)
+
 	// Apply gradient to each character
 	var result strings.Builder
 	for i, char := range r.display {
 		ratio := float64(i) / float64(r.width-1)
-		color := r.startColor.BlendLab(r.endColor, ratio)
+		color := startColor.BlendLab(endColor, ratio)
 		hexColor := color.Hex()
 		charStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(hexColor))
 		result.WriteString(charStyle.Render(string(char)))

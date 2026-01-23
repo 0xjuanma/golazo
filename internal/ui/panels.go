@@ -49,7 +49,6 @@ var (
 			Foreground(neonRed).
 			Bold(true).
 			Margin(0, 0).
-			Background(neonBlack).
 			Padding(0, 0)
 
 	matchStatusStyle = lipgloss.NewStyle().
@@ -544,8 +543,9 @@ func renderStyledLiveUpdate(update string, contentWidth int, details *api.MatchD
 	var styledContent string
 	switch symbol {
 	case "●": // Goal - gradient on [GOAL] label, white text for player
-		startColor, _ := colorful.Hex(constants.GradientStartColor)
-		endColor, _ := colorful.Hex(constants.GradientEndColor)
+		startHex, endHex := AdaptiveGradientColors()
+		startColor, _ := colorful.Hex(startHex)
+		endColor, _ := colorful.Hex(endHex)
 		playerDetails, _ := extractPlayerAndType(contentWithoutMinute, "[GOAL]")
 		styledType := applyGradientToText("GOAL", startColor, endColor)
 		styledPlayer := whiteStyle.Render(playerDetails)
@@ -675,9 +675,10 @@ func renderCardWithColor(update string, color lipgloss.Color) string {
 // renderGoalWithGradient renders a goal event with gradient on the [GOAL] label.
 // The gradient matches the spinner theme (cyan → red).
 func renderGoalWithGradient(update string) string {
-	// Parse gradient colors
-	startColor, _ := colorful.Hex(constants.GradientStartColor) // Cyan
-	endColor, _ := colorful.Hex(constants.GradientEndColor)     // Red
+	// Parse gradient colors - adaptive based on terminal background
+	startHex, endHex := AdaptiveGradientColors()
+	startColor, _ := colorful.Hex(startHex) // Cyan (adaptive)
+	endColor, _ := colorful.Hex(endHex)     // Red (adaptive)
 
 	// Use consolidated neon colors from neon_styles.go
 	whiteStyle := lipgloss.NewStyle().Foreground(neonWhite)

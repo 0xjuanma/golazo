@@ -112,15 +112,17 @@ func RenderGradientText(text string) string {
 }
 
 // renderGradientText applies a gradient (cyan to red) to multi-line text.
+// Uses adaptive colors based on terminal background for visibility.
 func renderGradientText(text string) string {
 	lines := strings.Split(text, "\n")
 	if len(lines) == 0 {
 		return text
 	}
 
-	// Create gradient colors (same as spinner)
-	startColor, _ := colorful.Hex(constants.GradientStartColor) // Cyan
-	endColor, _ := colorful.Hex(constants.GradientEndColor)     // Red
+	// Create gradient colors - adaptive based on terminal background
+	startHex, endHex := AdaptiveGradientColors()
+	startColor, _ := colorful.Hex(startHex) // Cyan (adaptive)
+	endColor, _ := colorful.Hex(endHex)     // Red (adaptive)
 
 	var result strings.Builder
 	for i, line := range lines {

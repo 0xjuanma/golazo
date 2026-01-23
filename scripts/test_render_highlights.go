@@ -3,14 +3,15 @@ package main
 import (
 	"fmt"
 	"strings"
+
 	"github.com/charmbracelet/lipgloss"
 )
 
-// Define neon colors locally for testing
+// Define neon colors locally for testing - adaptive for light/dark terminals
 var (
-	neonCyan     = lipgloss.Color("51")
-	neonWhite    = lipgloss.Color("255")
-	neonDarkDim  = lipgloss.Color("239")
+	neonCyan    = lipgloss.AdaptiveColor{Light: "30", Dark: "51"}   // Dark cyan / Electric cyan
+	neonWhite   = lipgloss.AdaptiveColor{Light: "235", Dark: "255"} // Dark gray / White
+	neonDarkDim = lipgloss.Color("239")
 )
 
 func main() {

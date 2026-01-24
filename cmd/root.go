@@ -25,8 +25,8 @@ var debugFlag bool
 
 var rootCmd = &cobra.Command{
 	Use:   "golazo",
-	Short: "Football match stats and updates in your terminal",
-	Long:  `A modern terminal user interface for real-time football stats and scores, covering multiple leagues and competitions.`,
+	Short: "The beautiful game in your terminal",
+	Long:  `A minimal TUI for following football matches in real-time. Get live match updates, finished match statistics, and minute-by-minute events directly in your terminal.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if versionFlag {
 			version.Print(Version)

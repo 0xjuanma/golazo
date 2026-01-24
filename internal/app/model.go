@@ -14,6 +14,7 @@ import (
 	"github.com/0xjuanma/golazo/internal/notify"
 	"github.com/0xjuanma/golazo/internal/reddit"
 	"github.com/0xjuanma/golazo/internal/ui"
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/viewport"
@@ -153,6 +154,11 @@ func New(useMockData bool, debugMode bool, isDevBuild bool, newVersionAvailable 
 	statsList.Styles.FilterCursor = filterCursorStyle
 	statsList.FilterInput.PromptStyle = filterPromptStyle
 	statsList.FilterInput.Cursor.Style = filterCursorStyle
+	statsList.AdditionalShortHelpKeys = func() []key.Binding {
+		return []key.Binding{
+			key.NewBinding(key.WithKeys("tab"), key.WithHelp("tab", "focus")),
+		}
+	}
 
 	// Initialize viewport for scrollable match details in stats view
 	statsDetailsViewport := viewport.New(80, 20) // Will be resized dynamically

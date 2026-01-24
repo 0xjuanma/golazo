@@ -95,18 +95,19 @@ func (m *model) ensureStatsListSize() {
 	}
 
 	const (
-		frameH        = 2
-		frameV        = 2
-		titleHeight   = 3
-		spinnerHeight = 3
+		frameH         = 2
+		frameV         = 2
+		titleHeight    = 3
+		spinnerHeight  = 3
+		headerHeight   = 2 // "Match List" header + spacing
+		selectorHeight = 2 // Date selector + spacing
 	)
 
 	leftWidth := max(m.width*40/100, 30)
 	availableWidth := leftWidth - frameH*2
-	availableHeight := m.height - frameV*2 - titleHeight - spinnerHeight
+	availableHeight := m.height - frameV*2 - titleHeight - spinnerHeight - headerHeight - selectorHeight
 
 	if availableWidth > 0 && availableHeight > 0 {
-		// Upcoming matches are now shown in Live view, so give full height to finished list
 		m.statsMatchesList.SetSize(availableWidth, availableHeight)
 	}
 }

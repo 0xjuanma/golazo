@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Unified Match Details Rendering** - Consolidated live and finished match views into a single rendering system with consistent styling
 
 ### Fixed
+- **Finished Matches Hints** - Fixed missing keyboard hints in finished matches view and added tab focus indicator
 
 ## [0.16.0] - 2026-01-22
 

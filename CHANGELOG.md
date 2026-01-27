@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Dialog Overlay System** - New reusable dialog component for displaying overlay content on top of views
+- **League Standings Dialog** - Press `s` (when right panel focused) to view current league standings with highlighted match teams
+- **Match Formations Dialog** - Press `f` (when right panel focused) to view both teams' formations and starting lineups with player ratings
 
 ### Changed
 

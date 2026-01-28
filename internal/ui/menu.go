@@ -5,9 +5,9 @@ import (
 	"strings"
 
 	"github.com/0xjuanma/golazo/internal/constants"
+	"github.com/0xjuanma/golazo/internal/ui/design"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/lucasb-eyer/go-colorful"
 )
 
 var (
@@ -59,7 +59,7 @@ func RenderMainMenu(width, height, selected int, sp spinner.Model, randomSpinner
 	menuContent := strings.Join(items, "\n")
 
 	// Apply gradient to ASCII title (cyan to red, same as spinner)
-	title := renderGradientText(constants.ASCIITitle)
+	title := design.ApplyGradientToMultilineText(constants.ASCIITitle)
 	help := menuHelpStyle.Render(constants.HelpMainMenu)
 
 	// Spinner with fixed spacing - always reserve space to prevent movement
@@ -108,45 +108,5 @@ func RenderMainMenu(width, height, selected int, sp spinner.Model, randomSpinner
 // RenderGradientText applies a gradient (cyan to red) to multi-line text.
 // Exported wrapper for external use.
 func RenderGradientText(text string) string {
-	return renderGradientText(text)
-}
-
-// renderGradientText applies a gradient (cyan to red) to multi-line text.
-// Uses adaptive colors based on terminal background for visibility.
-func renderGradientText(text string) string {
-	lines := strings.Split(text, "\n")
-	if len(lines) == 0 {
-		return text
-	}
-
-	// Create gradient colors - adaptive based on terminal background
-	startHex, endHex := AdaptiveGradientColors()
-	startColor, _ := colorful.Hex(startHex) // Cyan (adaptive)
-	endColor, _ := colorful.Hex(endHex)     // Red (adaptive)
-
-	var result strings.Builder
-	for i, line := range lines {
-		if line == "" {
-			result.WriteString("\n")
-			continue
-		}
-
-		// Calculate gradient position for this line (0.0 to 1.0)
-		ratio := float64(i) / float64(len(lines)-1)
-
-		// Blend colors based on line position
-		color := startColor.BlendLab(endColor, ratio)
-
-		// Convert to hex for lipgloss
-		hexColor := color.Hex()
-
-		// Style the line with gradient color
-		lineStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(hexColor))
-		result.WriteString(lineStyle.Render(line))
-		if i < len(lines)-1 {
-			result.WriteString("\n")
-		}
-	}
-
-	return result.String()
+	return design.ApplyGradientToMultilineText(text)
 }

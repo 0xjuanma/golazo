@@ -168,7 +168,7 @@ func (d *StatisticsDialog) renderStatRow(stat api.MatchStatistic, width int) str
 	barWidth := 16
 	homeBarWidth, awayBarWidth := calculateBarWidths(homeVal, awayVal, barWidth)
 
-	// Render the bars
+	// Render solid color bars (cyan for home, gray for away)
 	homeBar := strings.Repeat("█", homeBarWidth) + strings.Repeat("░", barWidth-homeBarWidth)
 	awayBar := strings.Repeat("█", awayBarWidth) + strings.Repeat("░", barWidth-awayBarWidth)
 
@@ -208,27 +208,6 @@ func (d *StatisticsDialog) renderStatRow(stat api.MatchStatistic, width int) str
 	)
 }
 
-// parseStatNumber extracts a numeric value from a stat string.
-func parseStatNumber(s string) float64 {
-	s = strings.TrimSpace(s)
-	s = strings.TrimSuffix(s, "%")
-
-	// Handle formats like "23 (45%)" - take first number
-	if idx := strings.Index(s, " "); idx > 0 {
-		s = s[:idx]
-	}
-	if idx := strings.Index(s, "("); idx > 0 {
-		s = s[:idx]
-	}
-	s = strings.TrimSpace(s)
-
-	val, err := strconv.ParseFloat(s, 64)
-	if err != nil {
-		return 0
-	}
-	return val
-}
-
 // calculateBarWidths calculates proportional bar widths for two values.
 func calculateBarWidths(home, away float64, maxWidth int) (int, int) {
 	total := home + away
@@ -256,4 +235,25 @@ func calculateBarWidths(home, away float64, maxWidth int) (int, int) {
 	}
 
 	return homeWidth, awayWidth
+}
+
+// parseStatNumber extracts a numeric value from a stat string.
+func parseStatNumber(s string) float64 {
+	s = strings.TrimSpace(s)
+	s = strings.TrimSuffix(s, "%")
+
+	// Handle formats like "23 (45%)" - take first number
+	if idx := strings.Index(s, " "); idx > 0 {
+		s = s[:idx]
+	}
+	if idx := strings.Index(s, "("); idx > 0 {
+		s = s[:idx]
+	}
+	s = strings.TrimSpace(s)
+
+	val, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return 0
+	}
+	return val
 }

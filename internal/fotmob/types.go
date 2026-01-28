@@ -172,7 +172,9 @@ type fotmobMatchDetails struct {
 			} `json:"periods,omitempty"`
 		} `json:"stats,omitempty"`
 		Lineup struct {
-			Lineup []fotmobTeamLineup `json:"lineup"`
+			Lineup   []fotmobTeamLineup `json:"lineup"`
+			HomeTeam *fotmobNewLineup   `json:"homeTeam,omitempty"`
+			AwayTeam *fotmobNewLineup   `json:"awayTeam,omitempty"`
 		} `json:"lineup,omitempty"`
 	} `json:"content"`
 }
@@ -192,7 +194,7 @@ type fotmobStatItem struct {
 	Highlight string        `json:"highlight,omitempty"` // "home" or "away" for who's better
 }
 
-// fotmobTeamLineup represents a team's lineup
+// fotmobTeamLineup represents a team's lineup (legacy format)
 type fotmobTeamLineup struct {
 	TeamID     int                  `json:"teamId"`
 	TeamName   string               `json:"teamName"`
@@ -204,7 +206,27 @@ type fotmobTeamLineup struct {
 	} `json:"optaLineup,omitempty"`
 }
 
-// fotmobPlayerInfo represents player information in lineups
+// fotmobNewLineup represents the new lineup format with homeTeam/awayTeam structure
+type fotmobNewLineup struct {
+	ID        int                   `json:"id"`
+	Name      string                `json:"name"`
+	Formation string                `json:"formation"`
+	Starters  []fotmobNewPlayerInfo `json:"starters"`
+	Subs      []fotmobNewPlayerInfo `json:"subs,omitempty"`
+}
+
+// fotmobNewPlayerInfo represents player info in the new lineup format
+type fotmobNewPlayerInfo struct {
+	ID          int    `json:"id"`
+	Name        string `json:"name"`
+	ShirtNumber string `json:"shirtNumber"`
+	Performance *struct {
+		Rating       json.Number `json:"rating"`
+		FantasyScore string      `json:"fantasyScore,omitempty"`
+	} `json:"performance,omitempty"`
+}
+
+// fotmobPlayerInfo represents player information in lineups (legacy format)
 type fotmobPlayerInfo struct {
 	ID       int    `json:"id"`
 	Name     string `json:"name"`
@@ -581,21 +603,52 @@ func formatStatValue(val interface{}) string {
 }
 
 // parseLineups extracts lineup information from FotMob response
+// Supports both old format (lineup.lineup[]) and new format (lineup.homeTeam/awayTeam)
 func (m fotmobMatchDetails) parseLineups(details *api.MatchDetails) {
-	for _, lineup := range m.Content.Lineup.Lineup {
-		isHome := lineup.TeamID == m.General.HomeTeam.ID
+	// Try new format first (homeTeam/awayTeam structure)
+	if m.Content.Lineup.HomeTeam != nil {
+		details.HomeFormation = m.Content.Lineup.HomeTeam.Formation
+		details.HomeStarting = convertNewLineupPlayers(m.Content.Lineup.HomeTeam.Starters)
+		details.HomeSubstitutes = convertNewLineupPlayers(m.Content.Lineup.HomeTeam.Subs)
+	}
+	if m.Content.Lineup.AwayTeam != nil {
+		details.AwayFormation = m.Content.Lineup.AwayTeam.Formation
+		details.AwayStarting = convertNewLineupPlayers(m.Content.Lineup.AwayTeam.Starters)
+		details.AwaySubstitutes = convertNewLineupPlayers(m.Content.Lineup.AwayTeam.Subs)
+	}
 
-		// Set formation
-		if isHome {
-			details.HomeFormation = lineup.Formation
-		} else {
-			details.AwayFormation = lineup.Formation
-		}
+	// If new format didn't provide data, try old format
+	if len(details.HomeStarting) == 0 && len(details.AwayStarting) == 0 {
+		for _, lineup := range m.Content.Lineup.Lineup {
+			isHome := lineup.TeamID == m.General.HomeTeam.ID
 
-		// Extract starting players from the nested players array
-		var starting []api.PlayerInfo
-		for _, row := range lineup.Players {
-			for _, p := range row {
+			// Set formation
+			if isHome {
+				details.HomeFormation = lineup.Formation
+			} else {
+				details.AwayFormation = lineup.Formation
+			}
+
+			// Extract starting players from the nested players array
+			var starting []api.PlayerInfo
+			for _, row := range lineup.Players {
+				for _, p := range row {
+					player := api.PlayerInfo{
+						ID:       p.ID,
+						Name:     p.Name,
+						Number:   p.Shirt,
+						Position: p.Position,
+					}
+					if p.Rating != nil {
+						player.Rating = p.Rating.Num
+					}
+					starting = append(starting, player)
+				}
+			}
+
+			// Extract substitutes
+			var substitutes []api.PlayerInfo
+			for _, p := range lineup.Bench {
 				player := api.PlayerInfo{
 					ID:       p.ID,
 					Name:     p.Name,
@@ -605,55 +658,64 @@ func (m fotmobMatchDetails) parseLineups(details *api.MatchDetails) {
 				if p.Rating != nil {
 					player.Rating = p.Rating.Num
 				}
-				starting = append(starting, player)
+				substitutes = append(substitutes, player)
 			}
-		}
 
-		// Extract substitutes
-		var substitutes []api.PlayerInfo
-		for _, p := range lineup.Bench {
-			player := api.PlayerInfo{
-				ID:       p.ID,
-				Name:     p.Name,
-				Number:   p.Shirt,
-				Position: p.Position,
+			if isHome {
+				details.HomeStarting = starting
+				details.HomeSubstitutes = substitutes
+			} else {
+				details.AwayStarting = starting
+				details.AwaySubstitutes = substitutes
 			}
-			if p.Rating != nil {
-				player.Rating = p.Rating.Num
-			}
-			substitutes = append(substitutes, player)
-		}
-
-		if isHome {
-			details.HomeStarting = starting
-			details.HomeSubstitutes = substitutes
-		} else {
-			details.AwayStarting = starting
-			details.AwaySubstitutes = substitutes
 		}
 	}
 }
 
+// convertNewLineupPlayers converts new format player info to API format
+func convertNewLineupPlayers(players []fotmobNewPlayerInfo) []api.PlayerInfo {
+	result := make([]api.PlayerInfo, 0, len(players))
+	for _, p := range players {
+		var number int
+		fmt.Sscanf(p.ShirtNumber, "%d", &number)
+
+		player := api.PlayerInfo{
+			ID:     p.ID,
+			Name:   p.Name,
+			Number: number,
+		}
+		if p.Performance != nil {
+			player.Rating = string(p.Performance.Rating)
+		}
+		result = append(result, player)
+	}
+	return result
+}
+
 // fotmobTableRow represents a single row in the league table from FotMob
+// Matches the structure at table[0].data.table.all[]
 type fotmobTableRow struct {
-	ID             int    `json:"id"`
-	Name           string `json:"name"`
-	ShortName      string `json:"shortName"`
-	Rank           int    `json:"rank"`
-	Played         int    `json:"played"`
-	Wins           int    `json:"wins"`
-	Draws          int    `json:"draws"`
-	Losses         int    `json:"losses"`
-	GoalsFor       int    `json:"goalsFor"`
-	GoalsAgainst   int    `json:"goalsAgainst"`
-	GoalDifference int    `json:"goalDifference"`
-	Points         int    `json:"points"`
+	ID          int    `json:"id"`
+	Name        string `json:"name"`
+	ShortName   string `json:"shortName"`
+	Idx         int    `json:"idx"` // Position in table
+	Played      int    `json:"played"`
+	Wins        int    `json:"wins"`
+	Draws       int    `json:"draws"`
+	Losses      int    `json:"losses"`
+	ScoresStr   string `json:"scoresStr"`   // e.g., "42-17"
+	GoalConDiff int    `json:"goalConDiff"` // Goal difference
+	Pts         int    `json:"pts"`         // Points
 }
 
 // toAPITableEntry converts fotmobTableRow to api.LeagueTableEntry
 func (r fotmobTableRow) toAPITableEntry() api.LeagueTableEntry {
+	// Parse goals from scoresStr (e.g., "42-17")
+	var goalsFor, goalsAgainst int
+	fmt.Sscanf(r.ScoresStr, "%d-%d", &goalsFor, &goalsAgainst)
+
 	return api.LeagueTableEntry{
-		Position: r.Rank,
+		Position: r.Idx,
 		Team: api.Team{
 			ID:        r.ID,
 			Name:      r.Name,
@@ -663,10 +725,10 @@ func (r fotmobTableRow) toAPITableEntry() api.LeagueTableEntry {
 		Won:            r.Wins,
 		Drawn:          r.Draws,
 		Lost:           r.Losses,
-		GoalsFor:       r.GoalsFor,
-		GoalsAgainst:   r.GoalsAgainst,
-		GoalDifference: r.GoalDifference,
-		Points:         r.Points,
+		GoalsFor:       goalsFor,
+		GoalsAgainst:   goalsAgainst,
+		GoalDifference: r.GoalConDiff,
+		Points:         r.Pts,
 	}
 }
 

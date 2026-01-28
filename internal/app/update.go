@@ -71,6 +71,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case goalLinksMsg:
 		return m.handleGoalLinks(msg)
 
+	case standingsMsg:
+		return m.handleStandings(msg)
+
 	default:
 		// Fallback handler for ui.TickMsg type assertion
 		if _, ok := msg.(ui.TickMsg); ok {
@@ -282,6 +285,15 @@ func (m model) handleMatchDetails(msg matchDetailsMsg) (tea.Model, tea.Cmd) {
 
 // handleKeyPress routes key events to view-specific handlers.
 func (m model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// If dialog overlay has active dialogs, route messages there first
+	if m.dialogOverlay != nil && m.dialogOverlay.HasDialogs() {
+		action := m.dialogOverlay.Update(msg)
+		if _, ok := action.(ui.DialogActionClose); ok {
+			m.dialogOverlay.CloseFrontDialog()
+		}
+		return m, nil
+	}
+
 	switch msg.String() {
 	case "q", "ctrl+c":
 		return m, tea.Quit
@@ -411,7 +423,7 @@ func (m model) handleStatsSelection(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	// Handle keys based on focus state
 	if m.statsRightPanelFocused && m.matchDetails != nil && m.statsDetailsViewport.Height > 0 {
-		// Right panel focused - handle scrolling keys
+		// Right panel focused - handle scrolling keys and dialog triggers
 		switch msg.String() {
 		case "up", "k":
 			// Manual scroll up
@@ -450,6 +462,26 @@ func (m model) handleStatsSelection(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case "tab":
 			// Tab toggles focus back to left panel
 			m.statsRightPanelFocused = false
+			return m, nil
+		case "f":
+			// Open formations dialog
+			m.openFormationsDialog()
+			return m, nil
+		case "s":
+			// Fetch standings and open dialog
+			if m.matchDetails != nil {
+				return m, fetchStandings(
+					m.fotmobClient,
+					m.matchDetails.League.ID,
+					m.matchDetails.League.Name,
+					m.matchDetails.HomeTeam.ID,
+					m.matchDetails.AwayTeam.ID,
+				)
+			}
+			return m, nil
+		case "x":
+			// Open full statistics dialog
+			m.openStatisticsDialog()
 			return m, nil
 		}
 	}
@@ -1279,4 +1311,77 @@ func (m *model) GoalReplayURL(matchID, minute int) string {
 		return link.URL
 	}
 	return ""
+}
+
+// openFormationsDialog opens the formations dialog for the current match.
+func (m *model) openFormationsDialog() {
+	if m.matchDetails == nil || m.dialogOverlay == nil {
+		return
+	}
+
+	// Get team names
+	homeTeam := m.matchDetails.HomeTeam.ShortName
+	if homeTeam == "" {
+		homeTeam = m.matchDetails.HomeTeam.Name
+	}
+	awayTeam := m.matchDetails.AwayTeam.ShortName
+	if awayTeam == "" {
+		awayTeam = m.matchDetails.AwayTeam.Name
+	}
+
+	dialog := ui.NewFormationsDialog(
+		homeTeam,
+		awayTeam,
+		m.matchDetails.HomeFormation,
+		m.matchDetails.AwayFormation,
+		m.matchDetails.HomeStarting,
+		m.matchDetails.AwayStarting,
+	)
+	m.dialogOverlay.OpenDialog(dialog)
+}
+
+// handleStandings processes standings data and opens the standings dialog.
+func (m model) handleStandings(msg standingsMsg) (tea.Model, tea.Cmd) {
+	if msg.standings == nil || len(msg.standings) == 0 || m.dialogOverlay == nil {
+		return m, nil
+	}
+
+	dialog := ui.NewStandingsDialog(
+		msg.leagueName,
+		msg.standings,
+		msg.homeTeamID,
+		msg.awayTeamID,
+	)
+	m.dialogOverlay.OpenDialog(dialog)
+
+	return m, nil
+}
+
+// openStatisticsDialog opens the full statistics dialog for the current match.
+func (m *model) openStatisticsDialog() {
+	if m.matchDetails == nil || m.dialogOverlay == nil {
+		return
+	}
+
+	// Skip if no statistics available
+	if len(m.matchDetails.Statistics) == 0 {
+		return
+	}
+
+	// Get team names
+	homeTeam := m.matchDetails.HomeTeam.ShortName
+	if homeTeam == "" {
+		homeTeam = m.matchDetails.HomeTeam.Name
+	}
+	awayTeam := m.matchDetails.AwayTeam.ShortName
+	if awayTeam == "" {
+		awayTeam = m.matchDetails.AwayTeam.Name
+	}
+
+	dialog := ui.NewStatisticsDialog(
+		homeTeam,
+		awayTeam,
+		m.matchDetails.Statistics,
+	)
+	m.dialogOverlay.OpenDialog(dialog)
 }

@@ -419,4 +419,30 @@ func fetchGoalLinksForGoals(redditClient *reddit.Client, goals []reddit.GoalInfo
 	}
 }
 
+// fetchStandings fetches league standings for a specific league.
+// Used to populate the standings dialog.
+func fetchStandings(client *fotmob.Client, leagueID int, leagueName string, homeTeamID, awayTeamID int) tea.Cmd {
+	return func() tea.Msg {
+		if client == nil {
+			return standingsMsg{leagueID: leagueID, standings: nil}
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+
+		standings, err := client.LeagueTable(ctx, leagueID)
+		if err != nil {
+			return standingsMsg{leagueID: leagueID, standings: nil}
+		}
+
+		return standingsMsg{
+			leagueID:   leagueID,
+			leagueName: leagueName,
+			standings:  standings,
+			homeTeamID: homeTeamID,
+			awayTeamID: awayTeamID,
+		}
+	}
+}
+
 

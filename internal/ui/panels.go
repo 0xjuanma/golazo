@@ -7,9 +7,9 @@ import (
 
 	"github.com/0xjuanma/golazo/internal/api"
 	"github.com/0xjuanma/golazo/internal/constants"
+	"github.com/0xjuanma/golazo/internal/ui/design"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/lucasb-eyer/go-colorful"
 )
 
 // getReplayIndicator returns the replay link indicator for a goal if available.
@@ -185,11 +185,8 @@ func renderStyledLiveUpdate(update string, contentWidth int, details *api.MatchD
 	var styledContent string
 	switch symbol {
 	case "●": // Goal - gradient
-		startHex, endHex := AdaptiveGradientColors()
-		startColor, _ := colorful.Hex(startHex)
-		endColor, _ := colorful.Hex(endHex)
 		playerDetails, _ := extractPlayerAndType(contentWithoutMinute, "[GOAL]")
-		styledType := applyGradientToText("GOAL", startColor, endColor)
+		styledType := design.ApplyGradientToText("GOAL")
 		styledPlayer := whiteStyle.Render(playerDetails)
 
 		replayIndicator := ""
@@ -242,25 +239,6 @@ func extractPlayerAndType(content string, typeMarker string) (string, string) {
 	}
 
 	return strings.TrimSpace(after), typeMarker
-}
-
-// applyGradientToText applies a gradient to text, character by character.
-func applyGradientToText(text string, startColor, endColor colorful.Color) string {
-	runes := []rune(text)
-	if len(runes) == 0 {
-		return text
-	}
-
-	var result strings.Builder
-	for i, char := range runes {
-		ratio := float64(i) / float64(max(len(runes)-1, 1))
-		color := startColor.BlendLab(endColor, ratio)
-		hexColor := color.Hex()
-		charStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(hexColor)).Bold(true)
-		result.WriteString(charStyle.Render(string(char)))
-	}
-
-	return result.String()
 }
 
 // renderSubstitutionWithColorsNoMinute renders a substitution without the minute.

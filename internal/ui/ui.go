@@ -2,8 +2,8 @@ package ui
 
 import (
 	"github.com/0xjuanma/golazo/internal/constants"
+	"github.com/0xjuanma/golazo/internal/ui/design"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/lucasb-eyer/go-colorful"
 )
 
 // Truncate truncates text to fit the specified width, appending "..." if truncated.
@@ -38,10 +38,7 @@ func renderStatusBanner(bannerType constants.StatusBannerType, width int) string
 
 	if bannerType == constants.StatusBannerNewVersion {
 		// Apply gradient to new version banner (cyan → red, adaptive)
-		startHex, endHex := AdaptiveGradientColors()
-		startColor, _ := colorful.Hex(startHex)
-		endColor, _ := colorful.Hex(endHex)
-		styledMessage = applyGradientToText(message, startColor, endColor)
+		styledMessage = design.ApplyGradientToText(message)
 	} else {
 		// Use simple cyan styling for other banners
 		bannerStyle := lipgloss.NewStyle().

@@ -97,6 +97,9 @@ type model struct {
 	// Settings view state
 	settingsState *ui.SettingsState
 
+	// Dialog overlay for modal dialogs
+	dialogOverlay *ui.DialogOverlay
+
 	// API clients
 	fotmobClient *fotmob.Client
 	parser       *fotmob.LiveUpdateParser
@@ -218,7 +221,8 @@ func New(useMockData bool, debugMode bool, isDevBuild bool, newVersionAvailable 
 		statsRightPanelFocused: false, // Start with left panel focused
 		statsScrollOffset:      0,     // Start at top
 		statsDateRange:         1,
-		pendingSelection:       -1, // No pending selection
+		pendingSelection:       -1,                    // No pending selection
+		dialogOverlay:          ui.NewDialogOverlay(), // Initialize dialog overlay
 	}
 }
 

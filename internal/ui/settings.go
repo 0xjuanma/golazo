@@ -254,7 +254,7 @@ func RenderSettingsView(width, height int, state *SettingsState, bannerType cons
 	info := infoStyle.Render(infoText)
 
 	// Help text - update to include tab navigation
-	helpText := constants.HelpSettingsView + "  ←/→: switch tabs"
+	helpText := constants.HelpSettingsView
 	helpStyle := neonDimStyle.Width(settingsBoxWidth).Align(lipgloss.Center)
 	help := helpStyle.Render(helpText)
 

@@ -456,18 +456,29 @@ func (c *Client) LeagueTable(ctx context.Context, leagueID int) ([]api.LeagueTab
 		return nil, fmt.Errorf("unexpected status code %d for league %d table", resp.StatusCode, leagueID)
 	}
 
+	// FotMob returns table at: table[0].data.table.all
 	var response struct {
-		Data struct {
-			Table []fotmobTableRow `json:"table"`
-		} `json:"data"`
+		Table []struct {
+			Data struct {
+				Table struct {
+					All []fotmobTableRow `json:"all"`
+				} `json:"table"`
+			} `json:"data"`
+		} `json:"table"`
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		return nil, fmt.Errorf("decode league table response for league %d: %w", leagueID, err)
 	}
 
-	entries := make([]api.LeagueTableEntry, 0, len(response.Data.Table))
-	for _, row := range response.Data.Table {
+	// Extract table from first table group (most leagues have one group)
+	if len(response.Table) == 0 || len(response.Table[0].Data.Table.All) == 0 {
+		return nil, fmt.Errorf("no table data available for league %d", leagueID)
+	}
+
+	tableData := response.Table[0].Data.Table.All
+	entries := make([]api.LeagueTableEntry, 0, len(tableData))
+	for _, row := range tableData {
 		entries = append(entries, row.toAPITableEntry())
 	}
 

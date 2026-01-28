@@ -15,6 +15,11 @@ func (m model) View() string {
 		m.debugLog(fmt.Sprintf("VIEW: matchDetails ID=%d, Status=%s, Highlights=%v", m.matchDetails.ID, m.matchDetails.Status, m.matchDetails.Highlight != nil))
 	}
 
+	// If dialog overlay has active dialogs, render dialog on top
+	if m.dialogOverlay != nil && m.dialogOverlay.HasDialogs() {
+		return m.dialogOverlay.View(m.width, m.height)
+	}
+
 	switch m.currentView {
 	case viewMain:
 		return ui.RenderMainMenu(m.width, m.height, m.selected, m.spinner, m.randomSpinner, m.mainViewLoading, m.getStatusBannerType())

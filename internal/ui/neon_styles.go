@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"github.com/0xjuanma/golazo/internal/ui/design"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -149,12 +150,7 @@ func FilterInputStyles() (cursorStyle, promptStyle lipgloss.Style) {
 
 // AdaptiveGradientColors returns the appropriate gradient start/end hex colors
 // based on the terminal background (light or dark).
-// Dark terminals get bright vibrant colors, light terminals get darker saturated colors.
+// This is a convenience wrapper around design.AdaptiveGradientColors.
 func AdaptiveGradientColors() (startHex, endHex string) {
-	if lipgloss.HasDarkBackground() {
-		// Dark terminal: bright cyan to bright red
-		return "#00FFFF", "#FF0000"
-	}
-	// Light terminal: darker cyan (30% darker) to darker red for better visibility
-	return "#006161", "#8B0000"
+	return design.AdaptiveGradientColors()
 }

@@ -67,3 +67,12 @@ type goalLinksMsg struct {
 	links   map[reddit.GoalLinkKey]*reddit.GoalLink
 }
 
+// standingsMsg contains league standings from API response.
+// Used to populate the standings dialog.
+type standingsMsg struct {
+	leagueID   int
+	leagueName string
+	standings  []api.LeagueTableEntry
+	homeTeamID int
+	awayTeamID int
+}

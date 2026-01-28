@@ -7,9 +7,9 @@ import (
 
 	"github.com/0xjuanma/golazo/internal/api"
 	"github.com/0xjuanma/golazo/internal/constants"
+	"github.com/0xjuanma/golazo/internal/ui/design"
 	"github.com/charmbracelet/bubbles/progress"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/lucasb-eyer/go-colorful"
 )
 
 // MatchDetailsConfig holds all parameters for rendering match details.
@@ -249,11 +249,6 @@ func renderGoalsSection(cfg MatchDetailsConfig, contentWidth int) string {
 	lines = append(lines, "")
 	lines = append(lines, neonHeaderStyle.Render("Goals"))
 
-	// Get gradient colors for goal styling
-	startHex, endHex := AdaptiveGradientColors()
-	startColor, _ := colorful.Hex(startHex)
-	endColor, _ := colorful.Hex(endHex)
-
 	for _, goal := range goals {
 		player := "Unknown"
 		if goal.Player != nil {
@@ -265,7 +260,7 @@ func renderGoalsSection(cfg MatchDetailsConfig, contentWidth int) string {
 		replayIndicator := getReplayIndicator(details, cfg.GoalLinks, goal.Minute)
 
 		// Use gradient for GOAL label
-		styledGoal := applyGradientToText("GOAL", startColor, endColor)
+		styledGoal := design.ApplyGradientToText("GOAL")
 		goalContent := buildEventContent(playerDetails, replayIndicator, "●", styledGoal, isHome)
 
 		minuteStr := goal.DisplayMinute

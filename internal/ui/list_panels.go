@@ -320,7 +320,18 @@ func RenderStatsViewWithList(width, height int, finishedList list.Model, details
 	}
 
 	visibleContent := strings.Join(visibleLines, "\n")
-	rightPanel = lipgloss.JoinVertical(lipgloss.Left, headerContent, visibleContent)
+
+	// Add context-aware help hint at bottom of panel content
+	var helpText string
+	if rightPanelFocused {
+		helpText = constants.HelpStatsViewFocused
+	} else {
+		helpText = constants.HelpStatsViewUnfocused
+	}
+	helpStyle := neonDimStyle.Width(rightWidth - 4).Align(lipgloss.Center).MarginTop(1)
+	helpRendered := helpStyle.Render(helpText)
+
+	rightPanel = lipgloss.JoinVertical(lipgloss.Left, headerContent, visibleContent, helpRendered)
 
 	if rightPanelFocused {
 		rightPanel = lipgloss.NewStyle().

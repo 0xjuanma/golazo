@@ -1,19 +1,27 @@
 package ui
 
 import (
+	"strings"
+
 	"github.com/charmbracelet/lipgloss"
 )
 
 // Dialog-specific styles using existing adaptive colors from neon_styles.go.
 // All colors are adaptive and work on both light and dark terminal backgrounds.
 var (
-	// dialogBorderStyle applies a rounded border with cyan accent.
+	// dialogBorderStyle applies padding without border for a cleaner look.
 	dialogBorderStyle = lipgloss.NewStyle().
-				Border(lipgloss.RoundedBorder()).
-				BorderForeground(neonCyan).
 				Padding(1, 2)
 
-	// dialogTitleStyle styles the dialog title with red accent.
+	// dialogTitleBarStyle styles the title bar with inverted colors.
+	dialogTitleBarStyle = lipgloss.NewStyle().
+				Background(neonRed).
+				Foreground(neonWhite).
+				Bold(true).
+				Padding(0, 2).
+				MarginBottom(1)
+
+	// dialogTitleStyle styles plain dialog titles (fallback).
 	dialogTitleStyle = lipgloss.NewStyle().
 				Foreground(neonRed).
 				Bold(true).
@@ -66,13 +74,53 @@ var (
 			Foreground(neonDim).
 			Italic(true).
 			MarginTop(1)
+
+	// dialogBadgeStyle provides subtle background for values.
+	dialogBadgeStyle = lipgloss.NewStyle().
+				Background(neonDark).
+				Foreground(neonWhite).
+				Padding(0, 1)
+
+	// dialogBadgeHighlightStyle provides highlighted background for winning values.
+	dialogBadgeHighlightStyle = lipgloss.NewStyle().
+					Background(neonRed).
+					Foreground(neonWhite).
+					Bold(true).
+					Padding(0, 1)
 )
 
-// RenderDialogFrame wraps content in a dialog frame with title.
-func RenderDialogFrame(title, content string, width, height int) string {
-	titleRendered := dialogTitleStyle.Render(title)
+// RenderDialogTitleBar creates a full-width title bar with background.
+func RenderDialogTitleBar(title string, width int) string {
+	// Center the title and fill the width
+	titleLen := len(title)
+	if titleLen >= width-4 {
+		return dialogTitleBarStyle.Width(width).Render(title)
+	}
 
-	innerContent := lipgloss.JoinVertical(lipgloss.Left, titleRendered, content)
+	// Add padding characters to fill the bar
+	padding := (width - titleLen - 4) / 2
+	leftPad := strings.Repeat(" ", padding)
+	rightPad := strings.Repeat(" ", width-titleLen-4-padding)
+
+	fullTitle := leftPad + title + rightPad
+	return dialogTitleBarStyle.Width(width).Align(lipgloss.Center).Render(fullTitle)
+}
+
+// DialogBadge wraps a value with a subtle background.
+func DialogBadge(value string) string {
+	return dialogBadgeStyle.Render(value)
+}
+
+// DialogBadgeHighlight wraps a value with a highlighted background.
+func DialogBadgeHighlight(value string) string {
+	return dialogBadgeHighlightStyle.Render(value)
+}
+
+// RenderDialogFrame wraps content in a dialog frame with title bar.
+func RenderDialogFrame(title, content string, width, height int) string {
+	titleBar := RenderDialogTitleBar(title, width-6) // Account for border and padding
+
+	innerContent := lipgloss.JoinVertical(lipgloss.Left, titleBar, "", content)
 
 	return dialogBorderStyle.
 		Width(width).
@@ -82,12 +130,12 @@ func RenderDialogFrame(title, content string, width, height int) string {
 		Render(innerContent)
 }
 
-// RenderDialogFrameWithHelp wraps content in a dialog frame with title and help text.
+// RenderDialogFrameWithHelp wraps content in a dialog frame with title bar and help text.
 func RenderDialogFrameWithHelp(title, content, help string, width, height int) string {
-	titleRendered := dialogTitleStyle.Render(title)
+	titleBar := RenderDialogTitleBar(title, width-6) // Account for border and padding
 	helpRendered := dialogHelpStyle.Render(help)
 
-	innerContent := lipgloss.JoinVertical(lipgloss.Left, titleRendered, content, helpRendered)
+	innerContent := lipgloss.JoinVertical(lipgloss.Left, titleBar, "", content, helpRendered)
 
 	return dialogBorderStyle.
 		Width(width).

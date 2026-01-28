@@ -28,7 +28,7 @@ func NewStatisticsDialog(homeTeam, awayTeam string, statistics []api.MatchStatis
 		awayTeam:    awayTeam,
 		statistics:  statistics,
 		scrollIndex: 0,
-		maxVisible:  15, // Number of stats visible at once
+		maxVisible:  20, // Number of stats visible at once (larger dialog)
 	}
 }
 
@@ -63,8 +63,8 @@ func (d *StatisticsDialog) Update(msg tea.Msg) (Dialog, DialogAction) {
 
 // View renders the statistics comparison.
 func (d *StatisticsDialog) View(width, height int) string {
-	// Calculate dialog dimensions - wider for statistics
-	dialogWidth, dialogHeight := DialogSize(width, height, 75, 28)
+	// Larger dimensions for better readability
+	dialogWidth, dialogHeight := DialogSize(width, height, 97, 36)
 
 	// Build the content
 	content := d.renderContent(dialogWidth - 6) // Account for padding and border
@@ -141,15 +141,6 @@ func (d *StatisticsDialog) renderStatRow(stat api.MatchStatistic, width int) str
 	homeVal := parseStatNumber(stat.HomeValue)
 	awayVal := parseStatNumber(stat.AwayValue)
 
-	// Determine which team is better for highlighting
-	homeStyle := dialogValueStyle
-	awayStyle := dialogValueStyle
-	if homeVal > awayVal {
-		homeStyle = dialogHighlightStyle
-	} else if awayVal > homeVal {
-		awayStyle = dialogHighlightStyle
-	}
-
 	// Format label
 	label := stat.Label
 	if label == "" {
@@ -158,6 +149,19 @@ func (d *StatisticsDialog) renderStatRow(stat api.MatchStatistic, width int) str
 	maxLabelLen := 20
 	if len(label) > maxLabelLen {
 		label = label[:maxLabelLen-1] + "…"
+	}
+
+	// Fixed width for values to ensure alignment
+	valWidth := 12
+
+	// Truncate long values if needed
+	homeValStr := stat.HomeValue
+	awayValStr := stat.AwayValue
+	if len(homeValStr) > valWidth {
+		homeValStr = homeValStr[:valWidth-1] + "…"
+	}
+	if len(awayValStr) > valWidth {
+		awayValStr = awayValStr[:valWidth-1] + "…"
 	}
 
 	// Calculate bar widths
@@ -171,19 +175,36 @@ func (d *StatisticsDialog) renderStatRow(stat api.MatchStatistic, width int) str
 	homeBarStyled := lipgloss.NewStyle().Foreground(neonCyan).Render(homeBar)
 	awayBarStyled := lipgloss.NewStyle().Foreground(neonGray).Render(awayBar)
 
-	// Format values with fixed width
-	homeValStr := fmt.Sprintf("%6s", stat.HomeValue)
-	awayValStr := fmt.Sprintf("%-6s", stat.AwayValue)
+	// Style values - bold cyan for winner, dim for loser
+	winnerStyle := lipgloss.NewStyle().Foreground(neonCyan).Bold(true)
+	loserStyle := dialogDimStyle
 
-	// Build the row
+	var homeStyled, awayStyled string
+	if homeVal > awayVal {
+		homeStyled = winnerStyle.Width(valWidth).Align(lipgloss.Right).Render(homeValStr)
+		awayStyled = loserStyle.Width(valWidth).Align(lipgloss.Left).Render(awayValStr)
+	} else if awayVal > homeVal {
+		homeStyled = loserStyle.Width(valWidth).Align(lipgloss.Right).Render(homeValStr)
+		awayStyled = winnerStyle.Width(valWidth).Align(lipgloss.Left).Render(awayValStr)
+	} else {
+		// Tie - both normal
+		homeStyled = dialogValueStyle.Width(valWidth).Align(lipgloss.Right).Render(homeValStr)
+		awayStyled = dialogValueStyle.Width(valWidth).Align(lipgloss.Left).Render(awayValStr)
+	}
+
+	// Build the row with fixed widths
 	labelStyled := dialogLabelStyle.Width(maxLabelLen).Render(label)
 
-	return fmt.Sprintf("%s  %s %s│%s %s",
+	return lipgloss.JoinHorizontal(lipgloss.Top,
 		labelStyled,
-		homeStyle.Render(homeValStr),
+		" ",
+		homeStyled,
+		" ",
 		homeBarStyled,
+		"│",
 		awayBarStyled,
-		awayStyle.Render(awayValStr),
+		" ",
+		awayStyled,
 	)
 }
 

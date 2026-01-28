@@ -58,8 +58,8 @@ func (d *StandingsDialog) Update(msg tea.Msg) (Dialog, DialogAction) {
 
 // View renders the standings table.
 func (d *StandingsDialog) View(width, height int) string {
-	// Calculate dialog dimensions
-	dialogWidth, dialogHeight := DialogSize(width, height, 70, 25)
+	// Calculate dialog dimensions (larger for better readability)
+	dialogWidth, dialogHeight := DialogSize(width, height, 90, 32)
 
 	// Build the table content
 	content := d.renderTable(dialogWidth - 6) // Account for padding and border
@@ -93,22 +93,28 @@ func (d *StandingsDialog) renderTable(width int) string {
 	return lipgloss.JoinVertical(lipgloss.Left, lines...)
 }
 
+// Column widths for consistent alignment
+const (
+	standingsColPos  = 4  // Position column
+	standingsColStat = 5  // Stat columns (P, W, D, L)
+	standingsColGD   = 5  // Goal difference (needs +/- sign)
+	standingsColPts  = 5  // Points column
+)
+
 // renderHeaderRow renders the table header.
 func (d *StandingsDialog) renderHeaderRow(width int) string {
-	posStyle := dialogHeaderStyle.Width(3).Align(lipgloss.Right)
-	teamStyle := dialogHeaderStyle.Width(width - 35).Align(lipgloss.Left)
-	statStyle := dialogHeaderStyle.Width(4).Align(lipgloss.Right)
+	teamWidth := width - standingsColPos - (standingsColStat * 4) - standingsColGD - standingsColPts - 4
 
 	return lipgloss.JoinHorizontal(lipgloss.Top,
-		posStyle.Render("#"),
+		dialogHeaderStyle.Width(standingsColPos).Align(lipgloss.Right).Render("#"),
 		"  ",
-		teamStyle.Render("Team"),
-		statStyle.Render("P"),
-		statStyle.Render("W"),
-		statStyle.Render("D"),
-		statStyle.Render("L"),
-		statStyle.Render("GD"),
-		statStyle.Render("Pts"),
+		dialogHeaderStyle.Width(teamWidth).Align(lipgloss.Left).Render("Team"),
+		dialogHeaderStyle.Width(standingsColStat).Align(lipgloss.Right).Render("P"),
+		dialogHeaderStyle.Width(standingsColStat).Align(lipgloss.Right).Render("W"),
+		dialogHeaderStyle.Width(standingsColStat).Align(lipgloss.Right).Render("D"),
+		dialogHeaderStyle.Width(standingsColStat).Align(lipgloss.Right).Render("L"),
+		dialogHeaderStyle.Width(standingsColGD).Align(lipgloss.Right).Render("GD"),
+		dialogHeaderStyle.Width(standingsColPts).Align(lipgloss.Right).Render("Pts"),
 	)
 }
 
@@ -116,42 +122,45 @@ func (d *StandingsDialog) renderHeaderRow(width int) string {
 func (d *StandingsDialog) renderTeamRow(entry api.LeagueTableEntry, width int) string {
 	isHighlighted := entry.Team.ID == d.homeTeamID || entry.Team.ID == d.awayTeamID
 
-	// Choose styles based on highlight
-	var posStyle, teamStyle, statStyle lipgloss.Style
-	if isHighlighted {
-		posStyle = dialogHighlightStyle.Width(3).Align(lipgloss.Right)
-		teamStyle = dialogHighlightStyle.Width(width - 35).Align(lipgloss.Left)
-		statStyle = dialogHighlightStyle.Width(4).Align(lipgloss.Right)
-	} else {
-		posStyle = dialogValueStyle.Width(3).Align(lipgloss.Right)
-		teamStyle = dialogContentStyle.Width(width - 35).Align(lipgloss.Left)
-		statStyle = dialogValueStyle.Width(4).Align(lipgloss.Right)
-	}
+	teamWidth := width - standingsColPos - (standingsColStat * 4) - standingsColGD - standingsColPts - 4
 
 	// Truncate team name if needed
 	teamName := entry.Team.ShortName
 	if teamName == "" {
 		teamName = entry.Team.Name
 	}
-	maxTeamLen := width - 38
-	if len(teamName) > maxTeamLen {
-		teamName = teamName[:maxTeamLen-1] + "…"
+	if len(teamName) > teamWidth-1 {
+		teamName = teamName[:teamWidth-2] + "…"
 	}
 
 	// Format goal difference with sign
 	gdStr := formatGoalDifference(entry.GoalDifference)
 
-	return lipgloss.JoinHorizontal(lipgloss.Top,
-		posStyle.Render(fmt.Sprintf("%d", entry.Position)),
+	// Build row content with fixed widths
+	rowContent := lipgloss.JoinHorizontal(lipgloss.Top,
+		lipgloss.NewStyle().Width(standingsColPos).Align(lipgloss.Right).Render(fmt.Sprintf("%d", entry.Position)),
 		"  ",
-		teamStyle.Render(teamName),
-		statStyle.Render(fmt.Sprintf("%d", entry.Played)),
-		statStyle.Render(fmt.Sprintf("%d", entry.Won)),
-		statStyle.Render(fmt.Sprintf("%d", entry.Drawn)),
-		statStyle.Render(fmt.Sprintf("%d", entry.Lost)),
-		statStyle.Render(gdStr),
-		statStyle.Render(fmt.Sprintf("%d", entry.Points)),
+		lipgloss.NewStyle().Width(teamWidth).Align(lipgloss.Left).Render(teamName),
+		lipgloss.NewStyle().Width(standingsColStat).Align(lipgloss.Right).Render(fmt.Sprintf("%d", entry.Played)),
+		lipgloss.NewStyle().Width(standingsColStat).Align(lipgloss.Right).Render(fmt.Sprintf("%d", entry.Won)),
+		lipgloss.NewStyle().Width(standingsColStat).Align(lipgloss.Right).Render(fmt.Sprintf("%d", entry.Drawn)),
+		lipgloss.NewStyle().Width(standingsColStat).Align(lipgloss.Right).Render(fmt.Sprintf("%d", entry.Lost)),
+		lipgloss.NewStyle().Width(standingsColGD).Align(lipgloss.Right).Render(gdStr),
+		lipgloss.NewStyle().Width(standingsColPts).Align(lipgloss.Right).Render(fmt.Sprintf("%d", entry.Points)),
 	)
+
+	// Apply row styling
+	if isHighlighted {
+		// Background highlight for match teams
+		return lipgloss.NewStyle().
+			Background(neonDark).
+			Foreground(neonCyan).
+			Bold(true).
+			Width(width).
+			Render(rowContent)
+	}
+
+	return dialogValueStyle.Render(rowContent)
 }
 
 // formatGoalDifference formats goal difference with +/- sign.

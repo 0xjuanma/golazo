@@ -13,13 +13,13 @@ const formationsDialogID = "formations"
 
 // FormationsDialog displays the match formations for both teams.
 type FormationsDialog struct {
-	homeTeam     string
-	awayTeam     string
+	homeTeam      string
+	awayTeam      string
 	homeFormation string
 	awayFormation string
-	homeStarting []api.PlayerInfo
-	awayStarting []api.PlayerInfo
-	focusedTeam  int // 0 = home, 1 = away
+	homeStarting  []api.PlayerInfo
+	awayStarting  []api.PlayerInfo
+	focusedTeam   int // 0 = home, 1 = away
 }
 
 // NewFormationsDialog creates a new formations dialog.
@@ -61,7 +61,8 @@ func (d *FormationsDialog) Update(msg tea.Msg) (Dialog, DialogAction) {
 
 // View renders the formations view.
 func (d *FormationsDialog) View(width, height int) string {
-	dialogWidth, dialogHeight := DialogSize(width, height, 75, 28)
+	// Larger dimensions for better readability
+	dialogWidth, dialogHeight := DialogSize(width, height, 97, 36)
 
 	// Build the content
 	content := d.renderFormations(dialogWidth - 6)
@@ -71,17 +72,9 @@ func (d *FormationsDialog) View(width, height int) string {
 	return RenderDialogFrameWithHelp(title, content, help, dialogWidth, dialogHeight)
 }
 
-// buildTitle builds the dialog title showing both formations.
+// buildTitle builds the dialog title.
 func (d *FormationsDialog) buildTitle() string {
-	homeF := d.homeFormation
-	if homeF == "" {
-		homeF = "?"
-	}
-	awayF := d.awayFormation
-	if awayF == "" {
-		awayF = "?"
-	}
-	return fmt.Sprintf("Formations: %s vs %s", homeF, awayF)
+	return "Formations"
 }
 
 // renderFormations renders both team formations side by side.
@@ -162,34 +155,27 @@ func (d *FormationsDialog) renderPlayerLine(player api.PlayerInfo, width int, fo
 	posStr = fmt.Sprintf("%-3s", posStr)
 
 	// Player name (truncated if needed)
-	nameWidth := width - 12 // Account for number, position, rating, spacing
+	nameWidth := width - 14 // Account for number, position, rating badge, spacing
 	name := player.Name
 	if len(name) > nameWidth {
 		name = name[:nameWidth-1] + "…"
 	}
 	name = fmt.Sprintf("%-*s", nameWidth, name)
 
-	// Rating
-	ratingStr := ""
-	if player.Rating != "" {
-		ratingStr = fmt.Sprintf("%4s", player.Rating)
-	} else {
-		ratingStr = "    "
-	}
-
 	// Apply styles
-	var numStyle, posStyle, nameStyle, ratingStyle lipgloss.Style
+	var numStyle, posStyle, nameStyle lipgloss.Style
 	if focused {
 		numStyle = dialogValueStyle
 		posStyle = dialogDimStyle
 		nameStyle = dialogContentStyle
-		ratingStyle = d.ratingStyle(player.Rating)
 	} else {
 		numStyle = dialogDimStyle
 		posStyle = dialogDimStyle
 		nameStyle = dialogDimStyle
-		ratingStyle = dialogDimStyle
 	}
+
+	// Render rating with badge for high ratings
+	ratingRendered := d.renderRating(player.Rating, focused)
 
 	return lipgloss.JoinHorizontal(lipgloss.Top,
 		numStyle.Render(numStr),
@@ -197,24 +183,39 @@ func (d *FormationsDialog) renderPlayerLine(player api.PlayerInfo, width int, fo
 		posStyle.Render(posStr),
 		" ",
 		nameStyle.Render(name),
-		ratingStyle.Render(ratingStr),
+		ratingRendered,
 	)
 }
 
-// ratingStyle returns appropriate style based on rating value.
-func (d *FormationsDialog) ratingStyle(rating string) lipgloss.Style {
+// renderRating renders the player rating with color styling.
+func (d *FormationsDialog) renderRating(rating string, focused bool) string {
 	if rating == "" {
-		return dialogDimStyle
+		return "    "
+	}
+
+	ratingStr := fmt.Sprintf("%4s", rating)
+
+	if !focused {
+		return dialogDimStyle.Render(ratingStr)
 	}
 
 	// Parse rating to determine color
 	var val float64
 	fmt.Sscanf(rating, "%f", &val)
 
-	if val >= 7.5 {
-		return dialogHighlightStyle // Excellent - red (brand color)
+	if val >= 8.0 {
+		// Exceptional rating - bold red
+		return lipgloss.NewStyle().Foreground(neonRed).Bold(true).Render(ratingStr)
+	} else if val >= 7.5 {
+		// High rating - bold cyan
+		return lipgloss.NewStyle().Foreground(neonCyan).Bold(true).Render(ratingStr)
 	} else if val >= 6.5 {
-		return dialogTeamStyle // Good - cyan
+		// Good rating - normal cyan
+		return lipgloss.NewStyle().Foreground(neonCyan).Render(ratingStr)
+	} else if val >= 6.0 {
+		// Average rating - white
+		return dialogValueStyle.Render(ratingStr)
 	}
-	return dialogValueStyle // Average - white
+	// Below average - dim
+	return dialogDimStyle.Render(ratingStr)
 }

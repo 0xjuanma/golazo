@@ -6,10 +6,10 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// Dialog sizing constants.
+// Dialog sizing constants (30% larger for better readability).
 const (
-	DefaultDialogMaxWidth  = 80
-	DefaultDialogMaxHeight = 30
+	DefaultDialogMaxWidth  = 104
+	DefaultDialogMaxHeight = 39
 )
 
 // DialogAction represents an action returned by a dialog after handling a message.

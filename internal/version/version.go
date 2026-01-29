@@ -5,10 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/0xjuanma/golazo/internal/constants"
-	"github.com/0xjuanma/golazo/internal/ui"
-	"github.com/charmbracelet/lipgloss"
-	"github.com/lucasb-eyer/go-colorful"
+	"github.com/0xjuanma/golazo/internal/ui/logo"
 )
 
 // IsOlder returns true if versionA is older than versionB
@@ -44,17 +41,9 @@ func IsOlder(versionA, versionB string) bool {
 	return len(partsA) < len(partsB)
 }
 
-// Print displays the ASCII logo with gradient and version information.
+// Print displays the stylized logo with version information.
 func Print(version string) {
-	// Render ASCII title with gradient (same as main view, adaptive)
-	title := ui.RenderGradientText(constants.ASCIITitle)
-
-	// Render version with gradient color (use the end color - red, adaptive)
-	_, endHex := ui.AdaptiveGradientColors()
-	endColor, _ := colorful.Hex(endHex)
-	versionStyle := lipgloss.NewStyle().Foreground(lipgloss.Color(endColor.Hex()))
-	versionText := versionStyle.Render(version)
-
-	// Concatenate version after the last line of ASCII art
-	fmt.Println(title + "" + versionText)
+	opts := logo.DefaultOpts()
+	opts.Width = 80
+	fmt.Println(logo.Render(version, false, opts))
 }

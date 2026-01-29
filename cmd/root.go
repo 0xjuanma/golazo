@@ -65,7 +65,7 @@ var rootCmd = &cobra.Command{
 			}
 		}()
 
-		p := tea.NewProgram(app.New(mockFlag, debugFlag, isDevBuild, newVersionAvailable), tea.WithAltScreen())
+		p := tea.NewProgram(app.New(mockFlag, debugFlag, isDevBuild, newVersionAvailable, Version), tea.WithAltScreen())
 		if _, err := p.Run(); err != nil {
 			fmt.Fprintf(os.Stderr, "Error running application: %v\n", err)
 			os.Exit(1)

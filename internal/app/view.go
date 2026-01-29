@@ -22,7 +22,7 @@ func (m model) View() string {
 
 	switch m.currentView {
 	case viewMain:
-		return ui.RenderMainMenu(m.width, m.height, m.selected, m.spinner, m.randomSpinner, m.mainViewLoading, m.getStatusBannerType())
+		return ui.RenderMainMenu(m.width, m.height, m.selected, m.spinner, m.randomSpinner, m.mainViewLoading, m.getStatusBannerType(), m.appVersion)
 
 	case viewLiveMatches:
 		m.ensureLiveListSize()
@@ -67,7 +67,7 @@ func (m model) View() string {
 		return ui.RenderSettingsView(m.width, m.height, m.settingsState, m.getStatusBannerType())
 
 	default:
-		return ui.RenderMainMenu(m.width, m.height, m.selected, m.spinner, m.randomSpinner, m.mainViewLoading, m.getStatusBannerType())
+		return ui.RenderMainMenu(m.width, m.height, m.selected, m.spinner, m.randomSpinner, m.mainViewLoading, m.getStatusBannerType(), m.appVersion)
 	}
 }
 

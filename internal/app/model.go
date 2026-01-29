@@ -89,10 +89,11 @@ type model struct {
 
 	// Configuration
 	useMockData         bool
-	debugMode           bool // Enable debug logging to file
-	isDevBuild          bool // Whether this is a development build
-	newVersionAvailable bool // Whether a new version of Golazo is available
-	statsDateRange      int  // 1, 3, or 5 days (default: 1)
+	debugMode           bool   // Enable debug logging to file
+	isDevBuild          bool   // Whether this is a development build
+	newVersionAvailable bool   // Whether a new version of Golazo is available
+	appVersion          string // Current application version string
+	statsDateRange      int    // 1, 3, or 5 days (default: 1)
 
 	// Settings view state
 	settingsState *ui.SettingsState
@@ -117,7 +118,8 @@ type model struct {
 // debugMode enables debug logging to a file.
 // isDevBuild indicates if this is a development build.
 // newVersionAvailable indicates if a newer version is available.
-func New(useMockData bool, debugMode bool, isDevBuild bool, newVersionAvailable bool) model {
+// appVersion is the current application version string.
+func New(useMockData bool, debugMode bool, isDevBuild bool, newVersionAvailable bool, appVersion string) model {
 	s := spinner.New()
 	s.Spinner = spinner.Line
 	s.Style = ui.SpinnerStyle()
@@ -205,6 +207,7 @@ func New(useMockData bool, debugMode bool, isDevBuild bool, newVersionAvailable 
 		debugMode:              debugMode,
 		isDevBuild:             isDevBuild,
 		newVersionAvailable:    newVersionAvailable,
+		appVersion:             appVersion,
 		fotmobClient:           fotmob.NewClient(),
 		parser:                 fotmob.NewLiveUpdateParser(),
 		redditClient:           redditClient,

@@ -1342,10 +1342,19 @@ func (m *model) openFormationsDialog() {
 
 // handleStandings processes standings data and opens the standings dialog.
 func (m model) handleStandings(msg standingsMsg) (tea.Model, tea.Cmd) {
-	if msg.standings == nil || len(msg.standings) == 0 || m.dialogOverlay == nil {
+	m.debugLog(fmt.Sprintf("handleStandings: received msg with %d standings, leagueID=%d, leagueName=%s",
+		len(msg.standings), msg.leagueID, msg.leagueName))
+
+	if msg.standings == nil || len(msg.standings) == 0 {
+		m.debugLog("handleStandings: no standings data, skipping dialog")
+		return m, nil
+	}
+	if m.dialogOverlay == nil {
+		m.debugLog("handleStandings: dialogOverlay is nil, skipping dialog")
 		return m, nil
 	}
 
+	m.debugLog(fmt.Sprintf("handleStandings: creating dialog with %d entries", len(msg.standings)))
 	dialog := ui.NewStandingsDialog(
 		msg.leagueName,
 		msg.standings,
@@ -1353,6 +1362,7 @@ func (m model) handleStandings(msg standingsMsg) (tea.Model, tea.Cmd) {
 		msg.awayTeamID,
 	)
 	m.dialogOverlay.OpenDialog(dialog)
+	m.debugLog(fmt.Sprintf("handleStandings: dialog opened, HasDialogs=%v", m.dialogOverlay.HasDialogs()))
 
 	return m, nil
 }

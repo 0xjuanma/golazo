@@ -430,7 +430,7 @@ func fetchStandings(client *fotmob.Client, leagueID int, leagueName string, home
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
-		standings, err := client.LeagueTable(ctx, leagueID)
+		standings, err := client.LeagueTable(ctx, leagueID, leagueName)
 		if err != nil {
 			return standingsMsg{leagueID: leagueID, standings: nil}
 		}

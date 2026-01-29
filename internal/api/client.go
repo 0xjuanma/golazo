@@ -21,5 +21,6 @@ type Client interface {
 	LeagueMatches(ctx context.Context, leagueID int) ([]Match, error)
 
 	// LeagueTable retrieves the league table/standings for a specific league.
-	LeagueTable(ctx context.Context, leagueID int) ([]LeagueTableEntry, error)
+	// leagueName is used to detect parent leagues for knockout competitions.
+	LeagueTable(ctx context.Context, leagueID int, leagueName string) ([]LeagueTableEntry, error)
 }

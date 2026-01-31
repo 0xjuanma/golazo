@@ -55,8 +55,8 @@ func RenderMatchDetails(cfg MatchDetailsConfig) (headerContent, scrollableConten
 		awayTeam = details.AwayTeam.Name
 	}
 
-	// Header with optional focus styling
-	headerLines = append(headerLines, renderPanelHeader("Match Details", cfg.Focused))
+	// Header with optional focus styling using compact header design
+	headerLines = append(headerLines, renderPanelHeader(constants.PanelMatchDetails, cfg.Focused, contentWidth))
 	headerLines = append(headerLines, "")
 
 	// Status and league info
@@ -128,27 +128,11 @@ func RenderMatchDetails(cfg MatchDetailsConfig) (headerContent, scrollableConten
 		lipgloss.JoinVertical(lipgloss.Left, scrollableLines...)
 }
 
-func renderPanelHeader(title string, focused bool) string {
+func renderPanelHeader(title string, focused bool, width int) string {
 	if focused {
-		return lipgloss.NewStyle().
-			Foreground(neonCyan).
-			Bold(true).
-			PaddingBottom(0).
-			BorderBottom(true).
-			BorderStyle(lipgloss.NormalBorder()).
-			BorderForeground(neonCyan).
-			MarginBottom(0).
-			Render(title)
+		return design.RenderHeader(title, width)
 	}
-	return lipgloss.NewStyle().
-		Foreground(neonDim).
-		Bold(true).
-		PaddingBottom(0).
-		BorderBottom(true).
-		BorderStyle(lipgloss.NormalBorder()).
-		BorderForeground(neonDim).
-		MarginBottom(0).
-		Render(title)
+	return design.RenderHeaderDim(title, width)
 }
 
 func renderStatusLine(details *api.MatchDetails, contentWidth int) string {

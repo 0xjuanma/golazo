@@ -5,6 +5,7 @@ import (
 
 	"github.com/0xjuanma/golazo/internal/constants"
 	"github.com/0xjuanma/golazo/internal/data"
+	"github.com/0xjuanma/golazo/internal/ui/design"
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -165,8 +166,8 @@ func (s *SettingsState) SelectedCount() int {
 	return count
 }
 
-// Fixed width for settings panel
-const settingsBoxWidth = 48
+// Fixed width for settings panel (30% wider than original 48)
+const settingsBoxWidth = 62
 
 // renderTabBar renders the regional tabs at the top of the settings view.
 func renderTabBar(regions []string, currentRegion int, width int) string {
@@ -230,9 +231,8 @@ func RenderSettingsView(width, height int, state *SettingsState, bannerType cons
 		statusBanner += "\n"
 	}
 
-	// Title - red like other panel titles
-	titleStyle := neonPanelTitleStyle.Width(settingsBoxWidth)
-	title := titleStyle.Render("League Preferences")
+	// Title - compact header with gradient and diagonal fill
+	title := design.RenderHeader(constants.PanelLeaguePreferences, settingsBoxWidth)
 
 	// Render the tab bar
 	tabs := renderTabBar(state.Regions, state.CurrentRegion, settingsBoxWidth)

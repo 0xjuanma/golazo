@@ -91,7 +91,7 @@ func renderMatchDetailsPanelFull(width, height int, details *api.MatchDetails, l
 
 		content := emptyMessage
 		if showTitle {
-			title := neonPanelTitleStyle.Width(width - 6).Render(constants.PanelMinuteByMinute)
+			title := design.RenderHeader(constants.PanelMinuteByMinute, width-6)
 			content = lipgloss.JoinVertical(lipgloss.Left, title, emptyMessage)
 		}
 
@@ -121,7 +121,7 @@ func renderMatchDetailsPanelFull(width, height int, details *api.MatchDetails, l
 
 	var panelContent string
 	if showTitle {
-		title := neonPanelTitleStyle.Width(width - 6).Render(constants.PanelMinuteByMinute)
+		title := design.RenderHeader(constants.PanelMinuteByMinute, width-6)
 		panelContent = lipgloss.JoinVertical(lipgloss.Left, title, headerContent, scrollableContent)
 	} else {
 		panelContent = lipgloss.JoinVertical(lipgloss.Left, headerContent, scrollableContent)

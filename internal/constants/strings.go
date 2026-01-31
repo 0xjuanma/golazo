@@ -9,11 +9,15 @@ const (
 
 // Panel titles
 const (
-	PanelLiveMatches     = "Live Matches"
-	PanelFinishedMatches = "Finished Matches"
-	PanelMinuteByMinute  = "Minute-by-minute"
-	PanelMatchStatistics = "Match Statistics"
-	PanelUpdates         = "Updates"
+	PanelLiveMatches       = "Live Matches"
+	PanelFinishedMatches   = "Finished Matches"
+	PanelMatchDetails      = "Match Details"
+	PanelMatchList         = "Match List"
+	PanelUpcomingMatches   = "Upcoming Matches"
+	PanelMinuteByMinute    = "Minute-by-minute"
+	PanelMatchStatistics   = "Match Statistics"
+	PanelUpdates           = "Updates"
+	PanelLeaguePreferences = "League Preferences"
 )
 
 // Empty state messages

@@ -53,7 +53,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m.handleStatsDayData(msg)
 
 	case ui.TickMsg:
-		return m.handleRandomSpinnerTick(msg)
+		return m.handleAnimationTick(msg)
 
 	case mainViewCheckMsg:
 		return m.handleMainViewCheck(msg)
@@ -77,7 +77,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	default:
 		// Fallback handler for ui.TickMsg type assertion
 		if _, ok := msg.(ui.TickMsg); ok {
-			return m.handleRandomSpinnerTick(msg.(ui.TickMsg))
+			return m.handleAnimationTick(msg.(ui.TickMsg))
 		}
 	}
 
@@ -932,14 +932,21 @@ func filterMatchesByDays(matches []api.Match, days int) []api.Match {
 	return filtered
 }
 
-// handleRandomSpinnerTick updates all active spinner animations.
-// Uses a SINGLE tick chain - all spinners share the same tick rate.
-func (m model) handleRandomSpinnerTick(msg ui.TickMsg) (tea.Model, tea.Cmd) {
-	// Check if any spinner needs to be animated
-	needsTick := m.mainViewLoading || m.liveViewLoading || m.statsViewLoading || m.polling
+// handleAnimationTick updates all UI animations: logo reveal and loading spinners.
+// Uses a SINGLE tick chain - all animations share the same 70ms tick rate.
+func (m model) handleAnimationTick(msg ui.TickMsg) (tea.Model, tea.Cmd) {
+	// Logo animation (main view, one-time)
+	logoAnimating := false
+	if m.currentView == viewMain && m.animatedLogo != nil && !m.animatedLogo.IsComplete() {
+		m.animatedLogo.Tick()
+		logoAnimating = true
+	}
 
-	if !needsTick {
-		// No spinners active - don't continue the tick chain
+	// Check if any spinner needs to be animated
+	spinnersActive := m.mainViewLoading || m.liveViewLoading || m.statsViewLoading || m.polling
+
+	if !logoAnimating && !spinnersActive {
+		// No animations active - don't continue the tick chain
 		return m, nil
 	}
 

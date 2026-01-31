@@ -6,6 +6,7 @@ import (
 
 	"github.com/0xjuanma/golazo/internal/api"
 	"github.com/0xjuanma/golazo/internal/constants"
+	"github.com/0xjuanma/golazo/internal/ui/design"
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/viewport"
@@ -38,7 +39,7 @@ func (g GoalLinksMap) GetReplayURL(matchID, minute int) string {
 func RenderLiveMatchesListPanel(width, height int, listModel list.Model, upcomingMatches []MatchDisplay) string {
 	contentWidth := width - 6
 
-	title := neonPanelTitleStyle.Width(contentWidth).Render(constants.PanelLiveMatches)
+	title := design.RenderHeader(constants.PanelLiveMatches, contentWidth)
 
 	var listView string
 	if len(listModel.Items()) == 0 {
@@ -56,7 +57,7 @@ func RenderLiveMatchesListPanel(width, height int, listModel list.Model, upcomin
 	if len(upcomingMatches) > 0 {
 		maxUpcomingHeight := innerHeight / 2
 
-		upcomingTitle := neonHeaderStyle.Render("Upcoming")
+		upcomingTitle := design.RenderHeader(constants.PanelUpcomingMatches, contentWidth)
 
 		var upcomingLines []string
 		upcomingLines = append(upcomingLines, upcomingTitle)
@@ -126,17 +127,9 @@ func renderUpcomingMatchLine(match MatchDisplay, maxWidth int) string {
 func RenderStatsListPanel(width, height int, finishedList list.Model, dateRange int, rightPanelFocused bool) string {
 	var header string
 	if rightPanelFocused {
-		header = lipgloss.NewStyle().
-			Foreground(neonDim).
-			Bold(true).
-			PaddingBottom(0).
-			BorderBottom(true).
-			BorderStyle(lipgloss.NormalBorder()).
-			BorderForeground(neonDim).
-			MarginBottom(0).
-			Render("Match List")
+		header = design.RenderHeaderDim(constants.PanelMatchList, width-6)
 	} else {
-		header = neonHeaderStyle.Render("Match List")
+		header = design.RenderHeader(constants.PanelMatchList, width-6)
 	}
 
 	dateSelector := renderDateRangeSelector(width-6, dateRange)

@@ -14,6 +14,7 @@ import (
 	"github.com/0xjuanma/golazo/internal/notify"
 	"github.com/0xjuanma/golazo/internal/reddit"
 	"github.com/0xjuanma/golazo/internal/ui"
+	"github.com/0xjuanma/golazo/internal/ui/logo"
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/spinner"
@@ -89,10 +90,11 @@ type model struct {
 
 	// Configuration
 	useMockData         bool
-	debugMode           bool // Enable debug logging to file
-	isDevBuild          bool // Whether this is a development build
-	newVersionAvailable bool // Whether a new version of Golazo is available
-	statsDateRange      int  // 1, 3, or 5 days (default: 1)
+	debugMode           bool   // Enable debug logging to file
+	isDevBuild          bool   // Whether this is a development build
+	newVersionAvailable bool   // Whether a new version of Golazo is available
+	appVersion          string // Current application version string
+	statsDateRange      int    // 1, 3, or 5 days (default: 1)
 
 	// Settings view state
 	settingsState *ui.SettingsState
@@ -110,6 +112,9 @@ type model struct {
 
 	// Notifications
 	notifier *notify.DesktopNotifier
+
+	// Logo animation (main view only)
+	animatedLogo *logo.AnimatedLogo
 }
 
 // New creates a new application model with default values.
@@ -117,7 +122,8 @@ type model struct {
 // debugMode enables debug logging to a file.
 // isDevBuild indicates if this is a development build.
 // newVersionAvailable indicates if a newer version is available.
-func New(useMockData bool, debugMode bool, isDevBuild bool, newVersionAvailable bool) model {
+// appVersion is the current application version string.
+func New(useMockData bool, debugMode bool, isDevBuild bool, newVersionAvailable bool, appVersion string) model {
 	s := spinner.New()
 	s.Spinner = spinner.Line
 	s.Style = ui.SpinnerStyle()
@@ -198,6 +204,9 @@ func New(useMockData bool, debugMode bool, isDevBuild bool, newVersionAvailable 
 		redditClient, _ = reddit.NewClient()
 	}
 
+	// Initialize animated logo for main view
+	animatedLogo := logo.NewAnimatedLogoWithType(appVersion, false, logo.DefaultOpts(), 1200, 1, logo.AnimationWave)
+
 	return model{
 		currentView:            viewMain,
 		matchDetailsCache:      make(map[int]*api.MatchDetails),
@@ -205,6 +214,7 @@ func New(useMockData bool, debugMode bool, isDevBuild bool, newVersionAvailable 
 		debugMode:              debugMode,
 		isDevBuild:             isDevBuild,
 		newVersionAvailable:    newVersionAvailable,
+		appVersion:             appVersion,
 		fotmobClient:           fotmob.NewClient(),
 		parser:                 fotmob.NewLiveUpdateParser(),
 		redditClient:           redditClient,
@@ -223,6 +233,7 @@ func New(useMockData bool, debugMode bool, isDevBuild bool, newVersionAvailable 
 		statsDateRange:         1,
 		pendingSelection:       -1,                    // No pending selection
 		dialogOverlay:          ui.NewDialogOverlay(), // Initialize dialog overlay
+		animatedLogo:           animatedLogo,          // Initialize animated logo
 	}
 }
 

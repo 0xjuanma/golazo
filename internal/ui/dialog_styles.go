@@ -3,6 +3,7 @@ package ui
 import (
 	"strings"
 
+	"github.com/0xjuanma/golazo/internal/ui/design"
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -118,7 +119,7 @@ func DialogBadgeHighlight(value string) string {
 
 // RenderDialogFrame wraps content in a dialog frame with title bar.
 func RenderDialogFrame(title, content string, width, height int) string {
-	titleBar := RenderDialogTitleBar(title, width-6) // Account for border and padding
+	titleBar := design.RenderHeader(title, width-6) // Use compact header with gradient
 
 	innerContent := lipgloss.JoinVertical(lipgloss.Left, titleBar, "", content)
 
@@ -132,7 +133,7 @@ func RenderDialogFrame(title, content string, width, height int) string {
 
 // RenderDialogFrameWithHelp wraps content in a dialog frame with title bar and help text.
 func RenderDialogFrameWithHelp(title, content, help string, width, height int) string {
-	titleBar := RenderDialogTitleBar(title, width-6) // Account for border and padding
+	titleBar := design.RenderHeader(title, width-6) // Use compact header with gradient
 	helpRendered := dialogHelpStyle.Width(width - 6).Align(lipgloss.Center).Render(help)
 
 	innerContent := lipgloss.JoinVertical(lipgloss.Left, titleBar, "", content, helpRendered)

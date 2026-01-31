@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Full Statistics Dialog** - Press `x` to view full match statistics
 
 ### Changed
+- **Unified Header Design** - All panel titles now use consistent compact header style with gradient text and diagonal fill pattern
+- **Visual Overhaul** - Refreshed main menu logo and updated styling across views
 
 ### Fixed
 

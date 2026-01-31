@@ -6,9 +6,13 @@ import (
 
 	"github.com/0xjuanma/golazo/internal/constants"
 	"github.com/0xjuanma/golazo/internal/ui/design"
+	"github.com/0xjuanma/golazo/internal/ui/logo"
 	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/lipgloss"
 )
+
+// logoWidth is the standard width for the logo container.
+const logoWidth = 80
 
 var (
 	// Menu styles
@@ -40,7 +44,8 @@ var (
 // randomSpinner is the random character spinner for main view.
 // loading indicates if the spinner should be shown.
 // bannerType determines what status banner (if any) to display at the top.
-func RenderMainMenu(width, height, selected int, sp spinner.Model, randomSpinner *RandomCharSpinner, loading bool, bannerType constants.StatusBannerType) string {
+// animatedLogo is the animated logo instance for the main view.
+func RenderMainMenu(width, height, selected int, sp spinner.Model, randomSpinner *RandomCharSpinner, loading bool, bannerType constants.StatusBannerType, animatedLogo *logo.AnimatedLogo) string {
 	menuItems := []string{
 		constants.MenuStats,
 		constants.MenuLiveMatches,
@@ -58,8 +63,14 @@ func RenderMainMenu(width, height, selected int, sp spinner.Model, randomSpinner
 
 	menuContent := strings.Join(items, "\n")
 
-	// Apply gradient to ASCII title (cyan to red, same as spinner)
-	title := design.ApplyGradientToMultilineText(constants.ASCIITitle)
+	// Get logo content from animated logo (handles animation state internally)
+	logoContent := animatedLogo.View()
+
+	// Place logo in centered container
+	title := lipgloss.NewStyle().
+		Width(logoWidth).
+		Align(lipgloss.Center).
+		Render(logoContent)
 	help := menuHelpStyle.Render(constants.HelpMainMenu)
 
 	// Spinner with fixed spacing - always reserve space to prevent movement
@@ -87,12 +98,11 @@ func RenderMainMenu(width, height, selected int, sp spinner.Model, randomSpinner
 	content := lipgloss.JoinVertical(
 		lipgloss.Center,
 		title,
-		"\n",
 		statusBanner,
 		spinnerContent,
 		"\n",
 		menuContent,
-		"\n\n",
+		"\n",
 		help,
 	)
 

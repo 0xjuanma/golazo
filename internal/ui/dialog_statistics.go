@@ -70,7 +70,7 @@ func (d *StatisticsDialog) View(width, height int) string {
 	// Build the content
 	content := d.renderContent(dialogWidth - 6) // Account for padding and border
 
-	return RenderDialogFrameWithHelp("Match Statistics", content, constants.HelpStatisticsDialog, dialogWidth, dialogHeight)
+	return RenderDialogFrameWithHelp(constants.PanelMatchStatistics, content, constants.HelpStatisticsDialog, dialogWidth, dialogHeight)
 }
 
 // renderContent renders the statistics content.

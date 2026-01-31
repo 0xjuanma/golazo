@@ -57,7 +57,7 @@ func RenderLiveMatchesListPanel(width, height int, listModel list.Model, upcomin
 	if len(upcomingMatches) > 0 {
 		maxUpcomingHeight := innerHeight / 2
 
-		upcomingTitle := neonHeaderStyle.Render(constants.PanelUpcomingMatches)
+		upcomingTitle := design.RenderHeader(constants.PanelUpcomingMatches, contentWidth)
 
 		var upcomingLines []string
 		upcomingLines = append(upcomingLines, upcomingTitle)

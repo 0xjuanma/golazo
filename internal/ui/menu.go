@@ -60,10 +60,17 @@ func RenderMainMenu(width, height, selected int, sp spinner.Model, randomSpinner
 
 	menuContent := strings.Join(items, "\n")
 
-	// Render stylized logo with gradient (wide mode)
+	// Render stylized logo with gradient (wide mode & centered)
+	const logoWidth = 80
 	logoOpts := logo.DefaultOpts()
-	logoOpts.Width = width
-	title := logo.Render(appVersion, false, logoOpts)
+	logoOpts.Width = logoWidth
+	logoContent := logo.Render(appVersion, false, logoOpts)
+
+	// Place logo in centered container
+	title := lipgloss.NewStyle().
+		Width(logoWidth).
+		Align(lipgloss.Center).
+		Render(logoContent)
 	help := menuHelpStyle.Render(constants.HelpMainMenu)
 
 	// Spinner with fixed spacing - always reserve space to prevent movement

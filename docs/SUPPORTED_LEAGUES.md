@@ -1,6 +1,6 @@
 # Supported Leagues
 
-Golazo supports **60+ leagues and competitions**. Customize your selection in Settings.
+Golazo supports **65+ leagues and competitions**. Customize your selection in Settings.
 
 > **Missing your favourite league?** [Create an issue](https://github.com/0xjuanma/golazo/issues/new) and we'll add it!
 
@@ -10,6 +10,7 @@ Golazo supports **60+ leagues and competitions**. Customize your selection in Se
 |---|--------|
 | 🇩🇪 | Bundesliga |
 | 🇩🇪 | Frauen-Bundesliga |
+| 🇩🇪 | Regionalliga |
 | 🇪🇸 | La Liga |
 | 🇪🇸 | Liga F |
 | 🇫🇷 | Ligue 1 |

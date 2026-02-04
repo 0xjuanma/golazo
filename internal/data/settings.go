@@ -31,6 +31,7 @@ var AllSupportedLeagues = map[string][]LeagueInfo{
 		{ID: 47, Name: "Premier League", Country: "England"},
 		{ID: 87, Name: "La Liga", Country: "Spain"},
 		{ID: 54, Name: "Bundesliga", Country: "Germany"},
+		{ID: 512, Name: "Regionalliga", Country: "Germany"},
 		{ID: 55, Name: "Serie A", Country: "Italy"},
 		{ID: 53, Name: "Ligue 1", Country: "France"},
 		// Top 5 Women's Leagues

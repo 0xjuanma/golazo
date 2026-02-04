@@ -54,6 +54,7 @@ type MatchEvent struct {
 	Player        *string   `json:"player,omitempty"`
 	Assist        *string   `json:"assist,omitempty"`
 	EventType     *string   `json:"event_type,omitempty"` // "yellow", "red", "in", "out", etc.
+	OwnGoal       *bool     `json:"own_goal,omitempty"`   // Indicates if this is an own goal
 	Timestamp     time.Time `json:"timestamp"`
 }
 

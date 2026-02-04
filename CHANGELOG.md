@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Code Quality** - Improved code quality by addressing golangci-lint recommendations (Thanks @rober0xf!)
 
 ### Fixed
+- **Own Goal Display** - Goals are now correctly labeled as "OWN GOAL" when applicable
 
 ## [0.18.0] - 2026-01-31
 

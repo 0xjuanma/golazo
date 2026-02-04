@@ -243,8 +243,12 @@ func renderGoalsSection(cfg MatchDetailsConfig, contentWidth int) string {
 		playerDetails := neonValueStyle.Render(player)
 		replayIndicator := getReplayIndicator(details, cfg.GoalLinks, goal.Minute)
 
-		// Use gradient for GOAL label
-		styledGoal := design.ApplyGradientToText("GOAL")
+		// Use gradient for GOAL or OWN GOAL label
+		label := "GOAL"
+		if goal.OwnGoal != nil && *goal.OwnGoal {
+			label = "OWN GOAL"
+		}
+		styledGoal := design.ApplyGradientToText(label)
 		goalContent := buildEventContent(playerDetails, replayIndicator, "●", styledGoal, isHome)
 
 		minuteStr := goal.DisplayMinute

@@ -185,8 +185,15 @@ func renderStyledLiveUpdate(update string, contentWidth int, details *api.MatchD
 	var styledContent string
 	switch symbol {
 	case "●": // Goal - gradient
-		playerDetails, _ := extractPlayerAndType(contentWithoutMinute, "[GOAL]")
-		styledType := design.ApplyGradientToText("GOAL")
+		// Check for own goal marker in the update string
+		label := "GOAL"
+		marker := "[GOAL]"
+		if strings.Contains(contentWithoutMinute, "[OWN GOAL]") {
+			label = "OWN GOAL"
+			marker = "[OWN GOAL]"
+		}
+		playerDetails, _ := extractPlayerAndType(contentWithoutMinute, marker)
+		styledType := design.ApplyGradientToText(label)
 		styledPlayer := whiteStyle.Render(playerDetails)
 
 		replayIndicator := ""

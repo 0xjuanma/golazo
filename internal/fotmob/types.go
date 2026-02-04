@@ -480,6 +480,11 @@ func (m fotmobMatchDetails) toAPIMatchDetails() *api.MatchDetails {
 			event.Player = &playerName
 		}
 
+		// Extract own goal flag
+		if e.OwnGoal != nil && *e.OwnGoal {
+			event.OwnGoal = e.OwnGoal
+		}
+
 		// Extract assist
 		if e.AssistInput != "" {
 			event.Assist = &e.AssistInput

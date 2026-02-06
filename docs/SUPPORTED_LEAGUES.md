@@ -103,8 +103,11 @@ Golazo supports **65+ leagues and competitions**. Customize your selection in Se
 
 ## North America
 
-| | League |
-|---|--------|
+| | League/Competition |
+|---|-------------------|
+| 🏆 | CONCACAF Champions Cup |
+| 🏆 | CONCACAF Gold Cup |
+| 🏆 | CONCACAF Nations League |
 | 🇲🇽 | Liga MX |
 | 🇺🇸 | MLS |
 | 🇺🇸 | NWSL |
@@ -117,8 +120,9 @@ Golazo supports **65+ leagues and competitions**. Customize your selection in Se
 
 ## Asia
 
-| | League |
-|---|--------|
+| | League/Competition |
+|---|-------------------|
+| 🏆 | AFC Champions League Elite |
 | 🇨🇳 | Chinese Super League |
 | 🇮🇳 | Indian Super League |
 | 🇯🇵 | J. League |
@@ -133,8 +137,9 @@ Golazo supports **65+ leagues and competitions**. Customize your selection in Se
 
 ## Africa
 
-| | League |
-|---|--------|
+| | League/Competition |
+|---|-------------------|
+| 🏆 | CAF Champions League |
 | 🇲🇦 | Botola Pro |
 | 🇪🇬 | Egyptian Premier League |
 | 🇿🇦 | Premier Soccer League |

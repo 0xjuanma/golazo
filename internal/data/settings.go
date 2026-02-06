@@ -88,6 +88,10 @@ var AllSupportedLeagues = map[string][]LeagueInfo{
 		{ID: 188, Name: "Supertaça Cândido de Oliveira", Country: "Portugal"},
 	},
 	RegionAmerica: {
+		// North America Competitions
+		{ID: 297, Name: "CONCACAF Champions Cup", Country: "North America"},
+		{ID: 298, Name: "CONCACAF Gold Cup", Country: "North America"},
+		{ID: 9821, Name: "CONCACAF Nations League", Country: "North America"},
 		// South America
 		{ID: 268, Name: "Brasileirão Série A", Country: "Brazil"},
 		{ID: 8814, Name: "Brasileirão Série B", Country: "Brazil"},
@@ -118,6 +122,7 @@ var AllSupportedLeagues = map[string][]LeagueInfo{
 		// Middle East
 		{ID: 536, Name: "Saudi Pro League", Country: "Saudi Arabia"},
 		// Asia
+		{ID: 525, Name: "AFC Champions League Elite", Country: "Asia"},
 		{ID: 9478, Name: "Indian Super League", Country: "India"},
 		{ID: 223, Name: "J. League", Country: "Japan"},
 		{ID: 9080, Name: "K League 1", Country: "South Korea"},
@@ -126,6 +131,7 @@ var AllSupportedLeagues = map[string][]LeagueInfo{
 		// Oceania
 		{ID: 113, Name: "A-League", Country: "Australia"},
 		// Africa
+		{ID: 526, Name: "CAF Champions League", Country: "Africa"},
 		{ID: 519, Name: "Egyptian Premier League", Country: "Egypt"},
 		{ID: 537, Name: "Premier Soccer League", Country: "South Africa"},
 		{ID: 530, Name: "Botola Pro", Country: "Morocco"},

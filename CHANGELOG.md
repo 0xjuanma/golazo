@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+
+## [0.20.0] - 2026-02-05
+
+### Added
 - **Italian Serie B** - Added support for Italian Serie B (second division)
 - **Finalissima** - Added support for CONMEBOL-UEFA Cup of Champions
 - **CONCACAF Competitions** - Added support for CONCACAF Champions Cup, Gold Cup, and Nations League

@@ -90,6 +90,8 @@ type GoalInfo struct {
 	MatchID       int
 	HomeTeam      string
 	AwayTeam      string
+	HomeTeamShort string // Short/alternative name (e.g., "Wolves", "Man Utd")
+	AwayTeamShort string // Short/alternative name (e.g., "Wolves", "Man Utd")
 	ScorerName    string
 	Minute        int
 	DisplayMinute string // e.g., "45+2'" for stoppage time display

@@ -17,7 +17,7 @@ type DebugLogger func(message string)
 // Fetcher defines the interface for fetching data from Reddit.
 // Uses Reddit's public JSON API for goal link retrieval.
 type Fetcher interface {
-	Search(query string, limit int, matchTime time.Time) ([]SearchResult, error)
+	Search(query string, limit int, matchTime time.Time, sort string) ([]SearchResult, error)
 }
 
 // PublicJSONFetcher uses Reddit's public JSON endpoints (no auth required).
@@ -67,7 +67,8 @@ func NewPublicJSONFetcher() *PublicJSONFetcher {
 
 // Search performs a search on r/soccer for Media posts matching the query.
 // matchTime is used to filter results to posts created around the match date.
-func (f *PublicJSONFetcher) Search(query string, limit int, matchTime time.Time) ([]SearchResult, error) {
+// sort controls the result ordering (e.g., "relevance", "top", "new", "hot").
+func (f *PublicJSONFetcher) Search(query string, limit int, matchTime time.Time, sort string) ([]SearchResult, error) {
 	f.rateLimiter.wait()
 
 	// Build timestamp range for filtering (match day only ±12 hours)
@@ -75,13 +76,19 @@ func (f *PublicJSONFetcher) Search(query string, limit int, matchTime time.Time)
 	startTime := matchTime.Add(-12 * time.Hour).Unix()
 	endTime := matchTime.Add(12 * time.Hour).Unix()
 
+	// Default to relevance if sort is empty
+	if sort == "" {
+		sort = "relevance"
+	}
+
 	// Build search URL for r/soccer with Media flair filter and timestamp
 	// Reddit CloudSearch supports timestamp:START..END syntax
 	searchURL := fmt.Sprintf(
-		"https://www.reddit.com/r/soccer/search.json?q=%s+flair:Media+timestamp:%d..%d&restrict_sr=on&sort=relevance&limit=%d",
+		"https://www.reddit.com/r/soccer/search.json?q=%s+flair:Media+timestamp:%d..%d&restrict_sr=on&sort=%s&limit=%d",
 		url.QueryEscape(query),
 		startTime,
 		endTime,
+		url.QueryEscape(sort),
 		limit,
 	)
 
@@ -316,7 +323,7 @@ func (c *Client) searchForGoalOnce(goal GoalInfo) (*GoalLink, error) {
 	query1 := fmt.Sprintf("%s %s %d'", goal.HomeTeam, goal.AwayTeam, goal.Minute)
 	c.debugLog(fmt.Sprintf("Reddit search query: '%s' for goal %d:%d (%s vs %s)",
 		query1, goal.MatchID, goal.Minute, goal.HomeTeam, goal.AwayTeam))
-	results1, err := c.fetcher.Search(query1, 15, goal.MatchTime)
+	results1, err := c.fetcher.Search(query1, 15, goal.MatchTime, "relevance")
 	if err != nil {
 		c.debugLog(fmt.Sprintf("Reddit search failed for query '%s': %v", query1, err))
 	} else {
@@ -361,7 +368,7 @@ func (c *Client) searchForGoalOnce(goal GoalInfo) (*GoalLink, error) {
 	}
 	query2 := fmt.Sprintf("%s %d'", scoringTeam, goal.Minute)
 	c.debugLog(fmt.Sprintf("Reddit search query (strategy 2): '%s' for goal %d:%d", query2, goal.MatchID, goal.Minute))
-	results2, err := c.fetcher.Search(query2, 15, goal.MatchTime)
+	results2, err := c.fetcher.Search(query2, 15, goal.MatchTime, "relevance")
 	if err != nil {
 		c.debugLog(fmt.Sprintf("Reddit search failed for strategy 2 query '%s': %v", query2, err))
 	} else {
@@ -379,12 +386,75 @@ func (c *Client) searchForGoalOnce(goal GoalInfo) (*GoalLink, error) {
 		}
 	}
 
-	// Find the best matching result
+	// Check if strategies 1+2 found a match before trying strategy 3
 	match := findBestMatch(uniqueResults, goal)
+	if match != nil {
+		c.debugLog(fmt.Sprintf("Strategy 1+2 match found for goal %d:%d, skipping strategy 3", goal.MatchID, goal.Minute))
+		c.debugLog(fmt.Sprintf("Found goal link for %d:%d: %s (post: %s)", goal.MatchID, goal.Minute, match.URL, match.PostURL))
+		return &GoalLink{
+			MatchID:   goal.MatchID,
+			Minute:    goal.Minute,
+			URL:       match.URL,
+			Title:     match.Title,
+			PostURL:   match.PostURL,
+			FetchedAt: time.Now(),
+		}, nil
+	}
+
+	// Strategy 3: Try with short/alternative team names + sort by top (upvotes)
+	// Only runs if strategies 1+2 did not find a match
+	homeShort := strings.TrimSpace(goal.HomeTeamShort)
+	awayShort := strings.TrimSpace(goal.AwayTeamShort)
+
+	// Skip if short names are empty or identical to full names (avoids redundant API call)
+	homeShortDifferent := homeShort != "" && !strings.EqualFold(homeShort, goal.HomeTeam)
+	awayShortDifferent := awayShort != "" && !strings.EqualFold(awayShort, goal.AwayTeam)
+
+	if !homeShortDifferent && !awayShortDifferent {
+		c.debugLog(fmt.Sprintf("Skipping strategy 3 for goal %d:%d: short names empty or identical to full names", goal.MatchID, goal.Minute))
+		return nil, nil // No match found across all strategies
+	}
+
+	// Build query using short names where they differ, falling back to full names
+	homeQuery := goal.HomeTeam
+	if homeShortDifferent {
+		homeQuery = homeShort
+	}
+	awayQuery := goal.AwayTeam
+	if awayShortDifferent {
+		awayQuery = awayShort
+	}
+
+	query3 := fmt.Sprintf("%s %s %d'", homeQuery, awayQuery, goal.Minute)
+	c.debugLog(fmt.Sprintf("Reddit search query (strategy 3): '%s' for goal %d:%d", query3, goal.MatchID, goal.Minute))
+	results3, err := c.fetcher.Search(query3, 15, goal.MatchTime, "top")
+	if err != nil {
+		c.debugLog(fmt.Sprintf("Reddit search failed for strategy 3 query '%s': %v", query3, err))
+	} else {
+		c.debugLog(fmt.Sprintf("Reddit search returned %d results for strategy 3 query '%s'", len(results3), query3))
+		// Debug: log the first few result titles
+		for i, result := range results3 {
+			if i < 3 { // Log first 3 results
+				c.debugLog(fmt.Sprintf("Strategy 3 result %d: '%s' (score: %d)", i+1, result.Title, result.Score))
+			}
+		}
+		// Combine with all prior results for best match selection
+		for _, result := range results3 {
+			if !seen[result.URL] {
+				seen[result.URL] = true
+				uniqueResults = append(uniqueResults, result)
+			}
+		}
+	}
+
+	// Find the best matching result across all strategies
+	match = findBestMatch(uniqueResults, goal)
+	c.debugLog(fmt.Sprintf("findBestMatch result (strategy 3) for goal %d:%d: %v", goal.MatchID, goal.Minute, match != nil))
 	if match == nil {
 		return nil, nil // No match found, but not an error
 	}
 
+	c.debugLog(fmt.Sprintf("Found goal link (strategy 3) for %d:%d: %s (post: %s)", goal.MatchID, goal.Minute, match.URL, match.PostURL))
 	return &GoalLink{
 		MatchID:   goal.MatchID,
 		Minute:    goal.Minute,

@@ -352,6 +352,8 @@ func fetchGoalLinks(redditClient *reddit.Client, details *api.MatchDetails) tea.
 				MatchID:       details.ID,
 				HomeTeam:      details.HomeTeam.Name,
 				AwayTeam:      details.AwayTeam.Name,
+				HomeTeamShort: details.HomeTeam.ShortName,
+				AwayTeamShort: details.AwayTeam.ShortName,
 				ScorerName:    scorer,
 				Minute:        event.Minute,
 				DisplayMinute: event.DisplayMinute,

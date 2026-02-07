@@ -354,6 +354,8 @@ func (m model) resetToMainView() (tea.Model, tea.Cmd) {
 	m.polling = false
 	m.matches = nil
 	m.upcomingMatches = nil
+	m.statsRightPanelFocused = false
+	m.statsScrollOffset = 0
 	return m, nil
 }
 

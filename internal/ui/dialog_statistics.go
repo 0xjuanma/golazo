@@ -17,16 +17,20 @@ const statisticsDialogID = "statistics"
 type StatisticsDialog struct {
 	homeTeam    string
 	awayTeam    string
+	homeScore	int
+	awayScore	int
 	statistics  []api.MatchStatistic
 	scrollIndex int
 	maxVisible  int
 }
 
 // NewStatisticsDialog creates a new statistics dialog.
-func NewStatisticsDialog(homeTeam, awayTeam string, statistics []api.MatchStatistic) *StatisticsDialog {
+func NewStatisticsDialog(homeTeam, awayTeam string, homeScore, awayScore int, statistics []api.MatchStatistic) *StatisticsDialog {
 	return &StatisticsDialog{
 		homeTeam:    homeTeam,
 		awayTeam:    awayTeam,
+		homeScore:    homeScore,
+		awayScore:    awayScore,
 		statistics:  statistics,
 		scrollIndex: 0,
 		maxVisible:  20, // Number of stats visible at once (larger dialog)
@@ -87,6 +91,11 @@ func (d *StatisticsDialog) renderContent(width int) string {
 	// Separator
 	separator := dialogSeparatorStyle.Render(strings.Repeat("─", width))
 	lines = append(lines, separator)
+
+	//Render Goals at top always
+	goalsStat := createStatFromGoal(d.homeScore, d.awayScore)
+	goals := d.renderStatRow(goalsStat,width)
+	lines = append(lines,goals)
 
 	// Calculate visible range
 	endIdx := d.scrollIndex + d.maxVisible
@@ -259,4 +268,17 @@ func parseStatNumber(s string) float64 {
 		return 0
 	}
 	return val
+}
+
+// create stat from goals returns a stat struct from goals value
+func createStatFromGoal(homeGoals, awayGoals int) api.MatchStatistic{
+	homeStr := strconv.Itoa(homeGoals)
+	awayStr := strconv.Itoa(awayGoals)
+
+	return api.MatchStatistic {
+		Key: "Goals",
+		Label: "Goals",
+		HomeValue: homeStr,
+		AwayValue: awayStr,
+	}
 }

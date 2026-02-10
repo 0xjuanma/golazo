@@ -14,6 +14,7 @@ Golazo supports **65+ leagues and competitions**. Customize your selection in Se
 | 🇪🇸 | La Liga |
 | 🇪🇸 | Liga F |
 | 🇫🇷 | Ligue 1 |
+| 🇫🇷 | Ligue 2 |
 | 🇫🇷 | Première Ligue Féminine |
 | 🏴󠁧󠁢󠁥󠁮󠁧󠁿 | Premier League |
 | 🇮🇹 | Serie A |

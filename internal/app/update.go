@@ -1401,6 +1401,8 @@ func (m *model) openStatisticsDialog() {
 	dialog := ui.NewStatisticsDialog(
 		homeTeam,
 		awayTeam,
+		*m.matchDetails.HomeScore,
+		*m.matchDetails.AwayScore,
 		m.matchDetails.Statistics,
 	)
 	m.dialogOverlay.OpenDialog(dialog)

@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Ligue 2** - Added support for French Ligue 2 (Thanks @hkajdan!)
 
 ### Changed
 

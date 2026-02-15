@@ -117,6 +117,12 @@ func RenderMatchDetails(cfg MatchDetailsConfig) (headerContent, scrollableConten
 			scrollableLines = append(scrollableLines, cardsSection)
 		}
 
+		// Substitutions section
+		subsSection := renderSubstitutionsSection(cfg, contentWidth)
+		if subsSection != "" {
+			scrollableLines = append(scrollableLines, subsSection)
+		}
+
 		// Statistics section (stats view only)
 		if cfg.ShowStatistics && len(details.Statistics) > 0 {
 			statsSection := renderStatisticsSection(cfg, contentWidth, homeTeam, awayTeam)
@@ -300,6 +306,51 @@ func renderCardsSection(cfg MatchDetailsConfig, contentWidth int) string {
 			minuteStr = fmt.Sprintf("%d'", card.Minute)
 		}
 		lines = append(lines, renderCenterAlignedEvent(minuteStr, cardContent, isHome, contentWidth))
+	}
+
+	return lipgloss.JoinVertical(lipgloss.Left, lines...)
+}
+
+func renderSubstitutionsSection(cfg MatchDetailsConfig, contentWidth int) string {
+	details := cfg.Details
+	var subs []api.MatchEvent
+	for _, event := range details.Events {
+		if event.Type == "substitution" {
+			subs = append(subs, event)
+		}
+	}
+
+	if len(subs) == 0 {
+		return ""
+	}
+
+	dimStyle := lipgloss.NewStyle().Foreground(neonDim)
+	outStyle := lipgloss.NewStyle().Foreground(neonRed)
+	inStyle := lipgloss.NewStyle().Foreground(neonCyan)
+
+	var lines []string
+	lines = append(lines, "")
+	lines = append(lines, neonHeaderStyle.Render("Substitutions"))
+
+	for _, sub := range subs {
+		playerOut := "Unknown"
+		if sub.Player != nil {
+			playerOut = *sub.Player
+		}
+		playerIn := "Unknown"
+		if sub.Assist != nil {
+			playerIn = *sub.Assist
+		}
+		isHome := sub.Team.ID == details.HomeTeam.ID
+
+		playerDetails := inStyle.Render("←"+playerIn) + " " + outStyle.Render("→"+playerOut)
+		subContent := buildEventContent(playerDetails, "", "↔", dimStyle.Render("SUB"), isHome)
+
+		minuteStr := sub.DisplayMinute
+		if minuteStr == "" {
+			minuteStr = fmt.Sprintf("%d'", sub.Minute)
+		}
+		lines = append(lines, renderCenterAlignedEvent(minuteStr, subContent, isHome, contentWidth))
 	}
 
 	return lipgloss.JoinVertical(lipgloss.Left, lines...)

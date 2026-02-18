@@ -33,6 +33,7 @@ var AllSupportedLeagues = map[string][]LeagueInfo{
 		{ID: 87, Name: "La Liga", Country: "Spain"},
 		{ID: 54, Name: "Bundesliga", Country: "Germany"},
 		{ID: 146, Name: "2. Bundesliga", Country: "Germany"},
+		{ID: 208, Name: "3. Liga", Country: "Germany"},
 		{ID: 512, Name: "Regionalliga", Country: "Germany"},
 		{ID: 55, Name: "Serie A", Country: "Italy"},
 		{ID: 86, Name: "Serie B", Country: "Italy"},

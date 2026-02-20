@@ -8,7 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+
+## [0.22.0] - 2026-02-20
+
+### Added
 - **Ligue 2** - Added support for French Ligue 2 (Thanks @hkajdan!)
+- **Add more German leagues** - Added support for German 2. Bundesliga and 3. Liga (Thanks @lukasgierth!)
+
 - **Substitutions in Finished View** - Finished match details now show a "Substitutions" section (after Goals and Cards) with the same styling as the live view (player in/out, minute)
 
 ### Changed
@@ -16,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **Half-Time Score** - Fixed HT score being overwritten with the final score when a match finishes
+- **Match Details & Scores** - Fixed match details returning nil and scores showing as empty due to FotMob API changes
 
 ## [0.21.0] - 2026-02-07
 

@@ -9,6 +9,8 @@ Golazo supports **65+ leagues and competitions**. Customize your selection in Se
 | | League |
 |---|--------|
 | 🇩🇪 | Bundesliga |
+| 🇩🇪 | 2. Bundesliga |
+| 🇩🇪 | 3. Liga |
 | 🇩🇪 | Frauen-Bundesliga |
 | 🇩🇪 | Regionalliga |
 | 🇪🇸 | La Liga |

@@ -35,6 +35,8 @@ type Client struct {
 	rateLimiter *RateLimiter
 	cache       *ResponseCache
 	emptyCache  *EmptyResultsCache // Persistent cache for empty league+date combinations
+	pageURLs    map[int]string     // Match ID -> page slug mapping for page-based fetching
+	pageURLsMu  sync.RWMutex
 }
 
 // NewClient creates a new FotMob API client with default configuration.
@@ -57,12 +59,30 @@ func NewClient() *Client {
 		rateLimiter: NewRateLimiter(200 * time.Millisecond), // Minimal delay for concurrent requests
 		cache:       NewResponseCache(DefaultCacheConfig()),
 		emptyCache:  emptyCache,
+		pageURLs:    make(map[int]string),
 	}
 }
 
 // Cache returns the response cache for external access (e.g., pre-fetching).
 func (c *Client) Cache() *ResponseCache {
 	return c.cache
+}
+
+// StorePageURL stores a match page URL slug for later use by MatchDetails.
+func (c *Client) StorePageURL(matchID int, pageURL string) {
+	if pageURL == "" {
+		return
+	}
+	c.pageURLsMu.Lock()
+	c.pageURLs[matchID] = pageURL
+	c.pageURLsMu.Unlock()
+}
+
+// getPageURL retrieves the stored page URL slug for a match ID.
+func (c *Client) getPageURL(matchID int) string {
+	c.pageURLsMu.RLock()
+	defer c.pageURLsMu.RUnlock()
+	return c.pageURLs[matchID]
 }
 
 // SaveEmptyCache persists the empty results cache to disk.
@@ -200,7 +220,9 @@ func (c *Client) MatchesByDateWithTabs(ctx context.Context, date time.Time, tabs
 										CountryCode: leagueResponse.Details.CountryCode,
 									}
 								}
-								leagueMatches = append(leagueMatches, m.toAPIMatch())
+								apiMatch := m.toAPIMatch()
+								c.StorePageURL(apiMatch.ID, apiMatch.PageURL)
+								leagueMatches = append(leagueMatches, apiMatch)
 							}
 						}
 					}
@@ -294,7 +316,9 @@ func (c *Client) MatchesForLeagueAndDate(ctx context.Context, leagueID int, date
 							CountryCode: leagueResponse.Details.CountryCode,
 						}
 					}
-					matches = append(matches, m.toAPIMatch())
+					apiMatch := m.toAPIMatch()
+				c.StorePageURL(apiMatch.ID, apiMatch.PageURL)
+				matches = append(matches, apiMatch)
 				}
 			}
 		}
@@ -305,6 +329,10 @@ func (c *Client) MatchesForLeagueAndDate(ctx context.Context, leagueID int, date
 
 // MatchDetails retrieves detailed information about a specific match.
 // Results are cached to avoid redundant API calls.
+//
+// Uses page-based fetching (match page HTML with __NEXT_DATA__) as the primary
+// method, since the /api/matchDetails endpoint now requires Cloudflare Turnstile
+// verification. Falls back to the direct API endpoint if page fetching fails.
 func (c *Client) MatchDetails(ctx context.Context, matchID int) (*api.MatchDetails, error) {
 	// Check cache first
 	if cached := c.cache.Details(matchID); cached != nil {
@@ -314,6 +342,24 @@ func (c *Client) MatchDetails(ctx context.Context, matchID int) (*api.MatchDetai
 	// Apply rate limiting
 	c.rateLimiter.Wait()
 
+	// Try page-based fetching first (primary method)
+	if pageSlug := c.getPageURL(matchID); pageSlug != "" {
+		details, err := fetchMatchDetailsFromPage(ctx, c.httpClient, pageSlug)
+		if err == nil && details != nil {
+			c.cache.SetDetails(matchID, details)
+			return details, nil
+		}
+		// Page fetch failed, fall through to direct API
+	}
+
+	// Fallback: direct API endpoint (may return 403 if Turnstile is required)
+	return c.matchDetailsFromAPI(ctx, matchID)
+}
+
+// matchDetailsFromAPI fetches match details from the /api/matchDetails endpoint.
+// This is the original fetching method, kept as a fallback in case the endpoint
+// becomes accessible again or for specific match IDs without a page URL.
+func (c *Client) matchDetailsFromAPI(ctx context.Context, matchID int) (*api.MatchDetails, error) {
 	url := fmt.Sprintf("%s/matchDetails?matchId=%d", c.baseURL, matchID)
 
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)

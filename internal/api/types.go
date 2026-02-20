@@ -43,6 +43,7 @@ type Match struct {
 	MatchTime *time.Time  `json:"match_time,omitempty"`
 	LiveTime  *string     `json:"live_time,omitempty"` // e.g., "45+2", "HT", "FT"
 	Round     string      `json:"round,omitempty"`
+	PageURL   string      `json:"page_url,omitempty"` // FotMob match page slug (e.g., "/matches/team-vs-team/abc123")
 }
 
 // MatchEvent represents an event in a match (goal, card, substitution, etc.)

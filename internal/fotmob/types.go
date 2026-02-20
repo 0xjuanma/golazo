@@ -14,12 +14,13 @@ import (
 // fotmobMatch represents a match in FotMob's API format
 // Note: FotMob uses string IDs in JSON, but we convert them to ints
 type fotmobMatch struct {
-	ID     string `json:"id"` // FotMob returns string IDs
-	Round  string `json:"round"`
-	Home   team   `json:"home"`
-	Away   team   `json:"away"`
-	Status status `json:"status"`
-	League league `json:"league"`
+	ID      string `json:"id"` // FotMob returns string IDs
+	Round   string `json:"round"`
+	Home    team   `json:"home"`
+	Away    team   `json:"away"`
+	Status  status `json:"status"`
+	League  league `json:"league"`
+	PageURL string `json:"pageUrl"` // Match page slug (e.g., "/matches/team-vs-team/abc123#matchID")
 }
 
 type team struct {
@@ -42,6 +43,7 @@ type status struct {
 	Cancelled *bool     `json:"cancelled"` // Can be null
 	LiveTime  *liveTime `json:"liveTime,omitempty"`
 	Score     *score    `json:"score,omitempty"`
+	ScoreStr  string    `json:"scoreStr,omitempty"` // Score as string (e.g., "4 - 2"), used when Score object is absent
 }
 
 type liveTime struct {
@@ -59,6 +61,12 @@ func (m fotmobMatch) toAPIMatch() api.Match {
 	matchID := parseInt(m.ID)
 	homeID := parseInt(m.Home.ID)
 	awayID := parseInt(m.Away.ID)
+
+	// Strip fragment (#matchID) from pageUrl to get the clean slug
+	pageURL := m.PageURL
+	if idx := strings.Index(pageURL, "#"); idx != -1 {
+		pageURL = pageURL[:idx]
+	}
 
 	match := api.Match{
 		ID: matchID,
@@ -78,7 +86,8 @@ func (m fotmobMatch) toAPIMatch() api.Match {
 			Name:      m.Away.Name,
 			ShortName: m.Away.ShortName,
 		},
-		Round: m.Round,
+		Round:   m.Round,
+		PageURL: pageURL,
 	}
 
 	// Parse match time - FotMob uses .000Z format sometimes
@@ -109,10 +118,16 @@ func (m fotmobMatch) toAPIMatch() api.Match {
 		match.Status = api.MatchStatusNotStarted
 	}
 
-	// Set scores if available
+	// Set scores if available (prefer structured Score, fall back to ScoreStr)
 	if m.Status.Score != nil {
 		match.HomeScore = &m.Status.Score.Home
 		match.AwayScore = &m.Status.Score.Away
+	} else if m.Status.ScoreStr != "" {
+		// Parse scoreStr format: "4 - 2"
+		if home, away, ok := parseScoreStr(m.Status.ScoreStr); ok {
+			match.HomeScore = &home
+			match.AwayScore = &away
+		}
 	}
 
 	return match
@@ -746,4 +761,21 @@ func parseInt(s string) int {
 		return 0
 	}
 	return val
+}
+
+// parseScoreStr parses a score string like "4 - 2" into home and away ints.
+func parseScoreStr(s string) (home, away int, ok bool) {
+	parts := strings.SplitN(s, " - ", 2)
+	if len(parts) != 2 {
+		return 0, 0, false
+	}
+	h, err := strconv.Atoi(strings.TrimSpace(parts[0]))
+	if err != nil {
+		return 0, 0, false
+	}
+	a, err := strconv.Atoi(strings.TrimSpace(parts[1]))
+	if err != nil {
+		return 0, 0, false
+	}
+	return h, a, true
 }

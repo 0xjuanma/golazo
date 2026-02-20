@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Ligue 2** - Added support for French Ligue 2 (Thanks @hkajdan!)
+- **Add more German leagues** - Added support for German 2. Bundesliga and 3. Liga (Thanks @lukasgierth!)
+
 - **Substitutions in Finished View** - Finished match details now show a "Substitutions" section (after Goals and Cards) with the same styling as the live view (player in/out, minute)
 
 ### Changed

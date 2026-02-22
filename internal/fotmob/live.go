@@ -67,7 +67,8 @@ func (c *Client) LiveMatchesForLeague(ctx context.Context, leagueID int) ([]api.
 	for _, match := range matches {
 		// Verify match is for today and is live
 		if match.MatchTime != nil {
-			matchDate := match.MatchTime.UTC().Format("2006-01-02")
+			//Compare with local times
+			matchDate := match.MatchTime.Local().Format("2006-01-02")
 			if matchDate == dateStr && match.Status == api.MatchStatusLive {
 				liveMatches = append(liveMatches, match)
 			}

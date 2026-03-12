@@ -66,7 +66,7 @@ func NewClient() *Client {
 		rateLimiter:   ratelimit.New(200 * time.Millisecond), // Minimal delay for concurrent requests
 		cache:         NewResponseCache(DefaultCacheConfig()),
 		emptyCache:    emptyCache,
-		pageURLs:      make(map[int]string),
+		pageURLs:      make(map[int]string, 50),
 		maxConcurrent: make(chan struct{}, 10),
 	}
 }
@@ -260,8 +260,8 @@ func (c *Client) MatchesByDateWithTabs(ctx context.Context, date time.Time, tabs
 	// Cache the results before returning
 	c.cache.SetMatches(requestDateStr, allMatches)
 
-	// Persist empty results cache to disk (async, best-effort)
-	go func() { _ = c.SaveEmptyCache() }()
+	// Persist empty results cache to disk (best-effort)
+	_ = c.SaveEmptyCache()
 
 	return allMatches, nil
 }

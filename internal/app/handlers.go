@@ -234,7 +234,9 @@ func (m model) handleSettingsViewKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		case "enter":
 			// Save settings and return to main menu
-			_ = m.settingsState.Save() // Best-effort save
+			if err := m.settingsState.Save(); err != nil {
+				m.debugLog(fmt.Sprintf("failed to save settings: %v", err))
+			}
 			m.settingsState = nil
 			m.currentView = viewMain
 			m.selected = 0

@@ -1171,8 +1171,9 @@ func (m *model) notifyNewGoals(details *api.MatchDetails) {
 	}
 
 	if goalEvent != nil {
-		// Send notification - errors are silently ignored to not disrupt the app
-		_ = m.notifier.Goal(*goalEvent, details.HomeTeam, details.AwayTeam, homeScore, awayScore)
+		if err := m.notifier.Goal(*goalEvent, details.HomeTeam, details.AwayTeam, homeScore, awayScore); err != nil {
+			m.debugLog(fmt.Sprintf("failed to send goal notification: %v", err))
+		}
 	}
 }
 

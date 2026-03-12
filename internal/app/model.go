@@ -198,12 +198,16 @@ func New(useMockData bool, debugMode bool, isDevBuild bool, newVersionAvailable 
 
 	// Initialize Reddit client (best-effort, nil if fails)
 	var redditClient *reddit.Client
+	var redditErr error
 	if debugMode {
-		redditClient, _ = reddit.NewClientWithDebug(func(message string) {
+		redditClient, redditErr = reddit.NewClientWithDebug(func(message string) {
 			logger.Debug(message, "source", "reddit")
 		})
 	} else {
-		redditClient, _ = reddit.NewClient()
+		redditClient, redditErr = reddit.NewClient()
+	}
+	if redditErr != nil {
+		logger.Warn("reddit client initialization failed, goal replay links will be unavailable", "error", redditErr)
 	}
 
 	// Initialize animated logo for main view

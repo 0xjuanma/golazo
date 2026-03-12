@@ -56,7 +56,7 @@ func fetchLiveBatchData(client *fotmob.Client, useMockData bool, batchIndex int)
 		// Fetch all leagues in this batch concurrently
 		var wg sync.WaitGroup
 		var mu sync.Mutex
-		var allMatches []api.Match
+		allMatches := make([]api.Match, 0, (endIdx-startIdx)*5)
 
 		for i := startIdx; i < endIdx; i++ {
 			wg.Add(1)
@@ -263,7 +263,8 @@ func fetchStatsDayData(client *fotmob.Client, useMockData bool, dayIndex int, to
 		}
 
 		// Split matches into finished and upcoming
-		var finished, upcoming []api.Match
+		finished := make([]api.Match, 0, len(matches)/2)
+		upcoming := make([]api.Match, 0, len(matches)/4)
 		for _, match := range matches {
 			if match.Status == api.MatchStatusFinished {
 				finished = append(finished, match)

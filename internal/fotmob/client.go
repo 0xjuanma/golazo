@@ -135,9 +135,12 @@ func (c *Client) MatchesByDateWithTabs(ctx context.Context, date time.Time, tabs
 		}
 	}
 
+	// Get active leagues (respects user settings)
+	activeLeagues := ActiveLeagues()
+
 	// Use a mutex to protect the shared slice
 	var mu sync.Mutex
-	var allMatches []api.Match
+	allMatches := make([]api.Match, 0, len(activeLeagues)*5)
 
 	// Query leagues concurrently - no stagger delays, just rate limiting
 	// Best-effort aggregation: if a league query fails, we skip it and continue with others
@@ -146,9 +149,6 @@ func (c *Client) MatchesByDateWithTabs(ctx context.Context, date time.Time, tabs
 
 	// Track skipped leagues for logging/debugging
 	var skippedFromCache int
-
-	// Get active leagues (respects user settings)
-	activeLeagues := ActiveLeagues()
 
 	// Query specified tabs
 	for _, tab := range tabs {
@@ -205,7 +205,7 @@ func (c *Client) MatchesByDateWithTabs(ctx context.Context, date time.Time, tabs
 
 				// Filter matches for the requested date and add league info
 				// Note: Matches are sorted chronologically, so we need to check all matches
-				var leagueMatches []api.Match
+				leagueMatches := make([]api.Match, 0, len(leagueResponse.Fixtures.AllMatches))
 				for _, m := range leagueResponse.Fixtures.AllMatches {
 					// Check if match is on the requested date
 					if m.Status.UTCTime != "" {
@@ -306,7 +306,7 @@ func (c *Client) MatchesForLeagueAndDate(ctx context.Context, leagueID int, date
 	}
 
 	// Filter matches for the requested date
-	var matches []api.Match
+	matches := make([]api.Match, 0, 10)
 	for _, m := range leagueResponse.Fixtures.AllMatches {
 		if m.Status.UTCTime != "" {
 			var matchTime time.Time

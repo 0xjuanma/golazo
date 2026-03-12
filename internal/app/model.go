@@ -2,6 +2,7 @@
 package app
 
 import (
+	"context"
 	"io"
 	"log/slog"
 	"os"
@@ -88,6 +89,10 @@ type model struct {
 	polling          bool
 	pendingSelection int    // Tracks which view is being preloaded (-1 = none, 0 = stats, 1 = live)
 	lastError        string // Last error message to display in UI (cleared on successful load)
+
+	// Context for cancelling in-flight API requests when navigating away
+	loadCtx    context.Context
+	loadCancel context.CancelFunc
 
 	// Configuration
 	useMockData         bool

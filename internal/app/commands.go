@@ -21,13 +21,18 @@ const LiveBatchSize = 4
 // fetchLiveBatchData fetches live matches for a batch of leagues concurrently.
 // batchIndex: 0, 1, 2, ... (each batch fetches LiveBatchSize leagues in parallel)
 // Results appear after each batch completes, giving progressive updates while being fast.
-func fetchLiveBatchData(client *fotmob.Client, useMockData bool, batchIndex int) tea.Cmd {
+func fetchLiveBatchData(parentCtx context.Context, client *fotmob.Client, useMockData bool, batchIndex int) tea.Cmd {
 	return func() tea.Msg {
 		totalLeagues := fotmob.TotalLeagues()
 		startIdx := batchIndex * LiveBatchSize
 		endIdx := startIdx + LiveBatchSize
 		endIdx = min(endIdx, totalLeagues)
 		isLast := endIdx >= totalLeagues
+
+		// Check if cancelled before starting work
+		if parentCtx.Err() != nil {
+			return liveBatchDataMsg{batchIndex: batchIndex, isLast: true}
+		}
 
 		if useMockData {
 			// Return mock data only on first batch
@@ -64,7 +69,7 @@ func fetchLiveBatchData(client *fotmob.Client, useMockData bool, batchIndex int)
 				defer wg.Done()
 
 				leagueID := fotmob.LeagueIDAtIndex(leagueIdx)
-				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+				ctx, cancel := context.WithTimeout(parentCtx, 10*time.Second)
 				defer cancel()
 
 				matches, err := client.LiveMatchesForLeague(ctx, leagueID)
@@ -200,10 +205,15 @@ func fetchPollMatchDetails(client *fotmob.Client, matchID int, useMockData bool)
 // dayIndex: 0 = today, 1 = yesterday, etc.
 // totalDays: total number of days to fetch (for isLast calculation)
 // This enables showing results immediately as each day's data arrives.
-func fetchStatsDayData(client *fotmob.Client, useMockData bool, dayIndex int, totalDays int) tea.Cmd {
+func fetchStatsDayData(parentCtx context.Context, client *fotmob.Client, useMockData bool, dayIndex int, totalDays int) tea.Cmd {
 	return func() tea.Msg {
 		isToday := dayIndex == 0
 		isLast := dayIndex == totalDays-1
+
+		// Check if cancelled before starting work
+		if parentCtx.Err() != nil {
+			return statsDayDataMsg{dayIndex: dayIndex, isToday: isToday, isLast: true}
+		}
 
 		if useMockData {
 			if isToday {
@@ -234,7 +244,7 @@ func fetchStatsDayData(client *fotmob.Client, useMockData bool, dayIndex int, to
 			}
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		ctx, cancel := context.WithTimeout(parentCtx, 30*time.Second)
 		defer cancel()
 
 		// Calculate the date for this day

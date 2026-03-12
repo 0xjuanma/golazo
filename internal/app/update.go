@@ -299,6 +299,9 @@ func (m model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	switch msg.String() {
 	case "q", "ctrl+c":
+		if m.loadCancel != nil {
+			m.loadCancel()
+		}
 		return m, tea.Quit
 	case "esc":
 		// Check if any list is in filtering mode - if so, let the list handle Esc
@@ -345,6 +348,10 @@ func (m model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 // resetToMainView clears state and returns to main menu.
 func (m model) resetToMainView() (tea.Model, tea.Cmd) {
+	// Cancel any in-flight API requests
+	if m.loadCancel != nil {
+		m.loadCancel()
+	}
 	m.currentView = viewMain
 	m.selected = 0
 	m.matchDetails = nil
@@ -656,6 +663,11 @@ func (m model) handleLiveRefresh(msg liveRefreshMsg) (tea.Model, tea.Cmd) {
 // handleLiveBatchData processes parallel batch loading - multiple leagues at once.
 // Results are shown after each batch completes, giving progressive updates while being fast.
 func (m model) handleLiveBatchData(msg liveBatchDataMsg) (tea.Model, tea.Cmd) {
+	// Discard results if load was cancelled (user navigated away)
+	if m.loadCtx != nil && m.loadCtx.Err() != nil {
+		return m, nil
+	}
+
 	var cmds []tea.Cmd
 
 	// Accumulate live matches from this batch
@@ -712,7 +724,7 @@ func (m model) handleLiveBatchData(msg liveBatchDataMsg) (tea.Model, tea.Cmd) {
 
 	// Otherwise, fetch next batch
 	nextBatchIndex := msg.batchIndex + 1
-	cmds = append(cmds, fetchLiveBatchData(m.fotmobClient, m.useMockData, nextBatchIndex))
+	cmds = append(cmds, fetchLiveBatchData(m.loadCtx, m.fotmobClient, m.useMockData, nextBatchIndex))
 
 	// Keep spinner running
 	cmds = append(cmds, ui.SpinnerTick())
@@ -782,6 +794,11 @@ func (m model) handleStatsData(msg statsDataMsg) (tea.Model, tea.Cmd) {
 // handleStatsDayData processes progressive loading - one day's data at a time.
 // Results are shown immediately as each day completes, giving instant feedback.
 func (m model) handleStatsDayData(msg statsDayDataMsg) (tea.Model, tea.Cmd) {
+	// Discard results if load was cancelled (user navigated away)
+	if m.loadCtx != nil && m.loadCtx.Err() != nil {
+		return m, nil
+	}
+
 	var cmds []tea.Cmd
 
 	// Initialize statsData if nil (first day)
@@ -888,7 +905,7 @@ func (m model) handleStatsDayData(msg statsDayDataMsg) (tea.Model, tea.Cmd) {
 
 	// Otherwise, fetch next day
 	nextDayIndex := msg.dayIndex + 1
-	cmds = append(cmds, fetchStatsDayData(m.fotmobClient, m.useMockData, nextDayIndex, m.statsTotalDays))
+	cmds = append(cmds, fetchStatsDayData(m.loadCtx, m.fotmobClient, m.useMockData, nextDayIndex, m.statsTotalDays))
 
 	// Keep spinner running
 	cmds = append(cmds, ui.SpinnerTick())

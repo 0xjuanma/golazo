@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/0xjuanma/golazo/internal/api"
@@ -38,6 +39,12 @@ func (m model) handleMainViewKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.mainViewLoading = true
 		m.pendingSelection = m.selected
 
+		// Cancel any in-flight requests from previous view
+		if m.loadCancel != nil {
+			m.loadCancel()
+		}
+		m.loadCtx, m.loadCancel = context.WithCancel(context.Background())
+
 		// Clear previous view state
 		m.matches = nil
 		m.upcomingMatches = nil
@@ -66,7 +73,7 @@ func (m model) handleMainViewKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.statsMatchesList.SetItems([]list.Item{}) // Clear list
 			cmds = append(cmds, ui.SpinnerTick())
 			// Start fetching day 0 (today) first - results shown immediately when it completes
-			cmds = append(cmds, fetchStatsDayData(m.fotmobClient, m.useMockData, 0, fotmob.StatsDataDays))
+			cmds = append(cmds, fetchStatsDayData(m.loadCtx, m.fotmobClient, m.useMockData, 0, fotmob.StatsDataDays))
 		case 1: // Live Matches view - preload live matches progressively (parallel batches)
 			m.liveViewLoading = true
 			m.loading = true
@@ -77,7 +84,7 @@ func (m model) handleMainViewKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.liveMatchesList.SetItems([]list.Item{})
 			cmds = append(cmds, ui.SpinnerTick())
 			// Start fetching batch 0 (4 leagues in parallel) - results shown when batch completes
-			cmds = append(cmds, fetchLiveBatchData(m.fotmobClient, m.useMockData, 0))
+			cmds = append(cmds, fetchLiveBatchData(m.loadCtx, m.fotmobClient, m.useMockData, 0))
 		}
 
 		return m, tea.Batch(cmds...)
@@ -140,7 +147,11 @@ func (m model) handleStatsViewKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	m.loading = true
 	m.statsDaysLoaded = 0
 	m.statsTotalDays = fotmob.StatsDataDays
-	return m, tea.Batch(m.spinner.Tick, ui.SpinnerTick(), fetchStatsDayData(m.fotmobClient, m.useMockData, 0, fotmob.StatsDataDays))
+	if m.loadCancel != nil {
+		m.loadCancel()
+	}
+	m.loadCtx, m.loadCancel = context.WithCancel(context.Background())
+	return m, tea.Batch(m.spinner.Tick, ui.SpinnerTick(), fetchStatsDayData(m.loadCtx, m.fotmobClient, m.useMockData, 0, fotmob.StatsDataDays))
 }
 
 // loadMatchDetails loads match details for the live matches view.

@@ -537,13 +537,13 @@ func parseNumber(s string) int {
 }
 
 func truncateString(s string, maxLen int) string {
-	if maxLen <= 3 {
+	if maxLen <= 1 {
 		return s
 	}
 	if len(s) <= maxLen {
 		return s
 	}
-	return s[:maxLen-3] + "..."
+	return s[:maxLen-1] + "…"
 }
 
 func formatNumber(n int) string {

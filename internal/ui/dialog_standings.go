@@ -125,9 +125,7 @@ func (d *StandingsDialog) renderTeamRow(entry api.LeagueTableEntry, width int) s
 	if teamName == "" {
 		teamName = entry.Team.Name
 	}
-	if len(teamName) > teamWidth-1 {
-		teamName = teamName[:teamWidth-2] + "…"
-	}
+	teamName = truncateString(teamName, teamWidth-1)
 
 	// Format goal difference with sign
 	gdStr := formatGoalDifference(entry.GoalDifference)

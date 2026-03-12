@@ -114,12 +114,8 @@ func (d *StatisticsDialog) renderTeamHeader(width int) string {
 	homeTeam := d.homeTeam
 	awayTeam := d.awayTeam
 	maxLen := (width - 10) / 2
-	if len(homeTeam) > maxLen {
-		homeTeam = homeTeam[:maxLen-1] + "…"
-	}
-	if len(awayTeam) > maxLen {
-		awayTeam = awayTeam[:maxLen-1] + "…"
-	}
+	homeTeam = truncateString(homeTeam, maxLen)
+	awayTeam = truncateString(awayTeam, maxLen)
 
 	headerText := fmt.Sprintf("%s %d - %d  %s", homeTeam, d.homeScore , d.awayScore, awayTeam)
 	return lipgloss.NewStyle().
@@ -142,9 +138,7 @@ func (d *StatisticsDialog) renderStatRow(stat api.MatchStatistic, width int) str
 		label = stat.Key
 	}
 	maxLabelLen := 20
-	if len(label) > maxLabelLen {
-		label = label[:maxLabelLen-1] + "…"
-	}
+	label = truncateString(label, maxLabelLen)
 
 	// Fixed width for values to ensure alignment
 	valWidth := 12
@@ -152,12 +146,8 @@ func (d *StatisticsDialog) renderStatRow(stat api.MatchStatistic, width int) str
 	// Truncate long values if needed
 	homeValStr := stat.HomeValue
 	awayValStr := stat.AwayValue
-	if len(homeValStr) > valWidth {
-		homeValStr = homeValStr[:valWidth-1] + "…"
-	}
-	if len(awayValStr) > valWidth {
-		awayValStr = awayValStr[:valWidth-1] + "…"
-	}
+	homeValStr = truncateString(homeValStr, valWidth)
+	awayValStr = truncateString(awayValStr, valWidth)
 
 	// Calculate bar widths
 	barWidth := 16

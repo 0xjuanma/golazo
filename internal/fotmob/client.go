@@ -11,6 +11,7 @@ import (
 
 	"github.com/0xjuanma/golazo/internal/api"
 	"github.com/0xjuanma/golazo/internal/data"
+	"github.com/0xjuanma/golazo/internal/ratelimit"
 )
 
 const (
@@ -32,7 +33,7 @@ var SupportedLeagues = data.AllLeagueIDs()
 type Client struct {
 	httpClient  *http.Client
 	baseURL     string
-	rateLimiter *RateLimiter
+	rateLimiter *ratelimit.Limiter
 	cache       *ResponseCache
 	emptyCache  *EmptyResultsCache // Persistent cache for empty league+date combinations
 	pageURLs    map[int]string     // Match ID -> page slug mapping for page-based fetching
@@ -56,7 +57,7 @@ func NewClient() *Client {
 			Timeout: 15 * time.Second,
 		},
 		baseURL:     baseURL,
-		rateLimiter: NewRateLimiter(200 * time.Millisecond), // Minimal delay for concurrent requests
+		rateLimiter: ratelimit.New(200 * time.Millisecond), // Minimal delay for concurrent requests
 		cache:       NewResponseCache(DefaultCacheConfig()),
 		emptyCache:  emptyCache,
 		pageURLs:    make(map[int]string),

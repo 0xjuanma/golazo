@@ -130,15 +130,15 @@ func (d *StandingsDialog) renderTeamRow(entry api.LeagueTableEntry, width int) s
 
 	// Build row content with fixed widths
 	rowContent := lipgloss.JoinHorizontal(lipgloss.Top,
-		lipgloss.NewStyle().Width(standingsColPos).Align(lipgloss.Right).Render(fmt.Sprintf("%d", entry.Position)),
+		dialogAlignRight(standingsColPos, fmt.Sprintf("%d", entry.Position)),
 		"  ",
-		lipgloss.NewStyle().Width(teamWidth).Align(lipgloss.Left).Render(teamName),
-		lipgloss.NewStyle().Width(standingsColStat).Align(lipgloss.Right).Render(fmt.Sprintf("%d", entry.Played)),
-		lipgloss.NewStyle().Width(standingsColStat).Align(lipgloss.Right).Render(fmt.Sprintf("%d", entry.Won)),
-		lipgloss.NewStyle().Width(standingsColStat).Align(lipgloss.Right).Render(fmt.Sprintf("%d", entry.Drawn)),
-		lipgloss.NewStyle().Width(standingsColStat).Align(lipgloss.Right).Render(fmt.Sprintf("%d", entry.Lost)),
-		lipgloss.NewStyle().Width(standingsColGD).Align(lipgloss.Right).Render(gdStr),
-		lipgloss.NewStyle().Width(standingsColPts).Align(lipgloss.Right).Render(fmt.Sprintf("%d", entry.Points)),
+		dialogAlignLeft(teamWidth, teamName),
+		dialogAlignRight(standingsColStat, fmt.Sprintf("%d", entry.Played)),
+		dialogAlignRight(standingsColStat, fmt.Sprintf("%d", entry.Won)),
+		dialogAlignRight(standingsColStat, fmt.Sprintf("%d", entry.Drawn)),
+		dialogAlignRight(standingsColStat, fmt.Sprintf("%d", entry.Lost)),
+		dialogAlignRight(standingsColGD, gdStr),
+		dialogAlignRight(standingsColPts, fmt.Sprintf("%d", entry.Points)),
 	)
 
 	// Apply row styling

@@ -45,13 +45,9 @@ func (d *StandingsDialog) Update(msg tea.Msg) (Dialog, DialogAction) {
 		case "esc", "s", "q":
 			return d, DialogActionClose{}
 		case "j", "down":
-			if d.scrollIndex < len(d.standings)-1 {
-				d.scrollIndex++
-			}
+			d.scrollIndex = scrollDown(d.scrollIndex, len(d.standings)-1)
 		case "k", "up":
-			if d.scrollIndex > 0 {
-				d.scrollIndex--
-			}
+			d.scrollIndex = scrollUp(d.scrollIndex)
 		}
 	}
 	return d, nil

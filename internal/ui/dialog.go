@@ -137,6 +137,22 @@ func centerDialog(view string, width, height int) string {
 		Render(view)
 }
 
+// scrollDown increments the scroll index up to maxIndex.
+func scrollDown(index, maxIndex int) int {
+	if index < maxIndex {
+		return index + 1
+	}
+	return index
+}
+
+// scrollUp decrements the scroll index down to 0.
+func scrollUp(index int) int {
+	if index > 0 {
+		return index - 1
+	}
+	return index
+}
+
 // DialogSize calculates appropriate dialog dimensions based on content and screen size.
 func DialogSize(screenWidth, screenHeight, contentWidth, contentHeight int) (width, height int) {
 	// Use 80% of screen or content size, whichever is smaller

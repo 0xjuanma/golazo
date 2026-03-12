@@ -50,15 +50,10 @@ func (d *StatisticsDialog) Update(msg tea.Msg) (Dialog, DialogAction) {
 		case "esc", "x", "q":
 			return d, DialogActionClose{}
 		case "j", "down":
-			maxScroll := len(d.statistics) - d.maxVisible
-			maxScroll = max(maxScroll, 0)
-			if d.scrollIndex < maxScroll {
-				d.scrollIndex++
-			}
+			maxScroll := max(len(d.statistics)-d.maxVisible, 0)
+			d.scrollIndex = scrollDown(d.scrollIndex, maxScroll)
 		case "k", "up":
-			if d.scrollIndex > 0 {
-				d.scrollIndex--
-			}
+			d.scrollIndex = scrollUp(d.scrollIndex)
 		}
 	}
 	return d, nil

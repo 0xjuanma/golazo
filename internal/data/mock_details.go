@@ -224,7 +224,3 @@ func getMockAttendance(matchID int) int {
 	}
 	return 50000
 }
-
-func stringPtr(s string) *string {
-	return &s
-}

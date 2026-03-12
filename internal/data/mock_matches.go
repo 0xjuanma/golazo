@@ -39,7 +39,3 @@ func getDefaultMockMatches() []api.Match {
 	matches = append(matches, MockFinishedMatches()...)
 	return matches
 }
-
-func intPtr(i int) *int {
-	return &i
-}

@@ -8,10 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Error Visibility** - API errors are now surfaced to the user with a retry hint instead of showing silent empty states
 
 ### Changed
+- **Performance** - Reduced API overhead with connection pooling, goroutine limiting, pre-compiled regexes, memoized name normalization, and slice/map pre-allocation
+- **Internal Code Quality** - Extracted shared rate limiter and generic TTL cache packages, consolidated duplicated UI helpers, and replaced file-based debug logging with `log/slog`
+- **Concurrency** - In-flight API requests are now cancelled when navigating away from a view, preventing wasted work
+- **Test Coverage** - Added unit tests for fotmob client/types, reddit matcher, data settings, rate limiter, and cache packages
 
 ### Fixed
+- **Silent Error Swallowing** - Settings save, notification, and Reddit client init errors are now logged instead of discarded
 
 ## [0.22.0] - 2026-02-20
 

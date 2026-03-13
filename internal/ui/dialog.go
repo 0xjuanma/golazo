@@ -12,6 +12,13 @@ const (
 	DefaultDialogMaxHeight = 39
 )
 
+// Dialog IDs
+const (
+	StandingsDialogID  = "standings"
+	FormationsDialogID = "formations"
+	StatisticsDialogID = "statistics"
+)
+
 // DialogAction represents an action returned by a dialog after handling a message.
 type DialogAction any
 
@@ -135,6 +142,22 @@ func centerDialog(view string, width, height int) string {
 		Width(width).
 		Height(height).
 		Render(view)
+}
+
+// scrollDown increments the scroll index up to maxIndex.
+func scrollDown(index, maxIndex int) int {
+	if index < maxIndex {
+		return index + 1
+	}
+	return index
+}
+
+// scrollUp decrements the scroll index down to 0.
+func scrollUp(index int) int {
+	if index > 0 {
+		return index - 1
+	}
+	return index
 }
 
 // DialogSize calculates appropriate dialog dimensions based on content and screen size.

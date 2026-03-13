@@ -2,10 +2,11 @@
 package app
 
 import (
-	"fmt"
+	"context"
+	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
-	"time"
 
 	"github.com/0xjuanma/golazo/internal/api"
 	"github.com/0xjuanma/golazo/internal/constants"
@@ -86,7 +87,12 @@ type model struct {
 	liveViewLoading  bool
 	statsViewLoading bool
 	polling          bool
-	pendingSelection int // Tracks which view is being preloaded (-1 = none, 0 = stats, 1 = live)
+	pendingSelection int    // Tracks which view is being preloaded (-1 = none, 0 = stats, 1 = live)
+	lastError        string // Last error message to display in UI (cleared on successful load)
+
+	// Context for cancelling in-flight API requests when navigating away
+	loadCtx    context.Context
+	loadCancel context.CancelFunc
 
 	// Configuration
 	useMockData         bool
@@ -110,6 +116,10 @@ type model struct {
 	// Goal replay links from Reddit (keyed by matchID:minute)
 	goalLinks map[reddit.GoalLinkKey]*reddit.GoalLink
 
+	// Logging
+	logger  *slog.Logger
+	logFile *os.File // kept open for logger lifetime
+
 	// Notifications
 	notifier *notify.DesktopNotifier
 
@@ -124,6 +134,9 @@ type model struct {
 // newVersionAvailable indicates if a newer version is available.
 // appVersion is the current application version string.
 func New(useMockData bool, debugMode bool, isDevBuild bool, newVersionAvailable bool, appVersion string) model {
+	// Initialize structured logger
+	logger, logFile := initLogger(debugMode)
+
 	s := spinner.New()
 	s.Spinner = spinner.Line
 	s.Style = ui.SpinnerStyle()
@@ -185,23 +198,16 @@ func New(useMockData bool, debugMode bool, isDevBuild bool, newVersionAvailable 
 
 	// Initialize Reddit client (best-effort, nil if fails)
 	var redditClient *reddit.Client
+	var redditErr error
 	if debugMode {
-		redditClient, _ = reddit.NewClientWithDebug(func(message string) {
-			// This will be called by the Reddit client for debug logging
-			// We'll create a model instance to access debugLog, but for now just log directly
-			// This is a bit of a hack, but it works for debug logging
-			configDir, _ := data.ConfigDir()
-			if configDir != "" {
-				logFile := filepath.Join(configDir, "golazo_debug.log")
-				f, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-				if err == nil {
-					defer func() { _ = f.Close() }()
-					_, _ = fmt.Fprintf(f, "%s %s\n", time.Now().Format("2006-01-02 15:04:05"), message)
-				}
-			}
+		redditClient, redditErr = reddit.NewClientWithDebug(func(message string) {
+			logger.Debug(message, "source", "reddit")
 		})
 	} else {
-		redditClient, _ = reddit.NewClient()
+		redditClient, redditErr = reddit.NewClient()
+	}
+	if redditErr != nil {
+		logger.Warn("reddit client initialization failed, goal replay links will be unavailable", "error", redditErr)
 	}
 
 	// Initialize animated logo for main view
@@ -219,6 +225,8 @@ func New(useMockData bool, debugMode bool, isDevBuild bool, newVersionAvailable 
 		parser:                 fotmob.NewLiveUpdateParser(),
 		redditClient:           redditClient,
 		goalLinks:              make(map[reddit.GoalLinkKey]*reddit.GoalLink),
+		logger:                 logger,
+		logFile:                logFile,
 		notifier:               notify.NewDesktopNotifier(),
 		spinner:                s,
 		randomSpinner:          randomSpinner,
@@ -235,6 +243,28 @@ func New(useMockData bool, debugMode bool, isDevBuild bool, newVersionAvailable 
 		dialogOverlay:          ui.NewDialogOverlay(), // Initialize dialog overlay
 		animatedLogo:           animatedLogo,          // Initialize animated logo
 	}
+}
+
+// initLogger creates a structured logger. When debugMode is true, logs to ~/.golazo/golazo_debug.log.
+// Otherwise returns a no-op logger. The caller should store the returned *os.File and close it on exit.
+func initLogger(debugMode bool) (*slog.Logger, *os.File) {
+	if !debugMode {
+		return slog.New(slog.NewTextHandler(io.Discard, nil)), nil
+	}
+
+	configDir, err := data.ConfigDir()
+	if err != nil {
+		return slog.New(slog.NewTextHandler(io.Discard, nil)), nil
+	}
+
+	logPath := filepath.Join(configDir, "golazo_debug.log")
+	f, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return slog.New(slog.NewTextHandler(io.Discard, nil)), nil
+	}
+
+	handler := slog.NewTextHandler(f, &slog.HandlerOptions{Level: slog.LevelDebug})
+	return slog.New(handler), f
 }
 
 // getStatusBannerType returns the appropriate status banner type based on current model state.

@@ -14,6 +14,7 @@ type liveUpdateMsg struct {
 // matchDetailsMsg contains match details from API response.
 type matchDetailsMsg struct {
 	details *api.MatchDetails
+	err     error
 }
 
 // liveMatchesMsg contains live matches from API response.
@@ -32,6 +33,7 @@ type liveBatchDataMsg struct {
 	batchIndex int         // Which batch (0, 1, 2, ...)
 	isLast     bool        // true if this is the last batch
 	matches    []api.Match // live matches from all leagues in this batch
+	err        error
 }
 
 // statsDataMsg contains all stats data (5 days finished + today upcoming) from API response.
@@ -48,6 +50,7 @@ type statsDayDataMsg struct {
 	isLast   bool        // true if this is the last day to fetch
 	finished []api.Match // finished matches for this day
 	upcoming []api.Match // upcoming matches (only for today)
+	err      error
 }
 
 // pollTickMsg is sent when the 90-second poll interval elapses.

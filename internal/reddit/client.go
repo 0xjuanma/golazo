@@ -7,8 +7,9 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"sync"
 	"time"
+
+	"github.com/0xjuanma/golazo/internal/ratelimit"
 )
 
 // DebugLogger is a function type for debug logging
@@ -25,32 +26,7 @@ type Fetcher interface {
 type PublicJSONFetcher struct {
 	httpClient  *http.Client
 	userAgent   string
-	rateLimiter *rateLimiter
-}
-
-// rateLimiter implements simple rate limiting for Reddit API.
-type rateLimiter struct {
-	mu          sync.Mutex
-	lastRequest time.Time
-	minInterval time.Duration
-}
-
-func newRateLimiter(requestsPerMinute int) *rateLimiter {
-	interval := time.Minute / time.Duration(requestsPerMinute)
-	return &rateLimiter{
-		minInterval: interval,
-	}
-}
-
-func (r *rateLimiter) wait() {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	elapsed := time.Since(r.lastRequest)
-	if elapsed < r.minInterval {
-		time.Sleep(r.minInterval - elapsed)
-	}
-	r.lastRequest = time.Now()
+	rateLimiter *ratelimit.Limiter
 }
 
 // NewPublicJSONFetcher creates a new fetcher using public Reddit JSON API.
@@ -58,10 +34,15 @@ func NewPublicJSONFetcher() *PublicJSONFetcher {
 	return &PublicJSONFetcher{
 		httpClient: &http.Client{
 			Timeout: 10 * time.Second,
+			Transport: &http.Transport{
+				MaxIdleConns:        10,
+				MaxIdleConnsPerHost: 10,
+				IdleConnTimeout:     90 * time.Second,
+			},
 		},
 		// Reddit requires a descriptive User-Agent
 		userAgent:   "golazo:v1.0.0 (by /u/golazo_app)",
-		rateLimiter: newRateLimiter(10), // 10 requests per minute for public API
+		rateLimiter: ratelimit.NewFromRate(10), // 10 requests per minute for public API
 	}
 }
 
@@ -69,7 +50,7 @@ func NewPublicJSONFetcher() *PublicJSONFetcher {
 // matchTime is used to filter results to posts created around the match date.
 // sort controls the result ordering (e.g., "relevance", "top", "new", "hot").
 func (f *PublicJSONFetcher) Search(query string, limit int, matchTime time.Time, sort string) ([]SearchResult, error) {
-	f.rateLimiter.wait()
+	f.rateLimiter.Wait()
 
 	// Build timestamp range for filtering (match day only ±12 hours)
 	// Goal videos are posted very soon after goals happen - limit to match day

@@ -104,14 +104,12 @@ func NewLiveUpdateParser() *LiveUpdateParser {
 // Events are sorted by minute in descending order (most recent first).
 func (p *LiveUpdateParser) ParseEvents(events []api.MatchEvent, homeTeam, awayTeam api.Team) []string {
 	// Sort events by minute descending (most recent first)
-	sorted := make([]api.MatchEvent, len(events))
-	copy(sorted, events)
-	sort.Slice(sorted, func(i, j int) bool {
-		return sorted[i].Minute > sorted[j].Minute
+	sort.Slice(events, func(i, j int) bool {
+		return events[i].Minute > events[j].Minute
 	})
 
-	updates := make([]string, 0, len(sorted))
-	for _, event := range sorted {
+	updates := make([]string, 0, len(events))
+	for _, event := range events {
 		update := p.formatEvent(event, homeTeam, awayTeam)
 		if update != "" {
 			updates = append(updates, update)

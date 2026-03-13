@@ -10,8 +10,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-const formationsDialogID = "formations"
-
 // FormationsDialog displays the match formations for both teams.
 type FormationsDialog struct {
 	homeTeam      string
@@ -42,7 +40,7 @@ func NewFormationsDialog(
 
 // ID returns the dialog identifier.
 func (d *FormationsDialog) ID() string {
-	return formationsDialogID
+	return FormationsDialogID
 }
 
 // Update handles input for the formations dialog.
@@ -97,9 +95,7 @@ func (d *FormationsDialog) renderTeamPanel(teamName, formation string, players [
 	}
 
 	// Truncate team name if needed
-	if len(teamName) > width-2 {
-		teamName = teamName[:width-3] + "…"
-	}
+	teamName = truncateString(teamName, width-2)
 
 	header := headerStyle.Render(teamName)
 	lines = append(lines, header)
@@ -150,9 +146,7 @@ func (d *FormationsDialog) renderPlayerLine(player api.PlayerInfo, width int, fo
 	// Player name (truncated if needed)
 	nameWidth := width - 14 // Account for number, position, rating badge, spacing
 	name := player.Name
-	if len(name) > nameWidth {
-		name = name[:nameWidth-1] + "…"
-	}
+	name = truncateString(name, nameWidth)
 	name = fmt.Sprintf("%-*s", nameWidth, name)
 
 	// Apply styles

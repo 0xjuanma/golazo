@@ -100,6 +100,21 @@ func DialogBadgeHighlight(value string) string {
 	return dialogBadgeHighlightStyle.Render(value)
 }
 
+// dialogAlignRight renders text right-aligned within the given width.
+func dialogAlignRight(width int, text string) string {
+	return lipgloss.NewStyle().Width(width).Align(lipgloss.Right).Render(text)
+}
+
+// dialogAlignLeft renders text left-aligned within the given width.
+func dialogAlignLeft(width int, text string) string {
+	return lipgloss.NewStyle().Width(width).Align(lipgloss.Left).Render(text)
+}
+
+// dialogAlignCenter renders text center-aligned within the given width.
+func dialogAlignCenter(width int, text string) string {
+	return lipgloss.NewStyle().Width(width).Align(lipgloss.Center).Render(text)
+}
+
 // RenderDialogFrame wraps content in a dialog frame with title bar.
 func RenderDialogFrame(title, content string, width, height int) string {
 	titleBar := design.RenderHeader(title, width-6) // Use compact header with gradient

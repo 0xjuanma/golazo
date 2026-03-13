@@ -10,8 +10,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-const standingsDialogID = "standings"
-
 // StandingsDialog displays the league standings table for a match.
 type StandingsDialog struct {
 	leagueName  string
@@ -34,7 +32,7 @@ func NewStandingsDialog(leagueName string, standings []api.LeagueTableEntry, hom
 
 // ID returns the dialog identifier.
 func (d *StandingsDialog) ID() string {
-	return standingsDialogID
+	return StandingsDialogID
 }
 
 // Update handles input for the standings dialog.
@@ -45,13 +43,9 @@ func (d *StandingsDialog) Update(msg tea.Msg) (Dialog, DialogAction) {
 		case "esc", "s", "q":
 			return d, DialogActionClose{}
 		case "j", "down":
-			if d.scrollIndex < len(d.standings)-1 {
-				d.scrollIndex++
-			}
+			d.scrollIndex = scrollDown(d.scrollIndex, len(d.standings)-1)
 		case "k", "up":
-			if d.scrollIndex > 0 {
-				d.scrollIndex--
-			}
+			d.scrollIndex = scrollUp(d.scrollIndex)
 		}
 	}
 	return d, nil
@@ -129,24 +123,22 @@ func (d *StandingsDialog) renderTeamRow(entry api.LeagueTableEntry, width int) s
 	if teamName == "" {
 		teamName = entry.Team.Name
 	}
-	if len(teamName) > teamWidth-1 {
-		teamName = teamName[:teamWidth-2] + "…"
-	}
+	teamName = truncateString(teamName, teamWidth-1)
 
 	// Format goal difference with sign
 	gdStr := formatGoalDifference(entry.GoalDifference)
 
 	// Build row content with fixed widths
 	rowContent := lipgloss.JoinHorizontal(lipgloss.Top,
-		lipgloss.NewStyle().Width(standingsColPos).Align(lipgloss.Right).Render(fmt.Sprintf("%d", entry.Position)),
+		dialogAlignRight(standingsColPos, fmt.Sprintf("%d", entry.Position)),
 		"  ",
-		lipgloss.NewStyle().Width(teamWidth).Align(lipgloss.Left).Render(teamName),
-		lipgloss.NewStyle().Width(standingsColStat).Align(lipgloss.Right).Render(fmt.Sprintf("%d", entry.Played)),
-		lipgloss.NewStyle().Width(standingsColStat).Align(lipgloss.Right).Render(fmt.Sprintf("%d", entry.Won)),
-		lipgloss.NewStyle().Width(standingsColStat).Align(lipgloss.Right).Render(fmt.Sprintf("%d", entry.Drawn)),
-		lipgloss.NewStyle().Width(standingsColStat).Align(lipgloss.Right).Render(fmt.Sprintf("%d", entry.Lost)),
-		lipgloss.NewStyle().Width(standingsColGD).Align(lipgloss.Right).Render(gdStr),
-		lipgloss.NewStyle().Width(standingsColPts).Align(lipgloss.Right).Render(fmt.Sprintf("%d", entry.Points)),
+		dialogAlignLeft(teamWidth, teamName),
+		dialogAlignRight(standingsColStat, fmt.Sprintf("%d", entry.Played)),
+		dialogAlignRight(standingsColStat, fmt.Sprintf("%d", entry.Won)),
+		dialogAlignRight(standingsColStat, fmt.Sprintf("%d", entry.Drawn)),
+		dialogAlignRight(standingsColStat, fmt.Sprintf("%d", entry.Lost)),
+		dialogAlignRight(standingsColGD, gdStr),
+		dialogAlignRight(standingsColPts, fmt.Sprintf("%d", entry.Points)),
 	)
 
 	// Apply row styling

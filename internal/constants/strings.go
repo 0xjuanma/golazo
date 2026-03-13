@@ -29,6 +29,13 @@ const (
 	EmptyNoMatches         = "No matches available"
 )
 
+// Error messages
+const (
+	ErrorLoadFailed   = "Unable to load data"
+	ErrorMatchDetails = "Unable to load match details"
+	ErrorRetryHint    = "r: retry"
+)
+
 // Help text
 const (
 	HelpMainMenu           = "↑/↓: navigate  Enter: select  q: quit"

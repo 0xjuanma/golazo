@@ -5,7 +5,15 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
+)
+
+var (
+	reNonAlphanumSpace = regexp.MustCompile(`[^a-z0-9\s]`)
+	reNonAlphaSpace    = regexp.MustCompile(`[^a-z\s]`)
+	teamNameCache      sync.Map // map[string]string
+	playerNameCache    sync.Map // map[string]string
 )
 
 // Matcher provides loose matching for Reddit goal post titles.
@@ -112,7 +120,17 @@ func findBestMatch(results []SearchResult, goal GoalInfo) *SearchResult {
 }
 
 // normalizeTeamName converts a team name to a normalized form for matching.
+// Results are cached since the same team names are normalized repeatedly.
 func normalizeTeamName(name string) string {
+	if cached, ok := teamNameCache.Load(name); ok {
+		return cached.(string)
+	}
+	result := normalizeTeamNameUncached(name)
+	teamNameCache.Store(name, result)
+	return result
+}
+
+func normalizeTeamNameUncached(name string) string {
 	// Convert to lowercase
 	norm := strings.ToLower(name)
 
@@ -129,16 +147,26 @@ func normalizeTeamName(name string) string {
 	}
 
 	// Remove special characters
-	norm = regexp.MustCompile(`[^a-z0-9\s]`).ReplaceAllString(norm, "")
+	norm = reNonAlphanumSpace.ReplaceAllString(norm, "")
 
 	return strings.TrimSpace(norm)
 }
 
 // normalizeName converts a player name to a normalized form for matching.
+// Results are cached since the same player names are normalized repeatedly.
 func normalizeName(name string) string {
+	if cached, ok := playerNameCache.Load(name); ok {
+		return cached.(string)
+	}
+	result := normalizeNameUncached(name)
+	playerNameCache.Store(name, result)
+	return result
+}
+
+func normalizeNameUncached(name string) string {
 	norm := strings.ToLower(name)
 	// Remove special characters but keep spaces
-	norm = regexp.MustCompile(`[^a-z\s]`).ReplaceAllString(norm, "")
+	norm = reNonAlphaSpace.ReplaceAllString(norm, "")
 	return strings.TrimSpace(norm)
 }
 

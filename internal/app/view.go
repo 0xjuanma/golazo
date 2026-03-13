@@ -42,6 +42,7 @@ func (m model) View() string {
 			m.liveUpcomingMatches,
 			m.buildGoalLinksMap(),
 			m.getStatusBannerType(),
+			m.lastError,
 		)
 
 	case viewStats:
@@ -61,6 +62,7 @@ func (m model) View() string {
 			&m.statsDetailsViewport,
 			m.statsRightPanelFocused,
 			m.statsScrollOffset,
+			m.lastError,
 		)
 
 	case viewSettings:

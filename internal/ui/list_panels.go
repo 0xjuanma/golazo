@@ -189,7 +189,7 @@ func renderDateRangeSelector(width int, selected int) string {
 }
 
 // RenderMultiPanelViewWithList renders the live matches view with list component.
-func RenderMultiPanelViewWithList(width, height int, listModel list.Model, details *api.MatchDetails, liveUpdates []string, sp spinner.Model, loading bool, randomSpinner *RandomCharSpinner, viewLoading bool, leaguesLoaded int, totalLeagues int, pollingSpinner *RandomCharSpinner, isPolling bool, upcomingMatches []MatchDisplay, goalLinks GoalLinksMap, bannerType constants.StatusBannerType) string {
+func RenderMultiPanelViewWithList(width, height int, listModel list.Model, details *api.MatchDetails, liveUpdates []string, sp spinner.Model, loading bool, randomSpinner *RandomCharSpinner, viewLoading bool, leaguesLoaded int, totalLeagues int, pollingSpinner *RandomCharSpinner, isPolling bool, upcomingMatches []MatchDisplay, goalLinks GoalLinksMap, bannerType constants.StatusBannerType, lastError string) string {
 	if width <= 0 {
 		width = 80
 	}
@@ -240,11 +240,21 @@ func RenderMultiPanelViewWithList(width, height int, listModel list.Model, detai
 	panels := lipgloss.JoinHorizontal(lipgloss.Top, leftPanel, separator, rightPanel)
 	statusBanner := renderStatusBanner(bannerType, width)
 
+	if lastError != "" {
+		errorStyle := lipgloss.NewStyle().
+			Foreground(neonRed).
+			Bold(true).
+			Width(width).
+			Align(lipgloss.Center)
+		errorBanner := errorStyle.Render(lastError + "  " + constants.ErrorRetryHint)
+		return lipgloss.JoinVertical(lipgloss.Left, spinnerArea, statusBanner, errorBanner, panels)
+	}
+
 	return lipgloss.JoinVertical(lipgloss.Left, spinnerArea, statusBanner, panels)
 }
 
 // RenderStatsViewWithList renders the stats view with list component.
-func RenderStatsViewWithList(width, height int, finishedList list.Model, details *api.MatchDetails, randomSpinner *RandomCharSpinner, viewLoading bool, dateRange int, daysLoaded int, totalDays int, goalLinks GoalLinksMap, bannerType constants.StatusBannerType, detailsViewport *viewport.Model, rightPanelFocused bool, scrollOffset int) string {
+func RenderStatsViewWithList(width, height int, finishedList list.Model, details *api.MatchDetails, randomSpinner *RandomCharSpinner, viewLoading bool, dateRange int, daysLoaded int, totalDays int, goalLinks GoalLinksMap, bannerType constants.StatusBannerType, detailsViewport *viewport.Model, rightPanelFocused bool, scrollOffset int, lastError string) string {
 	if width <= 0 {
 		width = 80
 	}
@@ -287,7 +297,20 @@ func RenderStatsViewWithList(width, height int, finishedList list.Model, details
 	panelHeight := availableHeight - 2
 
 	leftPanel := RenderStatsListPanel(leftWidth, panelHeight, finishedList, dateRange, rightPanelFocused)
-	headerContent, scrollableContent := renderStatsMatchDetailsPanel(rightWidth, panelHeight, details, goalLinks, rightPanelFocused)
+
+	// If there's an error and no details, show error in the right panel area
+	var headerContent, scrollableContent string
+	if lastError != "" && details == nil {
+		errorStyle := lipgloss.NewStyle().
+			Foreground(neonRed).
+			Bold(true).
+			Align(lipgloss.Center).
+			Width(rightWidth - 6).
+			PaddingTop(panelHeight / 4)
+		scrollableContent = errorStyle.Render(lastError)
+	} else {
+		headerContent, scrollableContent = renderStatsMatchDetailsPanel(rightWidth, panelHeight, details, goalLinks, rightPanelFocused)
+	}
 
 	var rightPanel string
 	scrollableLines := strings.Split(scrollableContent, "\n")

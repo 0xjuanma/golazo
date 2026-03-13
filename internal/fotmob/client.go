@@ -11,6 +11,7 @@ import (
 
 	"github.com/0xjuanma/golazo/internal/api"
 	"github.com/0xjuanma/golazo/internal/data"
+	"github.com/0xjuanma/golazo/internal/ratelimit"
 )
 
 const (
@@ -30,13 +31,14 @@ var SupportedLeagues = data.AllLeagueIDs()
 
 // Client implements the api.Client interface for FotMob API
 type Client struct {
-	httpClient  *http.Client
-	baseURL     string
-	rateLimiter *RateLimiter
-	cache       *ResponseCache
-	emptyCache  *EmptyResultsCache // Persistent cache for empty league+date combinations
-	pageURLs    map[int]string     // Match ID -> page slug mapping for page-based fetching
-	pageURLsMu  sync.RWMutex
+	httpClient    *http.Client
+	baseURL       string
+	rateLimiter   *ratelimit.Limiter
+	cache         *ResponseCache
+	emptyCache    *EmptyResultsCache // Persistent cache for empty league+date combinations
+	pageURLs      map[int]string     // Match ID -> page slug mapping for page-based fetching
+	pageURLsMu    sync.RWMutex
+	maxConcurrent chan struct{} // Semaphore to limit concurrent API requests
 }
 
 // NewClient creates a new FotMob API client with default configuration.
@@ -54,12 +56,18 @@ func NewClient() *Client {
 	return &Client{
 		httpClient: &http.Client{
 			Timeout: 15 * time.Second,
+			Transport: &http.Transport{
+				MaxIdleConns:        30,
+				MaxIdleConnsPerHost: 30,
+				IdleConnTimeout:     90 * time.Second,
+			},
 		},
-		baseURL:     baseURL,
-		rateLimiter: NewRateLimiter(200 * time.Millisecond), // Minimal delay for concurrent requests
-		cache:       NewResponseCache(DefaultCacheConfig()),
-		emptyCache:  emptyCache,
-		pageURLs:    make(map[int]string),
+		baseURL:       baseURL,
+		rateLimiter:   ratelimit.New(200 * time.Millisecond), // Minimal delay for concurrent requests
+		cache:         NewResponseCache(DefaultCacheConfig()),
+		emptyCache:    emptyCache,
+		pageURLs:      make(map[int]string, 50),
+		maxConcurrent: make(chan struct{}, 10),
 	}
 }
 
@@ -127,9 +135,12 @@ func (c *Client) MatchesByDateWithTabs(ctx context.Context, date time.Time, tabs
 		}
 	}
 
+	// Get active leagues (respects user settings)
+	activeLeagues := ActiveLeagues()
+
 	// Use a mutex to protect the shared slice
 	var mu sync.Mutex
-	var allMatches []api.Match
+	allMatches := make([]api.Match, 0, len(activeLeagues)*5)
 
 	// Query leagues concurrently - no stagger delays, just rate limiting
 	// Best-effort aggregation: if a league query fails, we skip it and continue with others
@@ -138,9 +149,6 @@ func (c *Client) MatchesByDateWithTabs(ctx context.Context, date time.Time, tabs
 
 	// Track skipped leagues for logging/debugging
 	var skippedFromCache int
-
-	// Get active leagues (respects user settings)
-	activeLeagues := ActiveLeagues()
 
 	// Query specified tabs
 	for _, tab := range tabs {
@@ -155,6 +163,8 @@ func (c *Client) MatchesByDateWithTabs(ctx context.Context, date time.Time, tabs
 			wg.Add(1)
 			go func(id int, tabName string) {
 				defer wg.Done()
+				c.maxConcurrent <- struct{}{}        // acquire semaphore
+				defer func() { <-c.maxConcurrent }() // release semaphore
 
 				// Apply rate limiting (minimal delay for concurrent requests)
 				c.rateLimiter.Wait()
@@ -195,7 +205,7 @@ func (c *Client) MatchesByDateWithTabs(ctx context.Context, date time.Time, tabs
 
 				// Filter matches for the requested date and add league info
 				// Note: Matches are sorted chronologically, so we need to check all matches
-				var leagueMatches []api.Match
+				leagueMatches := make([]api.Match, 0, len(leagueResponse.Fixtures.AllMatches))
 				for _, m := range leagueResponse.Fixtures.AllMatches {
 					// Check if match is on the requested date
 					if m.Status.UTCTime != "" {
@@ -250,8 +260,8 @@ func (c *Client) MatchesByDateWithTabs(ctx context.Context, date time.Time, tabs
 	// Cache the results before returning
 	c.cache.SetMatches(requestDateStr, allMatches)
 
-	// Persist empty results cache to disk (async, best-effort)
-	go func() { _ = c.SaveEmptyCache() }()
+	// Persist empty results cache to disk (best-effort)
+	_ = c.SaveEmptyCache()
 
 	return allMatches, nil
 }
@@ -296,7 +306,7 @@ func (c *Client) MatchesForLeagueAndDate(ctx context.Context, leagueID int, date
 	}
 
 	// Filter matches for the requested date
-	var matches []api.Match
+	matches := make([]api.Match, 0, 10)
 	for _, m := range leagueResponse.Fixtures.AllMatches {
 		if m.Status.UTCTime != "" {
 			var matchTime time.Time
@@ -412,6 +422,8 @@ func (c *Client) BatchMatchDetails(ctx context.Context, matchIDs []int) map[int]
 		wg.Add(1)
 		go func(matchID int) {
 			defer wg.Done()
+			c.maxConcurrent <- struct{}{}        // acquire semaphore
+			defer func() { <-c.maxConcurrent }() // release semaphore
 
 			details, err := c.MatchDetails(ctx, matchID)
 			if err != nil {

@@ -2,7 +2,6 @@ package ui
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/0xjuanma/golazo/internal/api"
@@ -10,8 +9,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
-
-const statisticsDialogID = "statistics"
 
 // StatisticsDialog displays all match statistics in a comparison view.
 type StatisticsDialog struct {
@@ -39,7 +36,7 @@ func NewStatisticsDialog(homeTeam, awayTeam string, homeScore, awayScore int, st
 
 // ID returns the dialog identifier.
 func (d *StatisticsDialog) ID() string {
-	return statisticsDialogID
+	return StatisticsDialogID
 }
 
 // Update handles input for the statistics dialog.
@@ -50,15 +47,10 @@ func (d *StatisticsDialog) Update(msg tea.Msg) (Dialog, DialogAction) {
 		case "esc", "x", "q":
 			return d, DialogActionClose{}
 		case "j", "down":
-			maxScroll := len(d.statistics) - d.maxVisible
-			maxScroll = max(maxScroll, 0)
-			if d.scrollIndex < maxScroll {
-				d.scrollIndex++
-			}
+			maxScroll := max(len(d.statistics)-d.maxVisible, 0)
+			d.scrollIndex = scrollDown(d.scrollIndex, maxScroll)
 		case "k", "up":
-			if d.scrollIndex > 0 {
-				d.scrollIndex--
-			}
+			d.scrollIndex = scrollUp(d.scrollIndex)
 		}
 	}
 	return d, nil
@@ -119,12 +111,8 @@ func (d *StatisticsDialog) renderTeamHeader(width int) string {
 	homeTeam := d.homeTeam
 	awayTeam := d.awayTeam
 	maxLen := (width - 10) / 2
-	if len(homeTeam) > maxLen {
-		homeTeam = homeTeam[:maxLen-1] + "…"
-	}
-	if len(awayTeam) > maxLen {
-		awayTeam = awayTeam[:maxLen-1] + "…"
-	}
+	homeTeam = truncateString(homeTeam, maxLen)
+	awayTeam = truncateString(awayTeam, maxLen)
 
 	headerText := fmt.Sprintf("%s %d - %d  %s", homeTeam, d.homeScore , d.awayScore, awayTeam)
 	return lipgloss.NewStyle().
@@ -138,8 +126,8 @@ func (d *StatisticsDialog) renderTeamHeader(width int) string {
 // renderStatRow renders a single statistic row with comparison bar.
 func (d *StatisticsDialog) renderStatRow(stat api.MatchStatistic, width int) string {
 	// Parse values for comparison
-	homeVal := parseStatNumber(stat.HomeValue)
-	awayVal := parseStatNumber(stat.AwayValue)
+	homeVal := parseStatValue(stat.HomeValue)
+	awayVal := parseStatValue(stat.AwayValue)
 
 	// Format label
 	label := stat.Label
@@ -147,9 +135,7 @@ func (d *StatisticsDialog) renderStatRow(stat api.MatchStatistic, width int) str
 		label = stat.Key
 	}
 	maxLabelLen := 20
-	if len(label) > maxLabelLen {
-		label = label[:maxLabelLen-1] + "…"
-	}
+	label = truncateString(label, maxLabelLen)
 
 	// Fixed width for values to ensure alignment
 	valWidth := 12
@@ -157,12 +143,8 @@ func (d *StatisticsDialog) renderStatRow(stat api.MatchStatistic, width int) str
 	// Truncate long values if needed
 	homeValStr := stat.HomeValue
 	awayValStr := stat.AwayValue
-	if len(homeValStr) > valWidth {
-		homeValStr = homeValStr[:valWidth-1] + "…"
-	}
-	if len(awayValStr) > valWidth {
-		awayValStr = awayValStr[:valWidth-1] + "…"
-	}
+	homeValStr = truncateString(homeValStr, valWidth)
+	awayValStr = truncateString(awayValStr, valWidth)
 
 	// Calculate bar widths
 	barWidth := 16
@@ -244,23 +226,3 @@ func calculateBarWidths(home, away float64, maxWidth int) (int, int) {
 	return homeWidth, awayWidth
 }
 
-// parseStatNumber extracts a numeric value from a stat string.
-func parseStatNumber(s string) float64 {
-	s = strings.TrimSpace(s)
-	s = strings.TrimSuffix(s, "%")
-
-	// Handle formats like "23 (45%)" - take first number
-	if idx := strings.Index(s, " "); idx > 0 {
-		s = s[:idx]
-	}
-	if idx := strings.Index(s, "("); idx > 0 {
-		s = s[:idx]
-	}
-	s = strings.TrimSpace(s)
-
-	val, err := strconv.ParseFloat(s, 64)
-	if err != nil {
-		return 0
-	}
-	return val
-}

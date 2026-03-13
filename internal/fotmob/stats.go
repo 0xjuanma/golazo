@@ -43,9 +43,9 @@ func (c *Client) StatsData(ctx context.Context) (*StatsData, error) {
 	todayStr := today.Format("2006-01-02")
 
 	// Use maps to deduplicate matches by ID
-	allFinishedMap := make(map[int]api.Match)
-	todayFinishedMap := make(map[int]api.Match)
-	todayUpcomingMap := make(map[int]api.Match)
+	allFinishedMap := make(map[int]api.Match, 50)
+	todayFinishedMap := make(map[int]api.Match, 20)
+	todayUpcomingMap := make(map[int]api.Match, 10)
 	var lastErr error
 	successCount := 0
 

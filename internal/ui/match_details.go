@@ -2,7 +2,6 @@ package ui
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/0xjuanma/golazo/internal/api"
@@ -443,8 +442,8 @@ func renderLiveUpdatesSection(cfg MatchDetailsConfig, contentWidth int) string {
 const statBarWidth = 20
 
 func renderStatProgressBar(label, homeVal, awayVal string, maxWidth int, homeTeam, awayTeam string) string {
-	homePercent := parsePercent(homeVal)
-	awayPercent := parsePercent(awayVal)
+	homePercent := int(parseStatValue(homeVal))
+	awayPercent := int(parseStatValue(awayVal))
 
 	total := homePercent + awayPercent
 	if total > 0 && total != 100 {
@@ -471,8 +470,8 @@ func renderStatProgressBar(label, homeVal, awayVal string, maxWidth int, homeTea
 }
 
 func renderStatComparison(label, homeVal, awayVal string, maxWidth int) string {
-	homeNum := parseNumber(homeVal)
-	awayNum := parseNumber(awayVal)
+	homeNum := int(parseStatValue(homeVal))
+	awayNum := int(parseStatValue(awayVal))
 
 	homeStyle := neonValueStyle
 	awayStyle := neonValueStyle
@@ -509,41 +508,15 @@ func renderStatComparison(label, homeVal, awayVal string, maxWidth int) string {
 	return labelLine + "\n" + barLine
 }
 
-func parsePercent(s string) int {
-	s = strings.TrimSuffix(s, "%")
-	s = strings.TrimSpace(s)
-	val, err := strconv.Atoi(s)
-	if err != nil {
-		return 0
-	}
-	return val
-}
-
-func parseNumber(s string) int {
-	s = strings.TrimSpace(s)
-	if idx := strings.Index(s, " "); idx > 0 {
-		s = s[:idx]
-	}
-	if idx := strings.Index(s, "("); idx > 0 {
-		s = s[:idx]
-	}
-	s = strings.TrimSpace(s)
-
-	val, err := strconv.Atoi(s)
-	if err != nil {
-		return 0
-	}
-	return val
-}
 
 func truncateString(s string, maxLen int) string {
-	if maxLen <= 3 {
+	if maxLen <= 1 {
 		return s
 	}
 	if len(s) <= maxLen {
 		return s
 	}
-	return s[:maxLen-3] + "..."
+	return s[:maxLen-1] + "…"
 }
 
 func formatNumber(n int) string {

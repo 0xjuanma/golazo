@@ -2,13 +2,11 @@ package app
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/0xjuanma/golazo/internal/api"
-	"github.com/0xjuanma/golazo/internal/data"
+	"github.com/0xjuanma/golazo/internal/constants"
 	"github.com/0xjuanma/golazo/internal/fotmob"
 	"github.com/0xjuanma/golazo/internal/reddit"
 	"github.com/0xjuanma/golazo/internal/ui"
@@ -165,10 +163,15 @@ func (m model) handleMatchDetails(msg matchDetailsMsg) (tea.Model, tea.Cmd) {
 		m.loading = false
 		m.liveViewLoading = false
 		m.statsViewLoading = false
+		if msg.err != nil {
+			m.lastError = constants.ErrorMatchDetails
+		}
 		m.debugLog("handleMatchDetails: match details is nil")
 		return m, nil
 	}
 
+	// Clear error on success
+	m.lastError = ""
 	m.matchDetails = msg.details
 	m.debugLog(fmt.Sprintf("handleMatchDetails: loaded match %d (%s vs %s) with %d events, status=%v",
 		msg.details.ID, msg.details.HomeTeam.Name, msg.details.AwayTeam.Name, len(msg.details.Events), msg.details.Status))
@@ -296,6 +299,9 @@ func (m model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	switch msg.String() {
 	case "q", "ctrl+c":
+		if m.loadCancel != nil {
+			m.loadCancel()
+		}
 		return m, tea.Quit
 	case "esc":
 		// Check if any list is in filtering mode - if so, let the list handle Esc
@@ -342,6 +348,10 @@ func (m model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 // resetToMainView clears state and returns to main menu.
 func (m model) resetToMainView() (tea.Model, tea.Cmd) {
+	// Cancel any in-flight API requests
+	if m.loadCancel != nil {
+		m.loadCancel()
+	}
 	m.currentView = viewMain
 	m.selected = 0
 	m.matchDetails = nil
@@ -653,11 +663,17 @@ func (m model) handleLiveRefresh(msg liveRefreshMsg) (tea.Model, tea.Cmd) {
 // handleLiveBatchData processes parallel batch loading - multiple leagues at once.
 // Results are shown after each batch completes, giving progressive updates while being fast.
 func (m model) handleLiveBatchData(msg liveBatchDataMsg) (tea.Model, tea.Cmd) {
+	// Discard results if load was cancelled (user navigated away)
+	if m.loadCtx != nil && m.loadCtx.Err() != nil {
+		return m, nil
+	}
+
 	var cmds []tea.Cmd
 
 	// Accumulate live matches from this batch
 	if len(msg.matches) > 0 {
 		m.liveMatchesBuffer = append(m.liveMatchesBuffer, msg.matches...)
+		m.lastError = ""
 	}
 
 	// Track progress
@@ -691,6 +707,10 @@ func (m model) handleLiveBatchData(msg liveBatchDataMsg) (tea.Model, tea.Cmd) {
 		m.liveViewLoading = false
 		m.loading = false
 
+		if len(m.liveMatchesBuffer) == 0 {
+			m.lastError = constants.ErrorLoadFailed
+		}
+
 		// Cache the final result
 		if m.fotmobClient != nil && len(m.liveMatchesBuffer) > 0 {
 			m.fotmobClient.Cache().SetLiveMatches(m.liveMatchesBuffer)
@@ -704,7 +724,7 @@ func (m model) handleLiveBatchData(msg liveBatchDataMsg) (tea.Model, tea.Cmd) {
 
 	// Otherwise, fetch next batch
 	nextBatchIndex := msg.batchIndex + 1
-	cmds = append(cmds, fetchLiveBatchData(m.fotmobClient, m.useMockData, nextBatchIndex))
+	cmds = append(cmds, fetchLiveBatchData(m.loadCtx, m.fotmobClient, m.useMockData, nextBatchIndex))
 
 	// Keep spinner running
 	cmds = append(cmds, ui.SpinnerTick())
@@ -774,6 +794,11 @@ func (m model) handleStatsData(msg statsDataMsg) (tea.Model, tea.Cmd) {
 // handleStatsDayData processes progressive loading - one day's data at a time.
 // Results are shown immediately as each day completes, giving instant feedback.
 func (m model) handleStatsDayData(msg statsDayDataMsg) (tea.Model, tea.Cmd) {
+	// Discard results if load was cancelled (user navigated away)
+	if m.loadCtx != nil && m.loadCtx.Err() != nil {
+		return m, nil
+	}
+
 	var cmds []tea.Cmd
 
 	// Initialize statsData if nil (first day)
@@ -783,6 +808,11 @@ func (m model) handleStatsDayData(msg statsDayDataMsg) (tea.Model, tea.Cmd) {
 			TodayFinished: []api.Match{},
 			TodayUpcoming: []api.Match{},
 		}
+	}
+
+	// Clear error when data arrives successfully
+	if len(msg.finished) > 0 || len(msg.upcoming) > 0 {
+		m.lastError = ""
 	}
 
 	// Accumulate finished matches (deduplicate by match ID)
@@ -865,12 +895,17 @@ func (m model) handleStatsDayData(msg statsDayDataMsg) (tea.Model, tea.Cmd) {
 	if msg.isLast {
 		m.statsViewLoading = false
 		m.loading = false
+
+		if len(m.statsData.AllFinished) == 0 && len(m.statsData.TodayUpcoming) == 0 {
+			m.lastError = constants.ErrorLoadFailed
+		}
+
 		return m, tea.Batch(cmds...)
 	}
 
 	// Otherwise, fetch next day
 	nextDayIndex := msg.dayIndex + 1
-	cmds = append(cmds, fetchStatsDayData(m.fotmobClient, m.useMockData, nextDayIndex, m.statsTotalDays))
+	cmds = append(cmds, fetchStatsDayData(m.loadCtx, m.fotmobClient, m.useMockData, nextDayIndex, m.statsTotalDays))
 
 	// Keep spinner running
 	cmds = append(cmds, ui.SpinnerTick())
@@ -1136,8 +1171,9 @@ func (m *model) notifyNewGoals(details *api.MatchDetails) {
 	}
 
 	if goalEvent != nil {
-		// Send notification - errors are silently ignored to not disrupt the app
-		_ = m.notifier.Goal(*goalEvent, details.HomeTeam, details.AwayTeam, homeScore, awayScore)
+		if err := m.notifier.Goal(*goalEvent, details.HomeTeam, details.AwayTeam, homeScore, awayScore); err != nil {
+			m.debugLog(fmt.Sprintf("failed to send goal notification: %v", err))
+		}
 	}
 }
 
@@ -1183,130 +1219,10 @@ func (m model) handleGoalLinks(msg goalLinksMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-// debugLog writes debug messages to a log file without interfering with the UI
-// Only writes when debug mode is enabled. Implements log rotation to prevent excessive growth.
+// debugLog writes a debug message via the structured logger.
+// No-op when debug mode is disabled (logger writes to io.Discard).
 func (m model) debugLog(message string) {
-	if !m.debugMode {
-		return // Silently skip if debug mode is not enabled
-	}
-
-	configDir, err := data.ConfigDir()
-	if err != nil {
-		return // Silently fail if we can't get config dir
-	}
-
-	logFile := filepath.Join(configDir, "golazo_debug.log")
-
-	// Check file size and rotate if necessary
-	if err := m.rotateDebugLogIfNeeded(logFile); err != nil {
-		return // Silently fail if rotation fails
-	}
-
-	f, err := os.OpenFile(logFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return // Silently fail if we can't open log file
-	}
-	defer func() { _ = f.Close() }()
-
-	timestamp := time.Now().Format("2006-01-02 15:04:05")
-	logLine := fmt.Sprintf("[%s] %s\n", timestamp, message)
-	_, _ = f.WriteString(logLine)
-}
-
-// rotateDebugLogIfNeeded rotates the debug log file when it exceeds size limits
-// Keeps up to 3 rotated files and limits current log to ~1000 lines
-func (m model) rotateDebugLogIfNeeded(logFile string) error {
-	const maxSize = 10 * 1024 * 1024 // 10MB
-	const maxLines = 1000            // Keep ~1000 recent lines
-	const maxRotatedFiles = 3
-
-	// Check if file exists and get its size
-	info, err := os.Stat(logFile)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil // File doesn't exist, no rotation needed
-		}
-		return err
-	}
-
-	fileSize := info.Size()
-
-	// If file is too large, rotate it
-	if fileSize > maxSize {
-		// Create rotated filename with timestamp
-		timestamp := time.Now().Format("2006-01-02_15-04-05")
-		rotatedFile := logFile + "." + timestamp + ".bak"
-
-		// Rename current log to rotated file
-		if err := os.Rename(logFile, rotatedFile); err != nil {
-			return err
-		}
-
-		// Clean up old rotated files (keep only maxRotatedFiles)
-		m.cleanupOldRotatedLogs(logFile, maxRotatedFiles)
-	}
-
-	// Always trim current log to maxLines to prevent immediate regrowth
-	return m.trimDebugLogToMaxLines(logFile, maxLines)
-}
-
-// cleanupOldRotatedLogs removes old rotated log files, keeping only the most recent ones
-func (m model) cleanupOldRotatedLogs(logFile string, maxFiles int) {
-	pattern := logFile + ".*.bak"
-	matches, err := filepath.Glob(pattern)
-	if err != nil {
-		return
-	}
-
-	// Sort by modification time (newest first)
-	type fileInfo struct {
-		path    string
-		modTime time.Time
-	}
-	var files []fileInfo
-	for _, match := range matches {
-		info, err := os.Stat(match)
-		if err != nil {
-			continue
-		}
-		files = append(files, fileInfo{match, info.ModTime()})
-	}
-
-	// Sort by modification time (newest first)
-	for i := 0; i < len(files)-1; i++ {
-		for j := i + 1; j < len(files); j++ {
-			if files[i].modTime.Before(files[j].modTime) {
-				files[i], files[j] = files[j], files[i]
-			}
-		}
-	}
-
-	// Remove files beyond maxFiles
-	for i := maxFiles; i < len(files); i++ {
-		_ = os.Remove(files[i].path)
-	}
-}
-
-// trimDebugLogToMaxLines keeps only the last maxLines lines in the log file
-func (m model) trimDebugLogToMaxLines(logFile string, maxLines int) error {
-	content, err := os.ReadFile(logFile)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil // File doesn't exist, nothing to trim
-		}
-		return err
-	}
-
-	lines := strings.Split(string(content), "\n")
-	if len(lines) <= maxLines+1 { // +1 for potential empty line at end
-		return nil // No trimming needed
-	}
-
-	// Keep only the last maxLines lines
-	lines = lines[len(lines)-maxLines-1:]
-
-	// Write back the trimmed content
-	return os.WriteFile(logFile, []byte(strings.Join(lines, "\n")), 0644)
+	m.logger.Debug(message)
 }
 
 // GoalReplayURL returns the replay URL for a goal if available.

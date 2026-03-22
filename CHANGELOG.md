@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **Silent Error Swallowing** - Settings save, notification, and Reddit client init errors are now logged instead of discarded
+- **Live Score Sync** - Fixed left panel score falling out of sync with the right panel between 5-minute list refreshes
 
 ## [0.22.0] - 2026-02-20
 

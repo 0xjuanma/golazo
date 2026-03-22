@@ -255,6 +255,10 @@ func (m model) handleMatchDetails(msg matchDetailsMsg) (tea.Model, tea.Cmd) {
 		m.lastHomeScore = homeScore
 		m.lastAwayScore = awayScore
 
+		// Back-propagate the fresh score into the left-panel list so both panels
+		// stay in sync after every 90s poll without waiting for the 5-min refresh.
+		m.syncMatchScoreInList(msg.details.ID, homeScore, awayScore, msg.details.LiveTime)
+
 		// Parse ALL events to rebuild the live updates list
 		// This ensures proper ordering (descending by minute) and uniqueness
 		m.liveUpdates = m.parser.ParseEvents(msg.details.Events, msg.details.HomeTeam, msg.details.AwayTeam)
@@ -1174,6 +1178,26 @@ func (m *model) notifyNewGoals(details *api.MatchDetails) {
 		if err := m.notifier.Goal(*goalEvent, details.HomeTeam, details.AwayTeam, homeScore, awayScore); err != nil {
 			m.debugLog(fmt.Sprintf("failed to send goal notification: %v", err))
 		}
+	}
+}
+
+// syncMatchScoreInList updates the score for a match in the live matches list so
+// that the left panel stays in sync with the right panel after every 90s poll,
+// without waiting for the 5-minute list refresh.
+// Only mutates the entry whose ID matches; all other entries are left unchanged.
+func (m *model) syncMatchScoreInList(matchID, homeScore, awayScore int, liveTime *string) {
+	updated := false
+	for i, d := range m.matches {
+		if d.ID == matchID {
+			m.matches[i].HomeScore = &homeScore
+			m.matches[i].AwayScore = &awayScore
+			m.matches[i].LiveTime = liveTime
+			updated = true
+			break
+		}
+	}
+	if updated {
+		m.liveMatchesList.SetItems(ui.ToMatchListItems(m.matches))
 	}
 }
 

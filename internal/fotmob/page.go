@@ -64,6 +64,46 @@ func fetchMatchDetailsFromPage(ctx context.Context, httpClient *http.Client, pag
 	return details, nil
 }
 
+// fetchLeagueFromPage fetches league data by scraping the league page HTML
+// and extracting fixtures/details from the __NEXT_DATA__ JSON.
+//
+// This replaces the old /api/leagues?id={id}&tab={tab} endpoint, which FotMob
+// removed (returns 404). The league page at /leagues/{id} contains the same data
+// in its __NEXT_DATA__ script tag, including all season matches in fixtures.allMatches.
+func fetchLeagueFromPage(ctx context.Context, httpClient *http.Client, leagueID int) (json.RawMessage, error) {
+	url := fmt.Sprintf("https://www.fotmob.com/leagues/%d", leagueID)
+
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, fmt.Errorf("create league page request: %w", err)
+	}
+
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
+	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("fetch league page: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("league page returned status %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("read league page body: %w", err)
+	}
+
+	pageProps, err := extractPageProps(string(body))
+	if err != nil {
+		return nil, fmt.Errorf("extract league page props: %w", err)
+	}
+
+	return pageProps, nil
+}
+
 // extractPageProps extracts the pageProps JSON from a Next.js page's __NEXT_DATA__ script tag.
 func extractPageProps(html string) (json.RawMessage, error) {
 	const marker = `__NEXT_DATA__`

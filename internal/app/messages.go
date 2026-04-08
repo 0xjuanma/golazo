@@ -24,7 +24,8 @@ type liveMatchesMsg struct {
 
 // liveRefreshMsg is sent when live matches are refreshed (periodic 5-min timer).
 type liveRefreshMsg struct {
-	matches []api.Match
+	matches  []api.Match
+	upcoming []api.Match
 }
 
 // liveBatchDataMsg contains live matches for a batch of leagues (parallel loading).
@@ -33,6 +34,7 @@ type liveBatchDataMsg struct {
 	batchIndex int         // Which batch (0, 1, 2, ...)
 	isLast     bool        // true if this is the last batch
 	matches    []api.Match // live matches from all leagues in this batch
+	upcoming   []api.Match // upcoming (not started) matches from this batch
 	err        error
 }
 

@@ -61,7 +61,9 @@ func fetchLiveBatchData(parentCtx context.Context, client *fotmob.Client, useMoc
 		// Fetch all leagues in this batch concurrently
 		var wg sync.WaitGroup
 		var mu sync.Mutex
-		allMatches := make([]api.Match, 0, (endIdx-startIdx)*5)
+		allLive := make([]api.Match, 0, (endIdx-startIdx)*5)
+		allUpcoming := make([]api.Match, 0, (endIdx-startIdx)*5)
+		today := time.Now()
 
 		for i := startIdx; i < endIdx; i++ {
 			wg.Add(1)
@@ -72,13 +74,20 @@ func fetchLiveBatchData(parentCtx context.Context, client *fotmob.Client, useMoc
 				ctx, cancel := context.WithTimeout(parentCtx, 10*time.Second)
 				defer cancel()
 
-				matches, err := client.LiveMatchesForLeague(ctx, leagueID)
+				// Fetch all fixtures (live + upcoming) instead of just live
+				matches, err := client.MatchesForLeagueAndDate(ctx, leagueID, today, "fixtures")
 				if err != nil || len(matches) == 0 {
 					return
 				}
 
 				mu.Lock()
-				allMatches = append(allMatches, matches...)
+				for _, m := range matches {
+					if m.Status == api.MatchStatusLive {
+						allLive = append(allLive, m)
+					} else if m.Status == api.MatchStatusNotStarted {
+						allUpcoming = append(allUpcoming, m)
+					}
+				}
 				mu.Unlock()
 			}(i)
 		}
@@ -88,13 +97,16 @@ func fetchLiveBatchData(parentCtx context.Context, client *fotmob.Client, useMoc
 		return liveBatchDataMsg{
 			batchIndex: batchIndex,
 			isLast:     isLast,
-			matches:    allMatches,
+			matches:    allLive,
+			upcoming:   allUpcoming,
 		}
 	}
 }
 
 // scheduleLiveRefresh schedules the next live matches refresh after 5 minutes.
 // This is used to keep the live matches list current while the user is in the view.
+// Fetches both live and upcoming matches so the upcoming section stays current
+// as matches transition from upcoming to live.
 func scheduleLiveRefresh(client *fotmob.Client, useMockData bool) tea.Cmd {
 	return tea.Tick(LiveRefreshInterval, func(t time.Time) tea.Msg {
 		if useMockData {
@@ -105,16 +117,27 @@ func scheduleLiveRefresh(client *fotmob.Client, useMockData bool) tea.Cmd {
 			return liveRefreshMsg{matches: nil}
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
-		// Force refresh to bypass cache
-		matches, err := client.LiveMatchesForceRefresh(ctx)
+		// Force refresh to bypass cache - fetch all fixtures to get both live and upcoming
+		today := time.Now()
+		client.Cache().ClearLive()
+		allMatches, err := client.MatchesByDateWithTabs(ctx, today, []string{"fixtures"})
 		if err != nil {
 			return liveRefreshMsg{matches: nil}
 		}
 
-		return liveRefreshMsg{matches: matches}
+		var live, upcoming []api.Match
+		for _, m := range allMatches {
+			if m.Status == api.MatchStatusLive {
+				live = append(live, m)
+			} else if m.Status == api.MatchStatusNotStarted {
+				upcoming = append(upcoming, m)
+			}
+		}
+
+		return liveRefreshMsg{matches: live, upcoming: upcoming}
 	})
 }
 

@@ -81,6 +81,8 @@ func (m model) handleMainViewKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			totalLeagues := fotmob.TotalLeagues()
 			m.liveTotalBatches = (totalLeagues + LiveBatchSize - 1) / LiveBatchSize // Ceiling division
 			m.liveMatchesBuffer = nil                                               // Clear buffer
+			m.liveUpcomingBuffer = nil                                              // Clear upcoming buffer
+			m.liveUpcomingMatches = nil                                             // Clear upcoming display
 			m.liveMatchesList.SetItems([]list.Item{})
 			cmds = append(cmds, ui.SpinnerTick())
 			// Start fetching batch 0 (4 leagues in parallel) - results shown when batch completes

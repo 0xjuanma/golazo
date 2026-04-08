@@ -63,9 +63,10 @@ type model struct {
 	statsTotalDays  int // Total days to load (5)
 
 	// Progressive loading state (live view) - batch-based for parallel fetching
-	liveBatchesLoaded int         // Number of batches loaded so far
-	liveTotalBatches  int         // Total batches to load
-	liveMatchesBuffer []api.Match // Buffer to accumulate live matches during progressive load
+	liveBatchesLoaded   int         // Number of batches loaded so far
+	liveTotalBatches    int         // Total batches to load
+	liveMatchesBuffer   []api.Match // Buffer to accumulate live matches during progressive load
+	liveUpcomingBuffer  []api.Match // Buffer to accumulate upcoming matches during progressive load
 
 	// UI components
 	spinner          spinner.Model

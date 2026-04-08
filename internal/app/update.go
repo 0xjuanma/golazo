@@ -627,6 +627,13 @@ func (m model) handleLiveRefresh(msg liveRefreshMsg) (tea.Model, tea.Cmd) {
 	// Schedule the next refresh
 	cmds = append(cmds, scheduleLiveRefresh(m.fotmobClient, m.useMockData))
 
+	// Update upcoming matches
+	upcomingDisplay := make([]ui.MatchDisplay, 0, len(msg.upcoming))
+	for _, match := range msg.upcoming {
+		upcomingDisplay = append(upcomingDisplay, ui.MatchDisplay{Match: match})
+	}
+	m.liveUpcomingMatches = upcomingDisplay
+
 	if len(msg.matches) == 0 {
 		// No live matches - clear list but keep view
 		m.matches = nil
@@ -678,6 +685,16 @@ func (m model) handleLiveBatchData(msg liveBatchDataMsg) (tea.Model, tea.Cmd) {
 	if len(msg.matches) > 0 {
 		m.liveMatchesBuffer = append(m.liveMatchesBuffer, msg.matches...)
 		m.lastError = ""
+	}
+
+	// Accumulate upcoming matches from this batch
+	if len(msg.upcoming) > 0 {
+		m.liveUpcomingBuffer = append(m.liveUpcomingBuffer, msg.upcoming...)
+		upcomingDisplay := make([]ui.MatchDisplay, 0, len(m.liveUpcomingBuffer))
+		for _, match := range m.liveUpcomingBuffer {
+			upcomingDisplay = append(upcomingDisplay, ui.MatchDisplay{Match: match})
+		}
+		m.liveUpcomingMatches = upcomingDisplay
 	}
 
 	// Track progress

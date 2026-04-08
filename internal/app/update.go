@@ -728,7 +728,7 @@ func (m model) handleLiveBatchData(msg liveBatchDataMsg) (tea.Model, tea.Cmd) {
 		m.liveViewLoading = false
 		m.loading = false
 
-		if len(m.liveMatchesBuffer) == 0 {
+		if len(m.liveMatchesBuffer) == 0 && len(m.liveUpcomingBuffer) == 0 {
 			m.lastError = constants.ErrorLoadFailed
 		}
 

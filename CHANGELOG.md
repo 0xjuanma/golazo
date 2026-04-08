@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Silent Error Swallowing** - Settings save, notification, and Reddit client init errors are now logged instead of discarded
 - **Live Score Sync** - Fixed left panel score falling out of sync with the right panel between 5-minute list refreshes
 - **Match Details Broken** - Fixed match data returning empty after FotMob removed their JSON API endpoints
+- **Live View Upcoming Matches** - Fixed upcoming matches not showing unless stats view was visited first
 
 ## [0.22.0] - 2026-02-20
 

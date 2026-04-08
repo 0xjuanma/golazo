@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+
+## [0.23.0] - 2026-04-08
+
+### Added
 - **Error Visibility** - API errors are now surfaced to the user with a retry hint instead of showing silent empty states
 
 ### Changed

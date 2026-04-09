@@ -17,7 +17,7 @@ import (
 func (m model) handleMainViewKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "j", "down":
-		if m.selected < 2 && !m.mainViewLoading { // 3 menu items: 0, 1, 2
+		if m.selected < 3 && !m.mainViewLoading { // 4 menu items: 0, 1, 2, 3
 			m.selected++
 		}
 	case "k", "up":
@@ -34,6 +34,23 @@ func (m model) handleMainViewKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.settingsState = ui.NewSettingsState()
 			m.currentView = viewSettings
 			return m, nil
+		}
+
+		// Handle World Cup view (immediate switch, loads data async)
+		if m.selected == 3 {
+			if m.loadCancel != nil {
+				m.loadCancel()
+			}
+			m.loadCtx, m.loadCancel = context.WithCancel(context.Background())
+			m.wcData = nil
+			m.wcLoading = true
+			m.wcSubView = wcSubViewGroups
+			m.wcLastError = ""
+			m.currentView = viewWorldCup
+			if m.useMockData {
+				return m, fetchWorldCupMockData()
+			}
+			return m, fetchWorldCupData(m.loadCtx, m.fotmobClient)
 		}
 
 		m.mainViewLoading = true

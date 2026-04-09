@@ -81,3 +81,9 @@ type standingsMsg struct {
 	homeTeamID int
 	awayTeamID int
 }
+
+// wcDataMsg contains World Cup data fetched from FotMob or mock.
+type wcDataMsg struct {
+	data *api.WorldCupData
+	err  error
+}

@@ -44,3 +44,42 @@ type WorldCupData struct {
 	Champion       *Team
 	RunnerUp       *Team
 }
+
+// DeriveFinalists extracts champion and runner-up from the final matchup's WinnerID.
+// Returns nil, nil if the final has not been played yet or no final round exists.
+func (d *WorldCupData) DeriveFinalists() (*Team, *Team) {
+	for _, r := range d.KnockoutRounds {
+		if r.Stage != "final" || len(r.Matchups) == 0 {
+			continue
+		}
+		mu := r.Matchups[0]
+		if mu.WinnerID == nil {
+			return nil, nil
+		}
+		home := Team{ID: mu.HomeTeamID, Name: mu.HomeTeam, ShortName: mu.HomeShort}
+		away := Team{ID: mu.AwayTeamID, Name: mu.AwayTeam, ShortName: mu.AwayShort}
+		if *mu.WinnerID == mu.HomeTeamID {
+			return &home, &away
+		}
+		return &away, &home
+	}
+	return nil, nil
+}
+
+// BracketLineCount returns the total number of content lines the bracket view
+// produces for this data. Must stay in sync with ui.RenderWorldCupBracket's
+// line construction.
+func (d *WorldCupData) BracketLineCount() int {
+	count := 0
+	for _, round := range d.KnockoutRounds {
+		count += 2 + len(round.Matchups) + 1 // roundHdr + blank + matchups + trailing blank
+	}
+	if d.BronzeFinal != nil {
+		count += 4 // bronzeHdr + blank + matchup + trailing blank
+	}
+	if d.Champion != nil {
+		count += 2 // blank + champion line
+	}
+	return count
+}
+

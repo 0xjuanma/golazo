@@ -34,6 +34,15 @@ const (
 	viewWorldCup
 )
 
+// wcSubView represents the current sub-view within the World Cup view.
+type wcSubView int
+
+const (
+	wcSubViewGroups      wcSubView = iota // scrollable group list
+	wcSubViewGroupDetail                  // single group expanded detail
+	wcSubViewBracket                      // knockout bracket
+)
+
 // model holds the application state.
 // Fields are organized by concern: display, data, UI components, and configuration.
 type model struct {
@@ -114,6 +123,7 @@ type model struct {
 	wcSelectedGroup int
 	wcGroupsList    list.Model // bubbles list for the groups overview
 	wcBracketScroll int
+	wcBracketLines  int // total content lines in bracket view; used for scroll clamping
 	wcLastError     string
 
 	// Dialog overlay for modal dialogs

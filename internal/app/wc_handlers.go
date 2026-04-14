@@ -7,15 +7,6 @@ import (
 	"github.com/0xjuanma/golazo/internal/ui"
 )
 
-// wcSubView represents the current sub-view within the World Cup view.
-type wcSubView int
-
-const (
-	wcSubViewGroups      wcSubView = iota // scrollable group list
-	wcSubViewGroupDetail                  // single group expanded detail
-	wcSubViewBracket                      // knockout bracket
-)
-
 // handleWorldCupKeys routes keyboard input to the active WC sub-view handler.
 func (m model) handleWorldCupKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if m.wcLoading {
@@ -82,7 +73,9 @@ func (m model) handleWCBracketKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "esc":
 		m.wcSubView = wcSubViewGroups
 	case "j", "down":
-		m.wcBracketScroll++
+		if m.wcBracketLines > 0 && m.wcBracketScroll < m.wcBracketLines-1 {
+			m.wcBracketScroll++
+		}
 	case "k", "up":
 		if m.wcBracketScroll > 0 {
 			m.wcBracketScroll--
@@ -100,6 +93,7 @@ func (m model) handleWCData(msg wcDataMsg) (tea.Model, tea.Cmd) {
 	}
 	m.wcData = msg.data
 	m.wcLastError = ""
+	m.wcBracketLines = msg.data.BracketLineCount()
 
 	items := make([]list.Item, len(msg.data.Groups))
 	for i, g := range msg.data.Groups {

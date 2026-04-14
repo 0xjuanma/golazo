@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sort"
 	"strings"
 
 	"github.com/0xjuanma/golazo/internal/api"
@@ -87,13 +88,15 @@ func (c *Client) WorldCupData(ctx context.Context, season string) (*api.WorldCup
 		s = resp.Overview.Season
 	}
 
-	return &api.WorldCupData{
+	wcData := &api.WorldCupData{
 		Season:         s,
 		Name:           fmt.Sprintf("FIFA World Cup %s", s),
 		Groups:         groups,
 		KnockoutRounds: rounds,
 		BronzeFinal:    bronze,
-	}, nil
+	}
+	wcData.Champion, wcData.RunnerUp = wcData.DeriveFinalists()
+	return wcData, nil
 }
 
 // fetchWorldCupPage fetches the FotMob World Cup league overview page.
@@ -205,12 +208,7 @@ func parseWCBracket(playoff wcPlayoff) ([]api.WCKnockoutRound, *api.WCMatchup) {
 		indexed = append(indexed, indexedRound{order: order, round: round})
 	}
 
-	// Sort by order
-	for i := 1; i < len(indexed); i++ {
-		for j := i; j > 0 && indexed[j].order < indexed[j-1].order; j-- {
-			indexed[j], indexed[j-1] = indexed[j-1], indexed[j]
-		}
-	}
+	sort.Slice(indexed, func(i, j int) bool { return indexed[i].order < indexed[j].order })
 
 	rounds := make([]api.WCKnockoutRound, 0, len(indexed))
 	for _, ir := range indexed {
@@ -256,13 +254,13 @@ func convertMatchup(r wcMatchupRaw) api.WCMatchup {
 	if len(r.Matches) > 0 {
 		finished := r.Matches[0].Status.Finished
 		if finished != nil && *finished {
-			m.HomeScore = intPtrLocal(r.HomeScore)
-			m.AwayScore = intPtrLocal(r.AwayScore)
+			m.HomeScore = intPtr(r.HomeScore)
+			m.AwayScore = intPtr(r.AwayScore)
 		}
 	}
 
 	if r.Winner != 0 {
-		m.WinnerID = intPtrLocal(r.Winner)
+		m.WinnerID = intPtr(r.Winner)
 		// Detect penalties: score is level at final whistle but there's a winner
 		if m.HomeScore != nil && m.AwayScore != nil && *m.HomeScore == *m.AwayScore {
 			m.IsPenalties = true
@@ -284,4 +282,4 @@ func wcGroupLetter(name string) string {
 	return name
 }
 
-func intPtrLocal(v int) *int { i := v; return &i }
+func intPtr(v int) *int { i := v; return &i }

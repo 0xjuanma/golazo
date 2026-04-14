@@ -160,7 +160,6 @@ func RenderWorldCupGroups(width, height int, wcData *api.WorldCupData, groupsLis
 	tabHint := lipgloss.NewStyle().Foreground(neonDim).Render("  b: Knockout Bracket")
 	help := wcHelpStyle.Width(width).Render("↑/↓: navigate  Enter: group detail  b: bracket  /: filter  Esc: back  q: quit")
 
-	// Reserve lines for header (1) + tabHint (1) + gap (1) + help (1) + statusBanner (0-1)
 	overhead := 4
 	if statusBanner != "" {
 		overhead++

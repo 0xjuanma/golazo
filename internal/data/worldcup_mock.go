@@ -19,8 +19,6 @@ func MockWorldCupData() *api.WorldCupData {
 	}
 }
 
-func mockWCIntPtr(v int) *int { return &v }
-
 func mockWC2022Groups() []api.WCGroup {
 	return []api.WCGroup{
 		{
@@ -104,39 +102,39 @@ func mockWC2022Bracket() []api.WCKnockoutRound {
 			Stage: "1/8",
 			Label: "Round of 16",
 			Matchups: []api.WCMatchup{
-				{HomeTeam: "Netherlands", HomeTeamID: 6708, HomeShort: "NED", AwayTeam: "USA", AwayTeamID: 6713, AwayShort: "USA", HomeScore: mockWCIntPtr(3), AwayScore: mockWCIntPtr(1), WinnerID: mockWCIntPtr(6708)},
-				{HomeTeam: "Argentina", HomeTeamID: 6706, HomeShort: "ARG", AwayTeam: "Australia", AwayTeamID: 6716, AwayShort: "AUS", HomeScore: mockWCIntPtr(2), AwayScore: mockWCIntPtr(1), WinnerID: mockWCIntPtr(6706)},
-				{HomeTeam: "Japan", HomeTeamID: 6715, HomeShort: "JPN", AwayTeam: "Croatia", AwayTeamID: 10155, AwayShort: "CRO", HomeScore: mockWCIntPtr(1), AwayScore: mockWCIntPtr(1), WinnerID: mockWCIntPtr(10155), IsPenalties: true},
-				{HomeTeam: "Brazil", HomeTeamID: 8256, HomeShort: "BRA", AwayTeam: "South Korea", AwayTeamID: 7804, AwayShort: "KOR", HomeScore: mockWCIntPtr(4), AwayScore: mockWCIntPtr(1), WinnerID: mockWCIntPtr(8256)},
-				{HomeTeam: "England", HomeTeamID: 8491, HomeShort: "ENG", AwayTeam: "Senegal", AwayTeamID: 6395, AwayShort: "SEN", HomeScore: mockWCIntPtr(3), AwayScore: mockWCIntPtr(0), WinnerID: mockWCIntPtr(8491)},
-				{HomeTeam: "France", HomeTeamID: 6723, HomeShort: "FRA", AwayTeam: "Poland", AwayTeamID: 8568, AwayShort: "POL", HomeScore: mockWCIntPtr(3), AwayScore: mockWCIntPtr(1), WinnerID: mockWCIntPtr(6723)},
-				{HomeTeam: "Morocco", HomeTeamID: 6262, HomeShort: "MAR", AwayTeam: "Spain", AwayTeamID: 6720, AwayShort: "ESP", HomeScore: mockWCIntPtr(0), AwayScore: mockWCIntPtr(0), WinnerID: mockWCIntPtr(6262), IsPenalties: true},
-				{HomeTeam: "Portugal", HomeTeamID: 8361, HomeShort: "POR", AwayTeam: "Switzerland", AwayTeamID: 6717, AwayShort: "SUI", HomeScore: mockWCIntPtr(6), AwayScore: mockWCIntPtr(1), WinnerID: mockWCIntPtr(8361)},
+				{HomeTeam: "Netherlands", HomeTeamID: 6708, HomeShort: "NED", AwayTeam: "USA", AwayTeamID: 6713, AwayShort: "USA", HomeScore: intPtr(3), AwayScore: intPtr(1), WinnerID: intPtr(6708)},
+				{HomeTeam: "Argentina", HomeTeamID: 6706, HomeShort: "ARG", AwayTeam: "Australia", AwayTeamID: 6716, AwayShort: "AUS", HomeScore: intPtr(2), AwayScore: intPtr(1), WinnerID: intPtr(6706)},
+				{HomeTeam: "Japan", HomeTeamID: 6715, HomeShort: "JPN", AwayTeam: "Croatia", AwayTeamID: 10155, AwayShort: "CRO", HomeScore: intPtr(1), AwayScore: intPtr(1), WinnerID: intPtr(10155), IsPenalties: true},
+				{HomeTeam: "Brazil", HomeTeamID: 8256, HomeShort: "BRA", AwayTeam: "South Korea", AwayTeamID: 7804, AwayShort: "KOR", HomeScore: intPtr(4), AwayScore: intPtr(1), WinnerID: intPtr(8256)},
+				{HomeTeam: "England", HomeTeamID: 8491, HomeShort: "ENG", AwayTeam: "Senegal", AwayTeamID: 6395, AwayShort: "SEN", HomeScore: intPtr(3), AwayScore: intPtr(0), WinnerID: intPtr(8491)},
+				{HomeTeam: "France", HomeTeamID: 6723, HomeShort: "FRA", AwayTeam: "Poland", AwayTeamID: 8568, AwayShort: "POL", HomeScore: intPtr(3), AwayScore: intPtr(1), WinnerID: intPtr(6723)},
+				{HomeTeam: "Morocco", HomeTeamID: 6262, HomeShort: "MAR", AwayTeam: "Spain", AwayTeamID: 6720, AwayShort: "ESP", HomeScore: intPtr(0), AwayScore: intPtr(0), WinnerID: intPtr(6262), IsPenalties: true},
+				{HomeTeam: "Portugal", HomeTeamID: 8361, HomeShort: "POR", AwayTeam: "Switzerland", AwayTeamID: 6717, AwayShort: "SUI", HomeScore: intPtr(6), AwayScore: intPtr(1), WinnerID: intPtr(8361)},
 			},
 		},
 		{
 			Stage: "1/4",
 			Label: "Quarterfinals",
 			Matchups: []api.WCMatchup{
-				{HomeTeam: "Netherlands", HomeTeamID: 6708, HomeShort: "NED", AwayTeam: "Argentina", AwayTeamID: 6706, AwayShort: "ARG", HomeScore: mockWCIntPtr(2), AwayScore: mockWCIntPtr(2), WinnerID: mockWCIntPtr(6706), IsPenalties: true},
-				{HomeTeam: "Croatia", HomeTeamID: 10155, HomeShort: "CRO", AwayTeam: "Brazil", AwayTeamID: 8256, AwayShort: "BRA", HomeScore: mockWCIntPtr(1), AwayScore: mockWCIntPtr(1), WinnerID: mockWCIntPtr(10155), IsPenalties: true},
-				{HomeTeam: "England", HomeTeamID: 8491, HomeShort: "ENG", AwayTeam: "France", AwayTeamID: 6723, AwayShort: "FRA", HomeScore: mockWCIntPtr(1), AwayScore: mockWCIntPtr(2), WinnerID: mockWCIntPtr(6723)},
-				{HomeTeam: "Morocco", HomeTeamID: 6262, HomeShort: "MAR", AwayTeam: "Portugal", AwayTeamID: 8361, AwayShort: "POR", HomeScore: mockWCIntPtr(1), AwayScore: mockWCIntPtr(0), WinnerID: mockWCIntPtr(6262)},
+				{HomeTeam: "Netherlands", HomeTeamID: 6708, HomeShort: "NED", AwayTeam: "Argentina", AwayTeamID: 6706, AwayShort: "ARG", HomeScore: intPtr(2), AwayScore: intPtr(2), WinnerID: intPtr(6706), IsPenalties: true},
+				{HomeTeam: "Croatia", HomeTeamID: 10155, HomeShort: "CRO", AwayTeam: "Brazil", AwayTeamID: 8256, AwayShort: "BRA", HomeScore: intPtr(1), AwayScore: intPtr(1), WinnerID: intPtr(10155), IsPenalties: true},
+				{HomeTeam: "England", HomeTeamID: 8491, HomeShort: "ENG", AwayTeam: "France", AwayTeamID: 6723, AwayShort: "FRA", HomeScore: intPtr(1), AwayScore: intPtr(2), WinnerID: intPtr(6723)},
+				{HomeTeam: "Morocco", HomeTeamID: 6262, HomeShort: "MAR", AwayTeam: "Portugal", AwayTeamID: 8361, AwayShort: "POR", HomeScore: intPtr(1), AwayScore: intPtr(0), WinnerID: intPtr(6262)},
 			},
 		},
 		{
 			Stage: "1/2",
 			Label: "Semifinals",
 			Matchups: []api.WCMatchup{
-				{HomeTeam: "Argentina", HomeTeamID: 6706, HomeShort: "ARG", AwayTeam: "Croatia", AwayTeamID: 10155, AwayShort: "CRO", HomeScore: mockWCIntPtr(3), AwayScore: mockWCIntPtr(0), WinnerID: mockWCIntPtr(6706)},
-				{HomeTeam: "France", HomeTeamID: 6723, HomeShort: "FRA", AwayTeam: "Morocco", AwayTeamID: 6262, AwayShort: "MAR", HomeScore: mockWCIntPtr(2), AwayScore: mockWCIntPtr(0), WinnerID: mockWCIntPtr(6723)},
+				{HomeTeam: "Argentina", HomeTeamID: 6706, HomeShort: "ARG", AwayTeam: "Croatia", AwayTeamID: 10155, AwayShort: "CRO", HomeScore: intPtr(3), AwayScore: intPtr(0), WinnerID: intPtr(6706)},
+				{HomeTeam: "France", HomeTeamID: 6723, HomeShort: "FRA", AwayTeam: "Morocco", AwayTeamID: 6262, AwayShort: "MAR", HomeScore: intPtr(2), AwayScore: intPtr(0), WinnerID: intPtr(6723)},
 			},
 		},
 		{
 			Stage: "final",
 			Label: "Final",
 			Matchups: []api.WCMatchup{
-				{HomeTeam: "Argentina", HomeTeamID: 6706, HomeShort: "ARG", AwayTeam: "France", AwayTeamID: 6723, AwayShort: "FRA", HomeScore: mockWCIntPtr(3), AwayScore: mockWCIntPtr(3), WinnerID: mockWCIntPtr(6706), IsPenalties: true},
+				{HomeTeam: "Argentina", HomeTeamID: 6706, HomeShort: "ARG", AwayTeam: "France", AwayTeamID: 6723, AwayShort: "FRA", HomeScore: intPtr(3), AwayScore: intPtr(3), WinnerID: intPtr(6706), IsPenalties: true},
 			},
 		},
 	}
@@ -146,6 +144,6 @@ func mockWC2022Bronze() *api.WCMatchup {
 	return &api.WCMatchup{
 		HomeTeam: "Croatia", HomeTeamID: 10155, HomeShort: "CRO",
 		AwayTeam: "Morocco", AwayTeamID: 6262, AwayShort: "MAR",
-		HomeScore: mockWCIntPtr(2), AwayScore: mockWCIntPtr(1), WinnerID: mockWCIntPtr(10155),
+		HomeScore: intPtr(2), AwayScore: intPtr(1), WinnerID: intPtr(10155),
 	}
 }

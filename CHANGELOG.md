@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 ### Fixed
+- **High CPU usage** - Fixed continuously growing CPU after repeated live match refreshes caused by duplicate poll and render tick chains
 
 ## [0.23.0] - 2026-04-08
 

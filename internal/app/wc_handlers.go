@@ -19,13 +19,14 @@ func (m model) handleWorldCupKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleWCGroupDetailKeys(msg)
 	case wcSubViewBracket:
 		return m.handleWCBracketKeys(msg)
+	case wcSubViewGroupGrid:
+		return m.handleWCGroupGridKeys(msg)
 	}
 	return m, nil
 }
 
 // handleWCGroupsKeys handles input on the groups list.
-// Enter navigates to group detail; b opens the bracket; all other keys are
-// delegated to the bubbles/list component for built-in navigation and filtering.
+// Enter navigates to group detail; b opens the bracket; g opens the grid.
 func (m model) handleWCGroupsKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if m.wcData == nil {
 		return m, nil
@@ -49,6 +50,11 @@ func (m model) handleWCGroupsKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.wcBracketScroll = 0
 			m.wcSubView = wcSubViewBracket
 		}
+		return m, nil
+
+	case "g":
+		m.wcGridSelectedIdx = 0
+		m.wcSubView = wcSubViewGroupGrid
 		return m, nil
 
 	default:
@@ -79,6 +85,64 @@ func (m model) handleWCBracketKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "k", "up":
 		if m.wcBracketScroll > 0 {
 			m.wcBracketScroll--
+		}
+	}
+	return m, nil
+}
+
+// handleWCGroupGridKeys handles input on the all-groups grid view.
+func (m model) handleWCGroupGridKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	if m.wcData == nil {
+		return m, nil
+	}
+	n := len(m.wcData.Groups)
+	if n == 0 {
+		if msg.String() == "esc" {
+			m.wcSubView = wcSubViewGroups
+		}
+		return m, nil
+	}
+
+	// Determine column count matching RenderGroupGrid's logic
+	cols := 2
+	if m.width > 120 {
+		cols = 4
+	} else if m.width > 80 {
+		cols = 3
+	}
+
+	switch msg.String() {
+	case "esc":
+		m.wcSubView = wcSubViewGroups
+
+	case "enter":
+		m.wcSelectedGroup = m.wcGridSelectedIdx
+		m.wcSubView = wcSubViewGroupDetail
+
+	case "b":
+		if len(m.wcData.KnockoutRounds) > 0 {
+			m.wcBracketScroll = 0
+			m.wcSubView = wcSubViewBracket
+		}
+
+	case "right", "l":
+		if m.wcGridSelectedIdx < n-1 {
+			m.wcGridSelectedIdx++
+		}
+
+	case "left", "h":
+		if m.wcGridSelectedIdx > 0 {
+			m.wcGridSelectedIdx--
+		}
+
+	case "down", "j":
+		if m.wcGridSelectedIdx+cols < n {
+			m.wcGridSelectedIdx += cols
+		}
+
+	case "up", "k":
+		if m.wcGridSelectedIdx-cols >= 0 {
+			m.wcGridSelectedIdx -= cols
 		}
 	}
 	return m, nil

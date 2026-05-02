@@ -59,6 +59,7 @@ type statsDayDataMsg struct {
 // This triggers the actual API call with loading state visible.
 type pollTickMsg struct {
 	matchID int
+	gen     int // generation at scheduling time; dropped if model has moved on
 }
 
 // pollDisplayCompleteMsg is sent after minimum display time (1 second) has elapsed.

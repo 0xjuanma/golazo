@@ -171,6 +171,7 @@ func (m model) loadMatchDetailsWithRefresh(matchID int, forceRefresh bool) (tea.
 	m.loading = true
 	m.liveViewLoading = true
 	m.polling = false // Reset polling state - this is a new match load, not a poll refresh
+	m.pollGen++       // Invalidate any in-flight poll timers from the previous chain
 
 	var cmd tea.Cmd
 	if forceRefresh {

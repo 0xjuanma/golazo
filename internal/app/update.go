@@ -145,7 +145,7 @@ func (m model) handleLiveUpdate(msg liveUpdateMsg) (tea.Model, tea.Cmd) {
 
 	// Continue polling if match is live
 	if m.polling && m.matchDetails != nil && m.matchDetails.Status == api.MatchStatusLive {
-		return m, schedulePollTick(m.matchDetails.ID)
+		return m, schedulePollTick(m.matchDetails.ID, m.pollGen)
 	}
 
 	m.loading = false
@@ -275,7 +275,7 @@ func (m model) handleMatchDetails(msg matchDetailsMsg) (tea.Model, tea.Cmd) {
 
 			m.polling = true
 			// Schedule next poll tick (90 seconds from now)
-			cmds = append(cmds, schedulePollTick(msg.details.ID))
+			cmds = append(cmds, schedulePollTick(msg.details.ID, m.pollGen))
 		} else {
 			m.loading = false
 			m.polling = false
@@ -1095,6 +1095,11 @@ func (m model) handleMainViewCheck(msg mainViewCheckMsg) (tea.Model, tea.Cmd) {
 func (m model) handlePollTick(msg pollTickMsg) (tea.Model, tea.Cmd) {
 	// Only process if we're still in live view and polling is active
 	if m.currentView != viewLiveMatches || !m.polling {
+		return m, nil
+	}
+
+	// Drop stale timers from previous load/refresh generations
+	if msg.gen != m.pollGen {
 		return m, nil
 	}
 

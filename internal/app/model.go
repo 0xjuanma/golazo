@@ -41,6 +41,7 @@ const (
 	wcSubViewGroups      wcSubView = iota // scrollable group list
 	wcSubViewGroupDetail                  // single group expanded detail
 	wcSubViewBracket                      // knockout bracket
+	wcSubViewGroupGrid                    // all-groups grid overview
 )
 
 // model holds the application state.
@@ -117,14 +118,15 @@ type model struct {
 	settingsState *ui.SettingsState
 
 	// World Cup view state
-	wcData          *api.WorldCupData
-	wcLoading       bool
-	wcSubView       wcSubView
-	wcSelectedGroup int
-	wcGroupsList    list.Model // bubbles list for the groups overview
-	wcBracketScroll int
-	wcBracketLines  int // total content lines in bracket view; used for scroll clamping
-	wcLastError     string
+	wcData            *api.WorldCupData
+	wcLoading         bool
+	wcSubView         wcSubView
+	wcSelectedGroup   int
+	wcGroupsList      list.Model // bubbles list for the groups overview
+	wcBracketScroll   int
+	wcBracketLines    int // total content lines in bracket view; used for scroll clamping
+	wcLastError       string
+	wcGridSelectedIdx int // selected group index in the grid overview
 
 	// Dialog overlay for modal dialogs
 	dialogOverlay *ui.DialogOverlay

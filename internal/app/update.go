@@ -145,7 +145,7 @@ func (m model) handleLiveUpdate(msg liveUpdateMsg) (tea.Model, tea.Cmd) {
 
 	// Continue polling if match is live
 	if m.polling && m.matchDetails != nil && m.matchDetails.Status == api.MatchStatusLive {
-		return m, schedulePollTick(m.matchDetails.ID)
+		return m, schedulePollTick(m.matchDetails.ID, m.pollGen)
 	}
 
 	m.loading = false
@@ -275,7 +275,7 @@ func (m model) handleMatchDetails(msg matchDetailsMsg) (tea.Model, tea.Cmd) {
 
 			m.polling = true
 			// Schedule next poll tick (90 seconds from now)
-			cmds = append(cmds, schedulePollTick(msg.details.ID))
+			cmds = append(cmds, schedulePollTick(msg.details.ID, m.pollGen))
 		} else {
 			m.loading = false
 			m.polling = false
@@ -594,7 +594,6 @@ func (m model) handleLiveMatches(msg liveMatchesMsg) (tea.Model, tea.Cmd) {
 	m.matches = displayMatches
 	m.selected = 0
 	m.loading = false
-	cmds = append(cmds, ui.SpinnerTick())
 
 	// Update list
 	m.liveMatchesList.SetItems(ui.ToMatchListItems(displayMatches))
@@ -746,9 +745,6 @@ func (m model) handleLiveBatchData(msg liveBatchDataMsg) (tea.Model, tea.Cmd) {
 	// Otherwise, fetch next batch
 	nextBatchIndex := msg.batchIndex + 1
 	cmds = append(cmds, fetchLiveBatchData(m.loadCtx, m.fotmobClient, m.useMockData, nextBatchIndex))
-
-	// Keep spinner running
-	cmds = append(cmds, ui.SpinnerTick())
 
 	return m, tea.Batch(cmds...)
 }
@@ -928,9 +924,6 @@ func (m model) handleStatsDayData(msg statsDayDataMsg) (tea.Model, tea.Cmd) {
 	nextDayIndex := msg.dayIndex + 1
 	cmds = append(cmds, fetchStatsDayData(m.loadCtx, m.fotmobClient, m.useMockData, nextDayIndex, m.statsTotalDays))
 
-	// Keep spinner running
-	cmds = append(cmds, ui.SpinnerTick())
-
 	return m, tea.Batch(cmds...)
 }
 
@@ -1063,7 +1056,7 @@ func (m model) handleMainViewCheck(msg mainViewCheckMsg) (tea.Model, tea.Cmd) {
 
 		// Keep spinners running if still loading
 		if m.statsViewLoading {
-			cmds = append(cmds, m.spinner.Tick, ui.SpinnerTick())
+			cmds = append(cmds, m.spinner.Tick)
 		}
 
 		return m, tea.Batch(cmds...)
@@ -1081,7 +1074,7 @@ func (m model) handleMainViewCheck(msg mainViewCheckMsg) (tea.Model, tea.Cmd) {
 
 		// Keep spinners running if still loading
 		if m.liveViewLoading {
-			cmds = append(cmds, m.spinner.Tick, ui.SpinnerTick())
+			cmds = append(cmds, m.spinner.Tick)
 		}
 
 		return m, tea.Batch(cmds...)
@@ -1098,6 +1091,11 @@ func (m model) handlePollTick(msg pollTickMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	// Drop stale timers from previous load/refresh generations
+	if msg.gen != m.pollGen {
+		return m, nil
+	}
+
 	// Verify the poll is for the currently selected match
 	if m.matchDetails == nil || m.matchDetails.ID != msg.matchID {
 		return m, nil
@@ -1110,7 +1108,6 @@ func (m model) handlePollTick(msg pollTickMsg) (tea.Model, tea.Cmd) {
 	// Also check for any new goals that might have been scored since last poll
 	return m, tea.Batch(
 		fetchPollMatchDetails(m.fotmobClient, msg.matchID, m.useMockData),
-		ui.SpinnerTick(),
 		schedulePollSpinnerHide(), // Hide spinner after 0.5 seconds
 	)
 }

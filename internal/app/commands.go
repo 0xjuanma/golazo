@@ -185,9 +185,9 @@ func fetchMatchDetailsForceRefresh(client *fotmob.Client, matchID int, useMockDa
 
 // schedulePollTick schedules the next poll after 90 seconds.
 // When the tick fires, it sends pollTickMsg which triggers the actual API call.
-func schedulePollTick(matchID int) tea.Cmd {
+func schedulePollTick(matchID, gen int) tea.Cmd {
 	return tea.Tick(90*time.Second, func(t time.Time) tea.Msg {
-		return pollTickMsg{matchID: matchID}
+		return pollTickMsg{matchID: matchID, gen: gen}
 	})
 }
 

@@ -164,6 +164,7 @@ func (m model) loadMatchDetails(matchID int) (tea.Model, tea.Cmd) {
 
 // loadMatchDetailsWithRefresh loads match details for the live matches view with optional cache bypass.
 func (m model) loadMatchDetailsWithRefresh(matchID int, forceRefresh bool) (tea.Model, tea.Cmd) {
+	chainAlive := m.polling || m.liveViewLoading // check before mutation: if true, tick chain is already running
 	m.liveUpdates = nil
 	m.lastEvents = nil
 	m.lastHomeScore = 0
@@ -171,6 +172,7 @@ func (m model) loadMatchDetailsWithRefresh(matchID int, forceRefresh bool) (tea.
 	m.loading = true
 	m.liveViewLoading = true
 	m.polling = false // Reset polling state - this is a new match load, not a poll refresh
+	m.pollGen++       // Invalidate any in-flight poll timers from the previous chain
 
 	var cmd tea.Cmd
 	if forceRefresh {
@@ -179,6 +181,9 @@ func (m model) loadMatchDetailsWithRefresh(matchID int, forceRefresh bool) (tea.
 		cmd = fetchMatchDetails(m.fotmobClient, matchID, m.useMockData)
 	}
 
+	if chainAlive {
+		return m, tea.Batch(m.spinner.Tick, cmd)
+	}
 	return m, tea.Batch(m.spinner.Tick, ui.SpinnerTick(), cmd)
 }
 

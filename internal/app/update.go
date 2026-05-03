@@ -387,6 +387,16 @@ func (m model) handleLiveMatchesSelection(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.openStatisticsDialog()
 			return m, nil
 		}
+		if msg.String() == "s" && m.matchDetails != nil {
+			return m, fetchStandings(
+				m.fotmobClient,
+				m.matchDetails.League.ID,
+				m.matchDetails.League.Name,
+				m.matchDetails.League.ParentLeagueID,
+				m.matchDetails.HomeTeam.ID,
+				m.matchDetails.AwayTeam.ID,
+			)
+		}
 	}
 
 	// Capture selected item BEFORE Update (critical for filter mode - selection changes after filter clears)

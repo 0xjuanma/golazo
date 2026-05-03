@@ -39,7 +39,7 @@ const (
 // Help text
 const (
 	HelpMainMenu           = "↑/↓: navigate  Enter: select  q: quit"
-	HelpMatchesView        = "↑/↓: navigate  r: refresh  x: statistics  /: filter  Esc: back  q: quit"
+	HelpMatchesView        = "↑/↓: navigate  r: refresh  x: statistics  s: standings  /: filter  Esc: back  q: quit"
 	HelpSettingsView       = "↑/↓: navigate  ←/→: switch tabs  Space: toggle  /: filter  Enter: save  Esc: back"
 	HelpStatsView          = "h/l: date range  j/k: navigate  Tab: focus details  ↑/↓: scroll when focused  r: refresh details  /: filter  Esc: back"
 	HelpStatsViewUnfocused = "Tab: focus details"

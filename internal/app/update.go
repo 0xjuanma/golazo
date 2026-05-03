@@ -383,7 +383,11 @@ func (m model) resetToMainView() (tea.Model, tea.Cmd) {
 func (m model) handleLiveMatchesSelection(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	// Trigger dialogs only when not in filter mode to avoid intercepting typed characters
 	if m.liveMatchesList.FilterState() != list.Filtering {
-		if msg.String() == "x" && m.matchDetails != nil && len(m.matchDetails.Statistics) > 0 {
+		if msg.String() == "x" {
+			if m.matchDetails == nil || len(m.matchDetails.Statistics) == 0 {
+				m.lastError = constants.ErrorNoStatistics
+				return m, nil
+			}
 			m.openStatisticsDialog()
 			return m, nil
 		}
@@ -1341,6 +1345,7 @@ func (m model) handleStandings(msg standingsMsg) (tea.Model, tea.Cmd) {
 
 	if len(msg.standings) == 0 {
 		m.debugLog("handleStandings: no standings data, skipping dialog")
+		m.lastError = constants.ErrorNoStandings
 		return m, nil
 	}
 	if m.dialogOverlay == nil {

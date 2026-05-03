@@ -47,6 +47,10 @@ const (
 	HelpStandingsDialog    = "Esc: close"
 	HelpFormationsDialog   = "Tab/←/→: switch team  Esc: close"
 	HelpStatisticsDialog   = "↑/↓: navigate  Esc: close"
+
+	// Edge case user-facing hints
+	ErrorNoStatistics = "No statistics available yet"
+	ErrorNoStandings  = "No standings available"
 )
 
 // Status text

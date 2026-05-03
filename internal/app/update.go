@@ -388,9 +388,15 @@ func (m model) handleLiveMatchesSelection(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		if msg.String() == "s" && m.matchDetails != nil {
+			leagueID := m.matchDetails.League.ID
+			if entry, ok := m.standingsCache[leagueID]; ok && time.Since(entry.fetchedAt) < 5*time.Minute {
+				dialog := ui.NewStandingsDialog(entry.leagueName, entry.standings, entry.homeTeamID, entry.awayTeamID)
+				m.dialogOverlay.OpenDialog(dialog)
+				return m, nil
+			}
 			return m, fetchStandings(
 				m.fotmobClient,
-				m.matchDetails.League.ID,
+				leagueID,
 				m.matchDetails.League.Name,
 				m.matchDetails.League.ParentLeagueID,
 				m.matchDetails.HomeTeam.ID,
@@ -1343,6 +1349,13 @@ func (m model) handleStandings(msg standingsMsg) (tea.Model, tea.Cmd) {
 	}
 
 	m.debugLog(fmt.Sprintf("handleStandings: creating dialog with %d entries", len(msg.standings)))
+	m.standingsCache[msg.leagueID] = &standingsCacheEntry{
+		standings:  msg.standings,
+		leagueName: msg.leagueName,
+		homeTeamID: msg.homeTeamID,
+		awayTeamID: msg.awayTeamID,
+		fetchedAt:  time.Now(),
+	}
 	dialog := ui.NewStandingsDialog(
 		msg.leagueName,
 		msg.standings,

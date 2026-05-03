@@ -259,6 +259,12 @@ func (m model) handleMatchDetails(msg matchDetailsMsg) (tea.Model, tea.Cmd) {
 		// stay in sync after every 90s poll without waiting for the 5-min refresh.
 		m.syncMatchScoreInList(msg.details.ID, homeScore, awayScore, msg.details.LiveTime)
 
+		// Keep the statistics dialog fresh if the user has it open during a poll cycle
+		if m.dialogOverlay != nil && m.dialogOverlay.ContainsDialog(ui.StatisticsDialogID) {
+			m.dialogOverlay.CloseDialog(ui.StatisticsDialogID)
+			m.openStatisticsDialog()
+		}
+
 		// Parse ALL events to rebuild the live updates list
 		// This ensures proper ordering (descending by minute) and uniqueness
 		m.liveUpdates = m.parser.ParseEvents(msg.details.Events, msg.details.HomeTeam, msg.details.AwayTeam)

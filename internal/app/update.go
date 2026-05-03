@@ -375,6 +375,14 @@ func (m model) resetToMainView() (tea.Model, tea.Cmd) {
 
 // handleLiveMatchesSelection handles list navigation in live matches view.
 func (m model) handleLiveMatchesSelection(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// Trigger dialogs only when not in filter mode to avoid intercepting typed characters
+	if m.liveMatchesList.FilterState() != list.Filtering {
+		if msg.String() == "x" && m.matchDetails != nil && len(m.matchDetails.Statistics) > 0 {
+			m.openStatisticsDialog()
+			return m, nil
+		}
+	}
+
 	// Capture selected item BEFORE Update (critical for filter mode - selection changes after filter clears)
 	var preUpdateMatchID int
 	if preItem := m.liveMatchesList.SelectedItem(); preItem != nil {

@@ -229,7 +229,8 @@ func RenderMultiPanelViewWithList(width, height int, listModel list.Model, detai
 		leftWidth = width - rightWidth - 1
 	}
 
-	panelHeight := availableHeight - 2
+	helpBar := neonDimStyle.Width(width).Align(lipgloss.Center).Render(constants.HelpMatchesView)
+	panelHeight := availableHeight - 3
 
 	leftPanel := RenderLiveMatchesListPanel(leftWidth, panelHeight, listModel, upcomingMatches)
 	rightPanel := renderMatchDetailsPanelWithPolling(rightWidth, panelHeight, details, liveUpdates, sp, loading, pollingSpinner, isPolling, goalLinks)
@@ -247,10 +248,10 @@ func RenderMultiPanelViewWithList(width, height int, listModel list.Model, detai
 			Width(width).
 			Align(lipgloss.Center)
 		errorBanner := errorStyle.Render(lastError + "  " + constants.ErrorRetryHint)
-		return lipgloss.JoinVertical(lipgloss.Left, spinnerArea, statusBanner, errorBanner, panels)
+		return lipgloss.JoinVertical(lipgloss.Left, spinnerArea, statusBanner, errorBanner, panels, helpBar)
 	}
 
-	return lipgloss.JoinVertical(lipgloss.Left, spinnerArea, statusBanner, panels)
+	return lipgloss.JoinVertical(lipgloss.Left, spinnerArea, statusBanner, panels, helpBar)
 }
 
 // RenderStatsViewWithList renders the stats view with list component.

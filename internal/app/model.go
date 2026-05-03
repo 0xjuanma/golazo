@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/0xjuanma/golazo/internal/api"
 	"github.com/0xjuanma/golazo/internal/constants"
@@ -32,6 +33,15 @@ const (
 	viewStats
 	viewSettings
 )
+
+// standingsCacheEntry holds a fetched standings result with a timestamp for TTL checks.
+type standingsCacheEntry struct {
+	standings  []api.LeagueTableEntry
+	leagueName string
+	homeTeamID int
+	awayTeamID int
+	fetchedAt  time.Time
+}
 
 // model holds the application state.
 // Fields are organized by concern: display, data, UI components, and configuration.
@@ -109,6 +119,9 @@ type model struct {
 
 	// Dialog overlay for modal dialogs
 	dialogOverlay *ui.DialogOverlay
+
+	// Standings cache keyed by league ID — limits refetches to once per 5 minutes
+	standingsCache map[int]*standingsCacheEntry
 
 	// API clients
 	fotmobClient *fotmob.Client
@@ -218,6 +231,7 @@ func New(useMockData bool, debugMode bool, isDevBuild bool, newVersionAvailable 
 	return model{
 		currentView:            viewMain,
 		matchDetailsCache:      make(map[int]*api.MatchDetails),
+		standingsCache:         make(map[int]*standingsCacheEntry),
 		useMockData:            useMockData,
 		debugMode:              debugMode,
 		isDevBuild:             isDevBuild,

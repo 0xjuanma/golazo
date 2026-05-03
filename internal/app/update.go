@@ -259,6 +259,12 @@ func (m model) handleMatchDetails(msg matchDetailsMsg) (tea.Model, tea.Cmd) {
 		// stay in sync after every 90s poll without waiting for the 5-min refresh.
 		m.syncMatchScoreInList(msg.details.ID, homeScore, awayScore, msg.details.LiveTime)
 
+		// Keep the statistics dialog fresh if the user has it open during a poll cycle
+		if m.dialogOverlay != nil && m.dialogOverlay.ContainsDialog(ui.StatisticsDialogID) {
+			m.dialogOverlay.CloseDialog(ui.StatisticsDialogID)
+			m.openStatisticsDialog()
+		}
+
 		// Parse ALL events to rebuild the live updates list
 		// This ensures proper ordering (descending by minute) and uniqueness
 		m.liveUpdates = m.parser.ParseEvents(msg.details.Events, msg.details.HomeTeam, msg.details.AwayTeam)
@@ -375,6 +381,34 @@ func (m model) resetToMainView() (tea.Model, tea.Cmd) {
 
 // handleLiveMatchesSelection handles list navigation in live matches view.
 func (m model) handleLiveMatchesSelection(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	// Trigger dialogs only when not in filter mode to avoid intercepting typed characters
+	if m.liveMatchesList.FilterState() != list.Filtering {
+		if msg.String() == "x" {
+			if m.matchDetails == nil || len(m.matchDetails.Statistics) == 0 {
+				m.lastError = constants.ErrorNoStatistics
+				return m, nil
+			}
+			m.openStatisticsDialog()
+			return m, nil
+		}
+		if msg.String() == "s" && m.matchDetails != nil {
+			leagueID := m.matchDetails.League.ID
+			if entry, ok := m.standingsCache[leagueID]; ok && time.Since(entry.fetchedAt) < 5*time.Minute {
+				dialog := ui.NewStandingsDialog(entry.leagueName, entry.standings, entry.homeTeamID, entry.awayTeamID)
+				m.dialogOverlay.OpenDialog(dialog)
+				return m, nil
+			}
+			return m, fetchStandings(
+				m.fotmobClient,
+				leagueID,
+				m.matchDetails.League.Name,
+				m.matchDetails.League.ParentLeagueID,
+				m.matchDetails.HomeTeam.ID,
+				m.matchDetails.AwayTeam.ID,
+			)
+		}
+	}
+
 	// Capture selected item BEFORE Update (critical for filter mode - selection changes after filter clears)
 	var preUpdateMatchID int
 	if preItem := m.liveMatchesList.SelectedItem(); preItem != nil {
@@ -1311,6 +1345,7 @@ func (m model) handleStandings(msg standingsMsg) (tea.Model, tea.Cmd) {
 
 	if len(msg.standings) == 0 {
 		m.debugLog("handleStandings: no standings data, skipping dialog")
+		m.lastError = constants.ErrorNoStandings
 		return m, nil
 	}
 	if m.dialogOverlay == nil {
@@ -1319,6 +1354,13 @@ func (m model) handleStandings(msg standingsMsg) (tea.Model, tea.Cmd) {
 	}
 
 	m.debugLog(fmt.Sprintf("handleStandings: creating dialog with %d entries", len(msg.standings)))
+	m.standingsCache[msg.leagueID] = &standingsCacheEntry{
+		standings:  msg.standings,
+		leagueName: msg.leagueName,
+		homeTeamID: msg.homeTeamID,
+		awayTeamID: msg.awayTeamID,
+		fetchedAt:  time.Now(),
+	}
 	dialog := ui.NewStandingsDialog(
 		msg.leagueName,
 		msg.standings,

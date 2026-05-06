@@ -44,6 +44,7 @@ func RenderMainMenu(width, height, selected int, sp spinner.Model, randomSpinner
 		constants.MenuStats,
 		constants.MenuLiveMatches,
 		constants.MenuSettings,
+		constants.MenuWorldCup,
 	}
 
 	items := make([]string, 0, len(menuItems))

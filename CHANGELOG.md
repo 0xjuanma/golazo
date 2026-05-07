@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+
+## [0.24.0] - 2026-05-03
+
+### Added
 - **Live Statistics & Standings** - Press `x` for match statistics (possession, shots, etc.) or `s` for league standings while viewing any live match
 
 ### Changed

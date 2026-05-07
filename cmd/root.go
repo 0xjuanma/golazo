@@ -103,7 +103,25 @@ func runBrewUpdate() error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	cmd.Stdin = os.Stdin
-	return cmd.Run()
+	if err := cmd.Run(); err != nil {
+		// brew upgrade can exit non-zero for two recoverable reasons:
+		//   1. The brew link step failed because a direct binary (e.g. from a
+		//      prior script install) already exists at /usr/local/bin/golazo,
+		//      preventing Homebrew from creating its symlink.
+		//   2. An unrelated brew cleanup error (e.g. Docker CLI plugins
+		//      permissions) fires after a successful upgrade+link.
+		// In both cases the formula was built successfully; attempt a forced
+		// re-link before giving up and falling back to the script.
+		fmt.Println("Attempting brew link recovery...")
+		linkCmd := exec.Command("brew", "link", "--overwrite", "0xjuanma/tap/golazo")
+		linkCmd.Stdout = os.Stdout
+		linkCmd.Stderr = os.Stderr
+		if linkErr := linkCmd.Run(); linkErr == nil {
+			return nil
+		}
+		return err
+	}
+	return nil
 }
 
 // runScriptUpdate updates golazo via the install script.

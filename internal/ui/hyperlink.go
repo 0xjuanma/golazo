@@ -31,8 +31,9 @@ func Hyperlink(text, url string) string {
 		return fmt.Sprintf("%s%s%s%s%s%s", oscStart, url, oscEnd, text, oscStart, oscEnd)
 	}
 
-	// Fallback: just return text (caller can handle showing URL separately)
-	return text
+	// Fallback: render URL as visible text so the terminal's native URL scanner
+	// (e.g. Terminal.app right-click → "Open URL") can detect and open it.
+	return text + "  [" + url + "]"
 }
 
 // HyperlinkWithFallback creates a hyperlink with a visible fallback indicator.
@@ -76,9 +77,12 @@ func CreateGoalLinkDisplay(goalText, replayURL string) string {
 		return goalText + " " + linkedIndicator
 	}
 
-	// Terminal doesn't support hyperlinks - return unchanged text
-	// This ensures no visible change when link can't be used
-	return goalText
+	// Fallback: render URL as visible text so the terminal's native URL scanner
+	// can detect and offer right-click → "Open URL".
+	if goalText == "" {
+		return "▶ [" + replayURL + "]"
+	}
+	return goalText + " ▶ [" + replayURL + "]"
 }
 
 // supportsHyperlinks detects if the terminal likely supports OSC 8 hyperlinks.
@@ -97,9 +101,15 @@ func supportsHyperlinks() bool {
 		"alacritty",
 	}
 
+	// Explicitly exclude terminals known not to support OSC 8.
+	// This must run before the supportingTerms loop because Apple_Terminal sets
+	// TERM=xterm-256color which would otherwise match and return true.
+	if termProgram == "Apple_Terminal" {
+		return false
+	}
+
 	supportingPrograms := []string{
 		"iTerm.app",
-		"Apple_Terminal", // Terminal.app (partial support)
 		"vscode",
 		"Hyper",
 		"WezTerm",

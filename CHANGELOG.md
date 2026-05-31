@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **Homebrew Update** - Fixed `golazo -u` falling back to the install script when brew successfully built the new version but failed the link step due to a conflicting binary
+- **Link Rendering** - Fixed highlight and goal replay links not being clickable in macOS Terminal.app and other terminals that don't support OSC 8; links now render as visible bracketed URLs that Terminal.app detects natively on right-click
 
 ## [0.24.0] - 2026-05-03
 

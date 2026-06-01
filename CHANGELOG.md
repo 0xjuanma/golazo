@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+
+## [0.25.0] - 2026-05-31
+
+### Added
 - **Aggregate Score** - Finished knockout matches (Champions League, Europa League, etc.) now display the aggregate score and eliminated team below the match score in the details panel
 
 ### Changed

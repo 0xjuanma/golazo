@@ -76,6 +76,8 @@ func (m model) View() string {
 			return ui.RenderWorldCupBracket(m.width, m.height, m.wcData, m.wcBracketScroll, m.getStatusBannerType())
 		case wcSubViewGroupGrid:
 			return ui.RenderWorldCupGroupGrid(m.width, m.height, m.wcData, m.wcGridSelectedIdx, m.getStatusBannerType())
+		case wcSubViewUpcoming:
+			return ui.RenderWorldCupUpcoming(m.width, m.height, m.wcUpcoming, m.wcUpcomingLoading, m.wcUpcomingLastError, m.getStatusBannerType())
 		default:
 			return ui.RenderWorldCupGroups(m.width, m.height, m.wcData, m.wcGroupsList, m.wcLoading, m.wcLastError, m.getStatusBannerType())
 		}

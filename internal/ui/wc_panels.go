@@ -56,3 +56,14 @@ func RenderWorldCupBracket(width, height int, wcData *api.WorldCupData, scrollOf
 	}
 	return worldcup.RenderBracket(width, height, wcData, scrollOffset, banner)
 }
+
+// RenderWorldCupUpcoming renders the upcoming-matches sub-view. This is a
+// placeholder shim — the real layout lives in the worldcup package and is
+// landed in a follow-up phase.
+func RenderWorldCupUpcoming(width, height int, matches []api.Match, loading bool, lastErr string, bannerType constants.StatusBannerType) string {
+	banner := renderStatusBanner(bannerType, width)
+	if banner != "" {
+		banner += "\n"
+	}
+	return worldcup.RenderUpcoming(width, height, matches, loading, lastErr, banner)
+}

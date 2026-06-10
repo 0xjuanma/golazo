@@ -52,6 +52,7 @@ const (
 	wcSubViewGroupDetail                  // single group expanded detail
 	wcSubViewBracket                      // knockout bracket
 	wcSubViewGroupGrid                    // all-groups grid overview
+	wcSubViewUpcoming                     // upcoming fixtures for the next few days
 )
 
 // model holds the application state.
@@ -138,6 +139,11 @@ type model struct {
 	wcBracketLines    int // total content lines in bracket view; used for scroll clamping
 	wcLastError       string
 	wcGridSelectedIdx int // selected group index in the grid overview
+
+	// World Cup upcoming-matches sub-view state
+	wcUpcoming          []api.Match
+	wcUpcomingLoading   bool
+	wcUpcomingLastError string
 
 	// Dialog overlay for modal dialogs
 	dialogOverlay *ui.DialogOverlay

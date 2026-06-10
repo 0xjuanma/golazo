@@ -75,6 +75,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case wcDataMsg:
 		return m.handleWCData(msg)
 
+	case wcUpcomingMsg:
+		return m.handleWCUpcoming(msg)
+
 	default:
 		// Fallback handler for ui.TickMsg type assertion
 		if _, ok := msg.(ui.TickMsg); ok {

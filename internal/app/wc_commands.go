@@ -105,3 +105,16 @@ func sortAndDedupeWCUpcoming(matches []api.Match) []api.Match {
 	})
 	return out
 }
+
+// fetchWorldCupUpcoming wraps fetchWCUpcomingMatches as a tea.Cmd, emitting a
+// wcUpcomingMsg with the results (or error). Falls back to the mock when
+// client is nil.
+func fetchWorldCupUpcoming(parentCtx context.Context, client *fotmob.Client) tea.Cmd {
+	return func() tea.Msg {
+		matches, err := fetchWCUpcomingMatches(parentCtx, client)
+		if err != nil {
+			return wcUpcomingMsg{err: err}
+		}
+		return wcUpcomingMsg{matches: matches}
+	}
+}

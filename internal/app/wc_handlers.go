@@ -21,6 +21,8 @@ func (m model) handleWorldCupKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleWCBracketKeys(msg)
 	case wcSubViewGroupGrid:
 		return m.handleWCGroupGridKeys(msg)
+	case wcSubViewUpcoming:
+		return m.handleWCUpcomingKeys(msg)
 	}
 	return m, nil
 }
@@ -56,6 +58,12 @@ func (m model) handleWCGroupsKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.wcGridSelectedIdx = 0
 		m.wcSubView = wcSubViewGroupGrid
 		return m, nil
+
+	case "u":
+		m.wcSubView = wcSubViewUpcoming
+		m.wcUpcomingLoading = true
+		m.wcUpcomingLastError = ""
+		return m, fetchWorldCupUpcoming(m.loadCtx, m.fotmobClient)
 
 	default:
 		var cmd tea.Cmd
@@ -125,6 +133,12 @@ func (m model) handleWCGroupGridKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.wcSubView = wcSubViewBracket
 		}
 
+	case "u":
+		m.wcSubView = wcSubViewUpcoming
+		m.wcUpcomingLoading = true
+		m.wcUpcomingLastError = ""
+		return m, fetchWorldCupUpcoming(m.loadCtx, m.fotmobClient)
+
 	case "right", "l":
 		if m.wcGridSelectedIdx < n-1 {
 			m.wcGridSelectedIdx++
@@ -164,5 +178,27 @@ func (m model) handleWCData(msg wcDataMsg) (tea.Model, tea.Cmd) {
 		items[i] = ui.WCGroupItem{Group: g}
 	}
 	m.wcGroupsList.SetItems(items)
+	return m, nil
+}
+
+// handleWCUpcomingKeys handles input on the upcoming-matches sub-view.
+// Only Esc is meaningful — it returns to the groups list.
+func (m model) handleWCUpcomingKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "esc":
+		m.wcSubView = wcSubViewGroups
+	}
+	return m, nil
+}
+
+// handleWCUpcoming processes the upcoming-matches response message.
+func (m model) handleWCUpcoming(msg wcUpcomingMsg) (tea.Model, tea.Cmd) {
+	m.wcUpcomingLoading = false
+	if msg.err != nil {
+		m.wcUpcomingLastError = "Failed to load upcoming matches"
+		return m, nil
+	}
+	m.wcUpcoming = msg.matches
+	m.wcUpcomingLastError = ""
 	return m, nil
 }

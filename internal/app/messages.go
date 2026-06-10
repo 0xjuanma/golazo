@@ -88,3 +88,10 @@ type wcDataMsg struct {
 	data *api.WorldCupData
 	err  error
 }
+
+// wcUpcomingMsg contains upcoming World Cup matches for the next few days,
+// fetched from FotMob or mock.
+type wcUpcomingMsg struct {
+	matches []api.Match
+	err     error
+}

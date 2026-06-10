@@ -5,6 +5,7 @@ const (
 	MenuStats       = "Finished Matches"
 	MenuLiveMatches = "Live Matches"
 	MenuSettings    = "Settings"
+	MenuWorldCup    = "World Cup 2026"
 )
 
 // Panel titles

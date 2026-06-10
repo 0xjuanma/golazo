@@ -32,6 +32,7 @@ const (
 	viewLiveMatches
 	viewStats
 	viewSettings
+	viewWorldCup
 )
 
 // standingsCacheEntry holds a fetched standings result with a timestamp for TTL checks.
@@ -42,6 +43,17 @@ type standingsCacheEntry struct {
 	awayTeamID int
 	fetchedAt  time.Time
 }
+
+// wcSubView represents the current sub-view within the World Cup view.
+type wcSubView int
+
+const (
+	wcSubViewGroups      wcSubView = iota // scrollable group list
+	wcSubViewGroupDetail                  // single group expanded detail
+	wcSubViewBracket                      // knockout bracket
+	wcSubViewGroupGrid                    // all-groups grid overview
+	wcSubViewUpcoming                     // upcoming fixtures for the next few days
+)
 
 // model holds the application state.
 // Fields are organized by concern: display, data, UI components, and configuration.
@@ -116,6 +128,22 @@ type model struct {
 
 	// Settings view state
 	settingsState *ui.SettingsState
+
+	// World Cup view state
+	wcData            *api.WorldCupData
+	wcLoading         bool
+	wcSubView         wcSubView
+	wcSelectedGroup   int
+	wcGroupsList      list.Model // bubbles list for the groups overview
+	wcBracketScroll   int
+	wcBracketLines    int // total content lines in bracket view; used for scroll clamping
+	wcLastError       string
+	wcGridSelectedIdx int // selected group index in the grid overview
+
+	// World Cup upcoming-matches sub-view state
+	wcUpcoming          []api.Match
+	wcUpcomingLoading   bool
+	wcUpcomingLastError string
 
 	// Dialog overlay for modal dialogs
 	dialogOverlay *ui.DialogOverlay
@@ -228,6 +256,17 @@ func New(useMockData bool, debugMode bool, isDevBuild bool, newVersionAvailable 
 	// Initialize animated logo for main view
 	animatedLogo := logo.NewAnimatedLogoWithType(appVersion, false, logo.DefaultOpts(), 1200, 1, logo.AnimationWave)
 
+	// Initialize World Cup groups list with neon-themed delegate
+	wcList := list.New([]list.Item{}, ui.NewWCGroupDelegate(), 0, 0)
+	wcList.SetShowTitle(false)
+	wcList.SetShowStatusBar(true)
+	wcList.SetFilteringEnabled(true)
+	wcList.SetShowFilter(true)
+	wcList.Filter = list.DefaultFilter
+	wcList.Styles.FilterCursor = filterCursorStyle
+	wcList.FilterInput.PromptStyle = filterPromptStyle
+	wcList.FilterInput.Cursor.Style = filterCursorStyle
+
 	return model{
 		currentView:            viewMain,
 		matchDetailsCache:      make(map[int]*api.MatchDetails),
@@ -258,6 +297,7 @@ func New(useMockData bool, debugMode bool, isDevBuild bool, newVersionAvailable 
 		pendingSelection:       -1,                    // No pending selection
 		dialogOverlay:          ui.NewDialogOverlay(), // Initialize dialog overlay
 		animatedLogo:           animatedLogo,          // Initialize animated logo
+		wcGroupsList:           wcList,                 // Initialize World Cup groups list
 	}
 }
 

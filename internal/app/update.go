@@ -72,6 +72,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case standingsMsg:
 		return m.handleStandings(msg)
 
+	case wcDataMsg:
+		return m.handleWCData(msg)
+
+	case wcUpcomingMsg:
+		return m.handleWCUpcoming(msg)
+
 	default:
 		// Fallback handler for ui.TickMsg type assertion
 		if _, ok := msg.(ui.TickMsg); ok {
@@ -329,10 +335,21 @@ func (m model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				isFiltering = m.settingsState.List.FilterState() == list.Filtering ||
 					m.settingsState.List.FilterState() == list.FilterApplied
 			}
+		case viewWorldCup:
+			if m.wcSubView == wcSubViewGroups {
+				isFiltering = m.wcGroupsList.FilterState() == list.Filtering ||
+					m.wcGroupsList.FilterState() == list.FilterApplied
+			}
 		}
 
 		if isFiltering {
 			// Let the view-specific handler pass Esc to the list to cancel filter
+			break
+		}
+
+		// In World Cup sub-views, let the view handle esc for internal navigation.
+		// The grid view is the home sub-view, so Esc from there resets to main.
+		if m.currentView == viewWorldCup && m.wcSubView != wcSubViewGroupGrid {
 			break
 		}
 
@@ -351,6 +368,8 @@ func (m model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleStatsSelection(msg)
 	case viewSettings:
 		return m.handleSettingsViewKeys(msg)
+	case viewWorldCup:
+		return m.handleWorldCupKeys(msg)
 	}
 
 	return m, nil
@@ -1173,6 +1192,10 @@ func (m model) handleFilterMatches(msg list.FilterMatchesMsg) (tea.Model, tea.Cm
 	case viewSettings:
 		if m.settingsState != nil {
 			m.settingsState.List, cmd = m.settingsState.List.Update(msg)
+		}
+	case viewWorldCup:
+		if m.wcSubView == wcSubViewGroups {
+			m.wcGroupsList, cmd = m.wcGroupsList.Update(msg)
 		}
 	}
 

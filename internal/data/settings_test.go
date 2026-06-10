@@ -3,6 +3,7 @@ package data
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -215,6 +216,58 @@ func TestGetLeaguesForRegion(t *testing.T) {
 	if !found {
 		t.Error("Premier League (ID=47) not found in Europe region")
 	}
+}
+
+func TestDebugLogPath(t *testing.T) {
+	// Helper: verify DebugLogPath does not create the directory it points to.
+	assertNoCreate := func(t *testing.T, p string) {
+		t.Helper()
+		dir := filepath.Dir(p)
+		if _, err := os.Stat(dir); err == nil {
+			t.Errorf("DebugLogPath created directory %q; helper must be pure", dir)
+		}
+	}
+
+	t.Run("linux with XDG_CONFIG_HOME", func(t *testing.T) {
+		if runtime.GOOS != "linux" {
+			t.Skip("linux-only branch")
+		}
+		xdg := t.TempDir()
+		t.Setenv("XDG_CONFIG_HOME", xdg)
+
+		got := DebugLogPath()
+		want := filepath.Join(xdg, "golazo", "golazo_debug.log")
+		if got != want {
+			t.Errorf("DebugLogPath() = %q, want %q", got, want)
+		}
+	})
+
+	t.Run("linux without XDG_CONFIG_HOME", func(t *testing.T) {
+		if runtime.GOOS != "linux" {
+			t.Skip("linux-only branch")
+		}
+		t.Setenv("XDG_CONFIG_HOME", "")
+
+		got := DebugLogPath()
+		want := filepath.Join("~", ".config", "golazo", "golazo_debug.log")
+		if got != want {
+			t.Errorf("DebugLogPath() = %q, want %q", got, want)
+		}
+		assertNoCreate(t, got)
+	})
+
+	t.Run("non-linux", func(t *testing.T) {
+		if runtime.GOOS == "linux" {
+			t.Skip("non-linux branch")
+		}
+
+		got := DebugLogPath()
+		want := filepath.Join("~", ".golazo", "golazo_debug.log")
+		if got != want {
+			t.Errorf("DebugLogPath() = %q, want %q", got, want)
+		}
+		assertNoCreate(t, got)
+	})
 }
 
 func TestConfigDir(t *testing.T) {

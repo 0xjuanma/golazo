@@ -132,10 +132,12 @@ func renderBracketRound(round api.WCKnockoutRound, width int) []string {
 
 	for i := 0; i < len(mus); i += 2 {
 		mu1 := mus[i]
-		lines = append(lines, renderBracketLine(mu1))
+		mu1Line := renderBracketLine(mu1)
+		lines = append(lines, mu1Line)
 
 		if i+1 < len(mus) {
 			mu2 := mus[i+1]
+			mu2Line := renderBracketLineRaw(mu2, false)
 
 			// Connector: ──╮ / ├─► next / ──╯
 			winnerLabel := ""
@@ -145,16 +147,21 @@ func renderBracketRound(round api.WCKnockoutRound, width int) []string {
 				winnerLabel = fmt.Sprintf(" ► %s vs %s", w1, w2)
 			}
 			connector := ConnectorStyle.Render("──╮")
-			middle := ConnectorStyle.Render("  ├─") + lipgloss.NewStyle().Foreground(colorDim).Render(winnerLabel)
+			middle := ConnectorStyle.Render("├─") + lipgloss.NewStyle().Foreground(colorDim).Render(winnerLabel)
 			bottom := ConnectorStyle.Render("──╯")
 
-			// Align connectors after the match line
-			const matchLineW = 44 // nameW*2 + scoreW + spacing
-			pad := strings.Repeat(" ", 2)
+			// Align connectors to the column immediately after the rendered
+			// match line, using lipgloss.Width to account for emoji/RIS pairs
+			// whose visual width differs from byte length.
+			pad := "  "
+			gap := "  "
+			alignCol := lipgloss.Width(pad + mu2Line + gap)
+			alignPad := strings.Repeat(" ", alignCol)
+
 			lines = append(lines,
-				pad+renderBracketLineRaw(mu2, false)+pad+connector,
-				pad+strings.Repeat(" ", matchLineW)+middle,
-				pad+renderBracketLine(mu1)[:0]+"  "+strings.Repeat(" ", matchLineW)+bottom,
+				pad+mu2Line+gap+connector,
+				alignPad+middle,
+				alignPad+bottom,
 			)
 		}
 	}

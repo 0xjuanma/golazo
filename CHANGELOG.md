@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 ### Fixed
-- **World Cup Team Labels** - All World Cup views (groups list, group detail table, group grid, bracket matchups, winner arrows, champion line, upcoming matches) now render teams consistently as `<flag emoji> <3-letter code>` (e.g. `🇦🇷 ARG`). Previously the table and bracket used full country names while the grid and list used 3-letter codes, and teams missing FotMob's `shortName` fell back to a naive 3-character truncation that produced wrong codes (e.g. `Net` for Netherlands); a local World Cup name-to-code override map now resolves these correctly.
+- **World Cup Team Labels** - All World Cup views now render teams as `<flag> <3-letter code>` (e.g. `🇦🇷 ARG`), with a local name-to-code map for teams missing a `shortName` from FotMob.
 - **Update Noop** - `golazo --update` now skips the Homebrew/install-script call when the running binary is already on the latest GitHub release (or is a dev build), printing an informative message instead of reinstalling. Network failures while checking the latest version still fall through to today's install behavior.
 - **Debug Log Hint** - The `--debug` banner and `--debug` flag help now display the platform-correct log path (`~/.config/golazo/golazo_debug.log` on Linux per XDG, `~/.golazo/golazo_debug.log` on macOS/Windows) instead of a hardcoded macOS path.
 - **World Cup Hints** - Removed a redundant tab hint above the groups list so each sub-view shows a single, accurate help line.

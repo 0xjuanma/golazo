@@ -308,7 +308,8 @@ func newFotmobClient(logger *slog.Logger) *fotmob.Client {
 	return c
 }
 
-// initLogger creates a structured logger. When debugMode is true, logs to ~/.golazo/golazo_debug.log.
+// initLogger creates a structured logger. When debugMode is true, logs to the
+// platform-specific debug log location (see data.DebugLogPath).
 // Otherwise returns a no-op logger. The caller should store the returned *os.File and close it on exit.
 func initLogger(debugMode bool) (*slog.Logger, *os.File) {
 	if !debugMode {

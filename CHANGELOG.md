@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 ### Fixed
+- **Debug Log Hint** - The `--debug` banner and `--debug` flag help now display the platform-correct log path (`~/.config/golazo/golazo_debug.log` on Linux per XDG, `~/.golazo/golazo_debug.log` on macOS/Windows) instead of a hardcoded macOS path.
 - **World Cup Hints** - Removed a redundant tab hint above the groups list so each sub-view shows a single, accurate help line.
 
 ## [0.25.0] - 2026-05-31

@@ -2,6 +2,7 @@ package ui
 
 import (
 	"github.com/0xjuanma/golazo/internal/constants"
+	"github.com/0xjuanma/golazo/internal/data"
 	"github.com/0xjuanma/golazo/internal/ui/design"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -23,7 +24,7 @@ func renderStatusBanner(bannerType constants.StatusBannerType, width int) string
 
 	switch bannerType {
 	case constants.StatusBannerDebug:
-		message = "[DEBUG MODE] Logs: ~/.golazo/golazo_debug.log"
+		message = "[DEBUG MODE] Logs: " + data.DebugLogPath()
 	case constants.StatusBannerNewVersion:
 		message = "New Version Available! Run 'golazo --update'"
 	case constants.StatusBannerDev:

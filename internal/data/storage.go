@@ -48,6 +48,23 @@ func ConfigDir() (string, error) {
 	return configPath, nil
 }
 
+// DebugLogPath returns the user-facing path to the debug log file, with the
+// home directory represented as "~" for display purposes. It is platform-aware
+// and mirrors the location used by ConfigDir, but performs no filesystem I/O
+// and does not create any directories. Safe to call from init() / flag help.
+func DebugLogPath() string {
+	const logFile = "golazo_debug.log"
+
+	if runtime.GOOS == "linux" {
+		if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
+			return filepath.Join(xdg, "golazo", logFile)
+		}
+		return filepath.Join("~", ".config", "golazo", logFile)
+	}
+
+	return filepath.Join("~", configDir, logFile)
+}
+
 // CacheDir returns the path to the golazo cache directory.
 // Uses os.UserCacheDir() which returns:
 //   - Linux: ~/.cache/golazo (or $XDG_CACHE_HOME/golazo)

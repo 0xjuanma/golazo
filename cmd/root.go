@@ -190,7 +190,7 @@ func Execute() {
 
 func init() {
 	rootCmd.Flags().BoolVar(&mockFlag, "mock", false, "Use mock data for all views instead of real API data")
-	rootCmd.Flags().BoolVar(&debugFlag, "debug", false, "Enable debug logging to ~/.golazo/golazo_debug.log")
+	rootCmd.Flags().BoolVar(&debugFlag, "debug", false, "Enable debug logging to "+data.DebugLogPath())
 	rootCmd.Flags().BoolVarP(&updateFlag, "update", "u", false, "Update golazo to the latest version")
 	rootCmd.Flags().BoolVarP(&versionFlag, "version", "v", false, "Display version information")
 }

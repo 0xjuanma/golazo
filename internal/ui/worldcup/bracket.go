@@ -77,8 +77,7 @@ func RenderBracket(width, height int, wcData *api.WorldCupData, scrollOffset int
 	// Champion card
 	if wcData.Champion != nil {
 		lines = append(lines, "")
-		emoji := FlagEmoji(wcData.Champion.ShortName)
-		champ := ChampionStyle.Render(fmt.Sprintf("  🏆  Champion: %s %s", emoji, wcData.Champion.Name))
+		champ := ChampionStyle.Render(fmt.Sprintf("  🏆  Champion: %s", TeamLabel(*wcData.Champion)))
 		lines = append(lines, champ)
 	}
 
@@ -168,21 +167,16 @@ func renderBracketRound(round api.WCKnockoutRound, width int) []string {
 	return lines
 }
 
-// nextRoundTeamName returns the winner's short name for a matchup.
+// nextRoundTeamName returns the winner's label (flag + 3-letter code) for a
+// matchup, or "TBD" when the matchup is unresolved.
 func nextRoundTeamName(mu api.WCMatchup) string {
 	if mu.WinnerID == nil {
 		return "TBD"
 	}
 	if *mu.WinnerID == mu.HomeTeamID {
-		if mu.HomeShort != "" {
-			return mu.HomeShort
-		}
-		return mu.HomeTeam
+		return MatchupTeamLabel(mu.HomeShort, mu.HomeTeam, mu.TBDHome)
 	}
-	if mu.AwayShort != "" {
-		return mu.AwayShort
-	}
-	return mu.AwayTeam
+	return MatchupTeamLabel(mu.AwayShort, mu.AwayTeam, mu.TBDAway)
 }
 
 // renderBracketLine renders a single matchup line with flag emojis.
@@ -191,21 +185,11 @@ func renderBracketLine(mu api.WCMatchup) string {
 }
 
 func renderBracketLineRaw(mu api.WCMatchup, showArrow bool) string {
-	const nameW = 14
+	const nameW = 8 // "<emoji> CODE" → typically 6 visual cells; small slack
 	const scoreW = 7
 
-	home := teamDisplay(mu.HomeShort, mu.HomeTeam, mu.TBDHome)
-	away := teamDisplay(mu.AwayShort, mu.AwayTeam, mu.TBDAway)
-
-	homeEmoji := FlagEmoji(mu.HomeShort)
-	awayEmoji := FlagEmoji(mu.AwayShort)
-
-	if len(home) > nameW {
-		home = home[:nameW]
-	}
-	if len(away) > nameW {
-		away = away[:nameW]
-	}
+	home := MatchupTeamLabel(mu.HomeShort, mu.HomeTeam, mu.TBDHome)
+	away := MatchupTeamLabel(mu.AwayShort, mu.AwayTeam, mu.TBDAway)
 
 	homeIsWinner := mu.WinnerID != nil && *mu.WinnerID == mu.HomeTeamID
 	awayIsWinner := mu.WinnerID != nil && *mu.WinnerID == mu.AwayTeamID
@@ -230,38 +214,23 @@ func renderBracketLineRaw(mu api.WCMatchup, showArrow bool) string {
 	}
 	scoreStr = lipgloss.NewStyle().Width(scoreW).Align(lipgloss.Center).Render(scoreStr)
 
-	homeFlag := lipgloss.NewStyle().Width(3).Render(homeEmoji)
-	awayFlag := lipgloss.NewStyle().Width(3).Render(awayEmoji)
-
 	if mu.WinnerID == nil || !showArrow {
-		return MatchLineStyle.Render(fmt.Sprintf("  %s%s  %s  %s%s", homeFlag, homeStr, scoreStr, awayFlag, awayStr))
+		return MatchLineStyle.Render(fmt.Sprintf("  %s  %s  %s", homeStr, scoreStr, awayStr))
 	}
 
-	winnerShort := mu.HomeShort
+	winnerLabel := MatchupTeamLabel(mu.HomeShort, mu.HomeTeam, mu.TBDHome)
 	if *mu.WinnerID == mu.AwayTeamID {
-		winnerShort = mu.AwayShort
+		winnerLabel = MatchupTeamLabel(mu.AwayShort, mu.AwayTeam, mu.TBDAway)
 	}
 	penStr := ""
 	if mu.IsPenalties {
 		penStr = " " + PenStyle.Render("(p)")
 	}
-	emoji := FlagEmoji(winnerShort)
-	winner := WinnerStyle.Render(winnerShort) + penStr
+	winner := WinnerStyle.Render(winnerLabel) + penStr
 	arrow := MatchLineStyle.Render("  ──► ")
 
-	return fmt.Sprintf("  %s%s  %s  %s%s%s%s %s",
-		homeFlag, homeStr, scoreStr, awayFlag, awayStr, arrow, emoji, winner)
-}
-
-// teamDisplay returns the display name for a team slot.
-func teamDisplay(short, full string, tbd bool) string {
-	if tbd {
-		return "TBD"
-	}
-	if short != "" {
-		return short
-	}
-	return full
+	return fmt.Sprintf("  %s  %s  %s%s%s",
+		homeStr, scoreStr, awayStr, arrow, winner)
 }
 
 func max(a, b int) int {

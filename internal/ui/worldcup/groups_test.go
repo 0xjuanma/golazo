@@ -52,17 +52,20 @@ func TestRenderGroupStandingsTable_EmojiAdjacentToName(t *testing.T) {
 	fraFlag := FlagEmoji("FRA")
 	braFlag := FlagEmoji("BRA")
 
+	// Standings table now renders the consistent "<flag> CODE" label used by
+	// every World Cup view.
 	for _, expect := range []string{
-		argFlag + " Argentina",
-		fraFlag + " France",
-		braFlag + " Brazil",
+		argFlag + " ARG",
+		fraFlag + " FRA",
+		braFlag + " BRA",
 	} {
 		if !strings.Contains(table, expect) {
 			t.Errorf("expected standings table to contain literal %q, got:\n%s", expect, table)
 		}
 	}
 
-	if !strings.Contains(table, "Nowhereland") {
-		t.Errorf("expected unmapped team name in table, got:\n%s", table)
+	// Unmapped short code still appears as the bare code (no flag).
+	if !strings.Contains(table, "ZZZ") {
+		t.Errorf("expected unmapped short code ZZZ in table, got:\n%s", table)
 	}
 }

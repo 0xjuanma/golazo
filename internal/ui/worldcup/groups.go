@@ -22,19 +22,7 @@ func (i WCGroupItem) Title() string       { return i.Group.Name }
 func (i WCGroupItem) Description() string {
 	parts := make([]string, 0, len(i.Group.Teams))
 	for _, t := range i.Group.Teams {
-		name := t.Team.ShortName
-		if name == "" {
-			name = t.Team.Name
-		}
-		if len(name) > 3 {
-			name = name[:3]
-		}
-		emoji := FlagEmoji(t.Team.ShortName)
-		if emoji != "" {
-			parts = append(parts, fmt.Sprintf("%s %s %d", emoji, name, t.Points))
-		} else {
-			parts = append(parts, fmt.Sprintf("%s %d", name, t.Points))
-		}
+		parts = append(parts, fmt.Sprintf("%s %d", TeamLabel(t.Team), t.Points))
 	}
 	return strings.Join(parts, "  ")
 }
@@ -177,14 +165,17 @@ func renderGroupStandingsTable(g api.WCGroup, width int) string {
 		return LoadingStyle.Render("No standings data")
 	}
 
-	// Col widths: # (3) + 2sp + Team (nameW, includes 3-wide flag prefix) +
-	// P(4)+W(4)+D(4)+L(4)+GF(4)+GA(4)+GD(5)+Pts(4) = nameW + 42
+	// Col widths: # (3) + 2sp + Team (nameW, includes 3-wide flag prefix +
+	// space + 3-letter code) + P(4)+W(4)+D(4)+L(4)+GF(4)+GA(4)+GD(5)+Pts(4)
+	// = nameW + 42. Team labels are now always "<flag> <CODE>" so a fixed
+	// 7-wide column is enough; widen up to 10 on roomier terminals for
+	// breathing space.
 	nameW := width - 42
-	if nameW < 11 {
-		nameW = 11
+	if nameW < 7 {
+		nameW = 7
 	}
-	if nameW > 23 {
-		nameW = 23
+	if nameW > 10 {
+		nameW = 10
 	}
 
 	hdr := lipgloss.JoinHorizontal(lipgloss.Top,
@@ -206,8 +197,7 @@ func renderGroupStandingsTable(g api.WCGroup, width int) string {
 
 	lines := []string{hdr, sep}
 	for i, t := range g.Teams {
-		emoji := FlagEmoji(t.Team.ShortName)
-		teamLabel := teamNameWithFlag(emoji, t.Team.Name, nameW)
+		teamLabel := lipgloss.PlaceHorizontal(nameW, lipgloss.Left, TeamLabel(t.Team))
 
 		var teamStyle, ptsStyle lipgloss.Style
 		switch {
@@ -243,48 +233,11 @@ func renderGroupStandingsTable(g api.WCGroup, width int) string {
 	return strings.Join(lines, "\n")
 }
 
-// teamNameWithFlag returns "<emoji> <name>" padded to colW visual cells.
-// Emoji takes a fixed 3-cell prefix slot so rows align even when some teams
-// lack a flag mapping. The name is truncated with an ellipsis when it would
-// overflow the column.
-func teamNameWithFlag(emoji, name string, colW int) string {
-	const flagSlot = 3 // visual cells reserved for emoji + trailing space
-	nameSpace := colW - flagSlot
-	if nameSpace < 1 {
-		nameSpace = 1
-	}
-	if lipgloss.Width(name) > nameSpace {
-		// Truncate by rune to avoid splitting multi-byte chars.
-		runes := []rune(name)
-		for nameSpace > 0 && lipgloss.Width(string(runes[:nameSpace])+"…") > nameSpace {
-			nameSpace--
-		}
-		if nameSpace > 0 {
-			name = string(runes[:nameSpace]) + "…"
-		} else {
-			name = "…"
-		}
-	}
-	prefix := emoji
-	if emoji == "" {
-		prefix = "  "
-	} else {
-		prefix = emoji + " "
-	}
-	combined := prefix + name
-	return lipgloss.PlaceHorizontal(colW, lipgloss.Left, combined)
-}
-
 // renderQualificationRow renders a compact one-line summary of qualified teams.
 func renderQualificationRow(g api.WCGroup, width int) string {
 	var parts []string
 	for i, t := range g.Teams {
-		name := t.Team.Name
-		emoji := FlagEmoji(t.Team.ShortName)
-		display := name
-		if emoji != "" {
-			display = emoji + " " + name
-		}
+		display := TeamLabel(t.Team)
 		switch {
 		case i < 2:
 			parts = append(parts, QualifiedStyle.Render("✓ "+display))
@@ -369,15 +322,6 @@ func renderGroupGridCell(g api.WCGroup, width int) string {
 	title := GridGroupHeaderStyle.Render(g.Name)
 	lines := []string{title}
 	for i, t := range g.Teams {
-		short := t.Team.ShortName
-		if short == "" {
-			short = t.Team.Name
-		}
-		if len(short) > 3 {
-			short = short[:3]
-		}
-		emoji := FlagEmoji(t.Team.ShortName)
-
 		pts := fmt.Sprintf("%2d", t.Points)
 
 		var ts lipgloss.Style
@@ -390,15 +334,10 @@ func renderGroupGridCell(g api.WCGroup, width int) string {
 			ts = GridTeamDimStyle
 		}
 
-		// Render emoji+name as a single styled chunk to avoid terminals
+		// Render emoji+code as a single styled chunk to avoid terminals
 		// dropping the regional-indicator pair when sandwiched between
 		// neighboring ANSI escape sequences.
-		var label string
-		if emoji != "" {
-			label = ts.Render(fmt.Sprintf("%s %-3s", emoji, short))
-		} else {
-			label = ts.Render(fmt.Sprintf("   %-3s", short))
-		}
+		label := ts.Render(TeamLabel(t.Team))
 		line := "  " + label + " " + ts.Render(pts)
 		lines = append(lines, line)
 	}

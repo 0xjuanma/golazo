@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- **Agentic CLI Mode** - New JSON subcommands (`golazo live`, `finished`, `match <id>`, `leagues`) that emit structured output to stdout for agents and scripts. Includes typed error codes, documented exit codes, `degraded` flag for partial multi-day failures, deterministic sort, and `GOLAZO_AGENT` / `GOLAZO_OFFLINE` env guardrails. TUI behavior is unchanged. See [docs/CLI.md](docs/CLI.md).
+- **Agentic CLI Mode** - Golazo is now usable by agentic dev tools (Claude Code, Codex, etc). Adds JSON subcommands (`live`, `finished`, `match`, `leagues`, `capabilities`) with a stable envelope, typed error codes and self-describing contract. TUI behavior is unchanged. See [docs/CLI.md](docs/CLI.md).
 
 ### Changed
 

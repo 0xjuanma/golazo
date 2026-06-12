@@ -38,7 +38,7 @@ func (m model) handleWCGroupsKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "esc":
 		m.wcSubView = wcSubViewGroupGrid
-		return m, nil
+		return m, tea.ClearScreen
 
 	case "enter":
 		if item, ok := m.wcGroupsList.SelectedItem().(ui.WCGroupItem); ok {
@@ -49,6 +49,7 @@ func (m model) handleWCGroupsKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 				}
 			}
 			m.wcSubView = wcSubViewGroupDetail
+			return m, tea.ClearScreen
 		}
 		return m, nil
 
@@ -56,6 +57,7 @@ func (m model) handleWCGroupsKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		if len(m.wcData.KnockoutRounds) > 0 {
 			m.wcBracketScroll = 0
 			m.wcSubView = wcSubViewBracket
+			return m, tea.ClearScreen
 		}
 		return m, nil
 
@@ -63,7 +65,7 @@ func (m model) handleWCGroupsKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.wcSubView = wcSubViewUpcoming
 		m.wcUpcomingLoading = true
 		m.wcUpcomingLastError = ""
-		return m, fetchWorldCupUpcoming(m.loadCtx, m.fotmobClient)
+		return m, tea.Batch(tea.ClearScreen, fetchWorldCupUpcoming(m.loadCtx, m.fotmobClient))
 
 	default:
 		var cmd tea.Cmd
@@ -77,6 +79,7 @@ func (m model) handleWCGroupDetailKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "esc":
 		m.wcSubView = wcSubViewGroupGrid
+		return m, tea.ClearScreen
 	}
 	return m, nil
 }
@@ -86,11 +89,12 @@ func (m model) handleWCBracketKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "esc":
 		m.wcSubView = wcSubViewGroupGrid
+		return m, tea.ClearScreen
 	case "u":
 		m.wcSubView = wcSubViewUpcoming
 		m.wcUpcomingLoading = true
 		m.wcUpcomingLastError = ""
-		return m, fetchWorldCupUpcoming(m.loadCtx, m.fotmobClient)
+		return m, tea.Batch(tea.ClearScreen, fetchWorldCupUpcoming(m.loadCtx, m.fotmobClient))
 	case "j", "down":
 		if m.wcBracketLines > 0 && m.wcBracketScroll < m.wcBracketLines-1 {
 			m.wcBracketScroll++
@@ -128,21 +132,24 @@ func (m model) handleWCGroupGridKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "enter":
 		m.wcSelectedGroup = m.wcGridSelectedIdx
 		m.wcSubView = wcSubViewGroupDetail
+		return m, tea.ClearScreen
 
 	case "t":
 		m.wcSubView = wcSubViewGroups
+		return m, tea.ClearScreen
 
 	case "b":
 		if len(m.wcData.KnockoutRounds) > 0 {
 			m.wcBracketScroll = 0
 			m.wcSubView = wcSubViewBracket
+			return m, tea.ClearScreen
 		}
 
 	case "u":
 		m.wcSubView = wcSubViewUpcoming
 		m.wcUpcomingLoading = true
 		m.wcUpcomingLastError = ""
-		return m, fetchWorldCupUpcoming(m.loadCtx, m.fotmobClient)
+		return m, tea.Batch(tea.ClearScreen, fetchWorldCupUpcoming(m.loadCtx, m.fotmobClient))
 
 	case "right", "l":
 		if m.wcGridSelectedIdx < n-1 {
@@ -192,6 +199,7 @@ func (m model) handleWCUpcomingKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "esc":
 		m.wcSubView = wcSubViewGroupGrid
+		return m, tea.ClearScreen
 	}
 	return m, nil
 }

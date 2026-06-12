@@ -78,3 +78,52 @@ func TestRenderBracketRound_ConnectorAlignment(t *testing.T) {
 }
 
 func intPtrLocal(i int) *int { return &i }
+
+// TestRenderBracketLineRaw_WidthInvariant locks in the fix for #158: bracket
+// match lines must render at the same total visual width regardless of which
+// flag form (regional-indicator pair, tag-sequence subdivision, or no-flag
+// placeholder) appears in either team slot.
+func TestRenderBracketLineRaw_WidthInvariant(t *testing.T) {
+	winner := 1
+	probes := []struct {
+		name string
+		mu   api.WCMatchup
+	}{
+		{"RIS+RIS", api.WCMatchup{
+			HomeTeam: "Mexico", HomeTeamID: 1, HomeShort: "MEX",
+			AwayTeam: "Brazil", AwayTeamID: 2, AwayShort: "BRA",
+			HomeScore: intPtrLocal(1), AwayScore: intPtrLocal(0),
+			WinnerID: &winner,
+		}},
+		{"tag+RIS", api.WCMatchup{
+			HomeTeam: "England", HomeTeamID: 1, HomeShort: "ENG",
+			AwayTeam: "Mexico", AwayTeamID: 2, AwayShort: "MEX",
+			HomeScore: intPtrLocal(1), AwayScore: intPtrLocal(0),
+			WinnerID: &winner,
+		}},
+		{"RIS+placeholder", api.WCMatchup{
+			HomeTeam: "Mexico", HomeTeamID: 1, HomeShort: "MEX",
+			AwayTeam: "Nowhereland", AwayTeamID: 2, AwayShort: "ZZZ",
+			HomeScore: intPtrLocal(1), AwayScore: intPtrLocal(0),
+			WinnerID: &winner,
+		}},
+		{"placeholder+placeholder", api.WCMatchup{
+			HomeTeam: "Nowhereland", HomeTeamID: 1, HomeShort: "ZZZ",
+			AwayTeam: "Otherland", AwayTeamID: 2, AwayShort: "YYY",
+			HomeScore: intPtrLocal(1), AwayScore: intPtrLocal(0),
+			WinnerID: &winner,
+		}},
+	}
+
+	var widths []int
+	for _, p := range probes {
+		line := renderBracketLineRaw(p.mu, false)
+		widths = append(widths, lipgloss.Width(line))
+	}
+	for i := 1; i < len(widths); i++ {
+		if widths[i] != widths[0] {
+			t.Errorf("bracket line width differs across flag forms: probe[0] %s = %d, probe[%d] %s = %d",
+				probes[0].name, widths[0], i, probes[i].name, widths[i])
+		}
+	}
+}

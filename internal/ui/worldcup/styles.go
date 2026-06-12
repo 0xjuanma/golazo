@@ -106,17 +106,27 @@ var (
 				Foreground(colorRed).
 				Bold(true)
 
+	// GridSelectedGroupHeaderStyle is rendered in cyan to mark the focused
+	// cell. The grid intentionally avoids box-drawing borders because their
+	// visual width disagrees between terminals when neighboring cells carry
+	// flag emojis (#158); a colored header is terminal-independent.
+	GridSelectedGroupHeaderStyle = lipgloss.NewStyle().
+					Foreground(colorCyan).
+					Bold(true).
+					Underline(true)
+
 	GridTeamQualStyle  = lipgloss.NewStyle().Foreground(colorCyan)
 	GridTeamThirdStyle = lipgloss.NewStyle().Foreground(colorGold)
 	GridTeamDimStyle   = lipgloss.NewStyle().Foreground(colorDim)
 
+	// GridSelectedGroupStyle and GridNormalGroupStyle now use interior
+	// padding only — no border — so per-cell visual width never depends on
+	// terminal-specific box-drawing measurements.
 	GridSelectedGroupStyle = lipgloss.NewStyle().
-				Border(lipgloss.NormalBorder()).
-				BorderForeground(colorRed)
+				Padding(0, 1)
 
 	GridNormalGroupStyle = lipgloss.NewStyle().
-				Border(lipgloss.NormalBorder()).
-				BorderForeground(colorDim)
+				Padding(0, 1)
 )
 
 // alignRight renders text right-aligned in a fixed-width column.

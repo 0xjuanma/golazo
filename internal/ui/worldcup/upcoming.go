@@ -48,7 +48,7 @@ func RenderUpcoming(width, height int, matches []api.Match, loading bool, lastEr
 		parts = append(parts, statusBanner)
 	}
 	parts = append(parts, header, "", body, help)
-	return lipgloss.JoinVertical(lipgloss.Left, parts...)
+	return padToHeight(lipgloss.JoinVertical(lipgloss.Left, parts...), height)
 }
 
 // renderWCUpcomingMatches groups matches by local kickoff date and renders

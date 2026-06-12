@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 ### Fixed
+- **World Cup Grid Alignment** - Reworked the World Cup grid to render consistently across terminals and cleared stale content when navigating between sub-views.
 
 ## [0.27.0] - 2026-06-12
 

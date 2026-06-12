@@ -64,6 +64,89 @@ func TestParseWCGroups_TwelveGroups(t *testing.T) {
 	}
 }
 
+// TestParseWCGroups_FiltersNonLetterTables locks in the fix for #158: FotMob
+// sometimes ships pseudo-tables alongside the real groups (e.g. a "Qualified
+// teams" pot table). Those must be dropped so the grid stays symmetric.
+func TestParseWCGroups_FiltersNonLetterTables(t *testing.T) {
+	resp := buildMockWCPageResponse(12)
+
+	// Inject two pseudo-tables: one whose name yields a word ("teams"), one
+	// whose name yields the empty string. Both must be filtered out.
+	pseudo := resp.Table[0].Data.Tables[0]
+	pseudo.LeagueID = 999001
+	pseudo.LeagueName = "Qualified teams"
+	resp.Table[0].Data.Tables = append(resp.Table[0].Data.Tables, pseudo)
+
+	empty := resp.Table[0].Data.Tables[0]
+	empty.LeagueID = 999002
+	empty.LeagueName = ""
+	resp.Table[0].Data.Tables = append(resp.Table[0].Data.Tables, empty)
+
+	groups := parseWCGroups(resp)
+	if len(groups) != 12 {
+		t.Fatalf("len(groups) = %d, want 12 (pseudo-tables not filtered)", len(groups))
+	}
+	for i, g := range groups {
+		if !isWCGroupLetter(g.Letter) {
+			t.Errorf("groups[%d].Letter = %q, want single uppercase letter", i, g.Letter)
+		}
+		if g.Name == "Group teams" {
+			t.Errorf("groups[%d] is the pseudo-table that should have been filtered", i)
+		}
+	}
+}
+
+func TestIsWCGroupLetter(t *testing.T) {
+	tests := []struct {
+		in   string
+		want bool
+	}{
+		{"A", true},
+		{"L", true},
+		{"Z", true},
+		{"", false},
+		{"AA", false},
+		{"teams", false},
+		{"a", false}, // lowercase rejected; wcGroupLetter uppercases via FotMob input
+		{"1", false},
+	}
+	for _, tt := range tests {
+		if got := isWCGroupLetter(tt.in); got != tt.want {
+			t.Errorf("isWCGroupLetter(%q) = %v, want %v", tt.in, got, tt.want)
+		}
+	}
+}
+
+// TestParseWCGroups_DropsEmptyTeamRows covers the row-4 gap reported on
+// macOS Terminal under #158: FotMob occasionally interleaves placeholder
+// rows (empty name + empty shortName) inside a group's standings. Those
+// would inflate the rendered cell height and push the grid layout out of
+// alignment, so the parser drops them.
+func TestParseWCGroups_DropsEmptyTeamRows(t *testing.T) {
+	resp := buildMockWCPageResponse(1)
+	// Inject an empty-name placeholder between real teams.
+	resp.Table[0].Data.Tables[0].Table.All = []fotmobTableRow{
+		{ID: 1, Name: "Team1", ShortName: "TM1", Idx: 1, Pts: 9},
+		{ID: 2, Name: "Team2", ShortName: "TM2", Idx: 2, Pts: 6},
+		{ID: 0, Name: "", ShortName: "", Idx: 3, Pts: 0}, // pseudo-row
+		{ID: 3, Name: "Team3", ShortName: "TM3", Idx: 3, Pts: 4},
+		{ID: 4, Name: "Team4", ShortName: "TM4", Idx: 4, Pts: 1},
+	}
+
+	groups := parseWCGroups(resp)
+	if len(groups) != 1 {
+		t.Fatalf("len(groups) = %d, want 1", len(groups))
+	}
+	if got := len(groups[0].Teams); got != 4 {
+		t.Errorf("len(teams) = %d, want 4 (empty pseudo-row not filtered)", got)
+	}
+	for i, te := range groups[0].Teams {
+		if te.Team.Name == "" && te.Team.ShortName == "" {
+			t.Errorf("teams[%d] retained empty placeholder row", i)
+		}
+	}
+}
+
 func TestParseWCBracket_Empty(t *testing.T) {
 	rounds, bronze := parseWCBracket(wcPlayoff{})
 	if len(rounds) != 0 {

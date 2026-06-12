@@ -134,6 +134,11 @@ func fetchWorldCupPage(ctx context.Context, httpClient *http.Client, season stri
 
 // parseWCGroups extracts group standings from the page response.
 // Handles both 8-group (Qatar 2022) and 12-group (USA 2026) formats.
+//
+// FotMob occasionally ships pseudo-tables alongside the real groups (e.g.
+// "Qualified teams", "Pot teams") whose derived "letter" is a word rather
+// than a single character. Those are filtered out so the UI grid stays
+// symmetric (#158).
 func parseWCGroups(resp wcPageResponse) []api.WCGroup {
 	if len(resp.Table) == 0 {
 		return nil
@@ -148,9 +153,19 @@ func parseWCGroups(resp wcPageResponse) []api.WCGroup {
 
 		// Derive group letter from leagueName ("Grp. A" → "A")
 		letter := wcGroupLetter(t.LeagueName)
+		if !isWCGroupLetter(letter) {
+			continue
+		}
 
 		entries := make([]api.LeagueTableEntry, 0, len(t.Table.All))
 		for _, row := range t.Table.All {
+			// Skip placeholder rows (TBD slots, qualifier annotations)
+			// that FotMob occasionally interleaves with real teams. They
+			// would otherwise inflate the rendered cell height and push
+			// the grid out of alignment (#158).
+			if strings.TrimSpace(row.Name) == "" && strings.TrimSpace(row.ShortName) == "" {
+				continue
+			}
 			entries = append(entries, row.toAPITableEntry())
 		}
 
@@ -162,6 +177,18 @@ func parseWCGroups(resp wcPageResponse) []api.WCGroup {
 		})
 	}
 	return groups
+}
+
+// isWCGroupLetter reports whether s is a single uppercase ASCII letter, the
+// shape every real WC group identifier takes (A–L). Anything else is a
+// FotMob pseudo-table (e.g. "teams" from "Qualified teams") and must be
+// dropped before reaching the renderer.
+func isWCGroupLetter(s string) bool {
+	if len(s) != 1 {
+		return false
+	}
+	c := s[0]
+	return c >= 'A' && c <= 'Z'
 }
 
 // parseWCBracket extracts the knockout bracket from the playoff data.

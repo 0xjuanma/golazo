@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 ### Fixed
+- **World Cup Grid Alignment** - Fixed misaligned rows and a stray extra group panel in the World Cup grid view.
 
 ## [0.27.0] - 2026-06-12
 

@@ -119,7 +119,7 @@ func RenderGroupsList(width, height int, wcData *api.WorldCupData, groupsList li
 	}
 	parts = append(parts, "", groupsList.View(), help)
 
-	return lipgloss.JoinVertical(lipgloss.Left, parts...)
+	return padToHeight(lipgloss.JoinVertical(lipgloss.Left, parts...), height)
 }
 
 // ── Group detail view ─────────────────────────────────────────────────────────
@@ -154,7 +154,7 @@ func RenderGroupDetail(width, height int, wcData *api.WorldCupData, groupIdx int
 	}
 	parts = append(parts, header, "", table, "", qual, "", help)
 
-	return lipgloss.JoinVertical(lipgloss.Left, parts...)
+	return padToHeight(lipgloss.JoinVertical(lipgloss.Left, parts...), height)
 }
 
 // renderGroupStandingsTable renders the full standings table for a group.
@@ -324,7 +324,26 @@ func RenderGroupGrid(width, height int, wcData *api.WorldCupData, selectedGroupI
 	}
 	parts = append(parts, header, "", gridContent, "", help)
 
-	return lipgloss.JoinVertical(lipgloss.Left, parts...)
+	return padToHeight(lipgloss.JoinVertical(lipgloss.Left, parts...), height)
+}
+
+// padToHeight pads s with trailing blank lines (or truncates) so its line
+// count is exactly height. Returning a fixed-height frame to bubbletea
+// prevents trailing content from a previous, taller view from leaking into
+// the bottom of the next frame on terminals whose diffing model doesn't
+// auto-erase shrunk lines.
+func padToHeight(s string, height int) string {
+	if height <= 0 {
+		return s
+	}
+	lines := strings.Split(s, "\n")
+	if len(lines) >= height {
+		return strings.Join(lines[:height], "\n")
+	}
+	for len(lines) < height {
+		lines = append(lines, "")
+	}
+	return strings.Join(lines, "\n")
 }
 
 // renderGroupGridCell renders a mini standings table for a single group cell.

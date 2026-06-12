@@ -120,7 +120,7 @@ func RenderBracket(width, height int, wcData *api.WorldCupData, scrollOffset int
 	}
 	parts = append(parts, header, "", PanelStyle.Width(width-2).Render(visible), scrollIndicator, help)
 
-	return lipgloss.JoinVertical(lipgloss.Left, parts...)
+	return padToHeight(lipgloss.JoinVertical(lipgloss.Left, parts...), height)
 }
 
 // renderBracketRound renders all matchups in a round, pairing consecutive

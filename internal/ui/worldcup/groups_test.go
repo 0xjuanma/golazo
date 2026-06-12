@@ -108,6 +108,65 @@ func TestRenderGroupGridCell_WidthInvariant(t *testing.T) {
 	}
 }
 
+// TestPadToHeight covers the fix-screen-leak helper from #158: every WC
+// render now passes through padToHeight so the returned frame matches the
+// terminal height exactly. Bubbletea's diffing model can leave residue from
+// a previous, taller view at the bottom of a shorter frame; pinning frame
+// height removes that whole class of bug.
+func TestPadToHeight(t *testing.T) {
+	tests := []struct {
+		name      string
+		in        string
+		height    int
+		wantLines int
+	}{
+		{"pads short to height", "a\nb", 5, 5},
+		{"truncates tall to height", "a\nb\nc\nd\ne\nf", 3, 3},
+		{"matches exact height", "a\nb\nc", 3, 3},
+		{"zero height returns input", "a\nb", 0, 2},
+		{"negative height returns input", "a\nb", -1, 2},
+		{"empty input pads to height", "", 4, 4},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := padToHeight(tc.in, tc.height)
+			gotLines := strings.Count(got, "\n") + 1
+			if gotLines != tc.wantLines {
+				t.Errorf("padToHeight(%q, %d) produced %d lines, want %d",
+					tc.in, tc.height, gotLines, tc.wantLines)
+			}
+		})
+	}
+}
+
+func TestRenderGroupGrid_FrameHeightInvariant(t *testing.T) {
+	mkGroup := func(letter string) api.WCGroup {
+		return api.WCGroup{
+			ID: int(letter[0]), Letter: letter, Name: "Group " + letter,
+			Teams: []api.LeagueTableEntry{
+				{Position: 1, Team: api.Team{Name: "Team", ShortName: "TM" + letter}, Points: 0},
+				{Position: 2, Team: api.Team{Name: "Team", ShortName: "TM" + letter}, Points: 0},
+				{Position: 3, Team: api.Team{Name: "Team", ShortName: "TM" + letter}, Points: 0},
+				{Position: 4, Team: api.Team{Name: "Team", ShortName: "TM" + letter}, Points: 0},
+			},
+		}
+	}
+	wc := &api.WorldCupData{Name: "Test", Groups: []api.WCGroup{mkGroup("A"), mkGroup("B"), mkGroup("C"), mkGroup("D")}}
+
+	const wantH = 40
+	out := RenderGroupGrid(120, wantH, wc, 0, "")
+	got := strings.Count(out, "\n") + 1
+	if got != wantH {
+		t.Errorf("RenderGroupGrid produced %d lines, want %d", got, wantH)
+	}
+
+	out2 := RenderGroupDetail(120, wantH, wc, 0, "")
+	got2 := strings.Count(out2, "\n") + 1
+	if got2 != wantH {
+		t.Errorf("RenderGroupDetail produced %d lines, want %d", got2, wantH)
+	}
+}
+
 // TestRenderGroupGridCell_FixedHeight locks in the fix for the row-4 gap
 // reported on macOS Terminal under #158: every cell must render at exactly
 // 1 + gridCellTeamRows lines regardless of how many teams FotMob ships.

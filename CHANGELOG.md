@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Fixed
+
+## [0.27.0] - 2026-06-12
+
+### Added
 - **Agentic CLI Mode** - Golazo is now usable by agentic dev tools (Claude Code, Codex, etc). Adds JSON subcommands (`live`, `finished`, `match`, `leagues`, `capabilities`) with a stable envelope, typed error codes and self-describing contract. TUI behavior is unchanged. See [docs/CLI.md](docs/CLI.md).
 
 ### Changed

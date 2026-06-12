@@ -76,7 +76,12 @@ For events / lineups / stats: use `golazo match <id> --mock` against the bundled
 }
 ```
 
-Single-item responses (e.g. `match <id>`) still use a `data` array with `count: 1`.
+Single-item responses (e.g. `match <id>`, `capabilities`) still use a `data` array with `count: 1`. **This is intentional** — every subcommand returns the same envelope shape so agents can write a single parser. Access singleton results with `.data[0]`:
+
+```bash
+golazo capabilities | jq '.data[0].tool'            # → "golazo"
+golazo match 2001 --mock | jq '.data[0].home_team'  # → match details
+```
 
 ### Degraded envelope
 
@@ -131,7 +136,10 @@ away_score:  int|null   # null when status == "not_started"
 match_time:  string     # RFC3339 timestamp in UTC, e.g. "2026-06-12T19:00:00Z"
 live_time:   string|null # null unless status == "live"; e.g. "45+2", "HT", "67'"
 round:       string     # e.g. "Matchday 17", "Round of 16"
-page_url:    string     # FotMob page slug (internal use; agents can ignore)
+page_url:    string     # FotMob page slug, e.g. "/matches/team-a-vs-team-b/abc123".
+                        # This is the slug the CLI would need to fetch full
+                        # match details reliably. Exposed for transparency;
+                        # not consumed by any current subcommand.
 ```
 
 ### `MatchDetails` (returned by `match`)

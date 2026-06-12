@@ -13,7 +13,9 @@ func FlagEmoji(shortName string) string {
 }
 
 // flagEmojis maps FIFA 3-letter codes to Unicode regional indicator flag emojis.
-// Covers all 32 WC 2022 teams plus the additional 16 teams confirmed for 2026.
+// Covers all 32 WC 2022 teams plus the additional teams confirmed for 2026 and
+// the broader set of confederation qualifiers that surface in FotMob payloads
+// during the WC 2026 qualifying cycle.
 var flagEmojis = map[string]string{
 	// WC 2022 participants
 	"QAT": "🇶🇦",
@@ -114,6 +116,53 @@ var flagEmojis = map[string]string{
 	"BHR": "🇧🇭",
 	"KUW": "🇰🇼",
 	"NZL": "🇳🇿",
+	// WC 2026 confirmed qualifiers / strong qualifying candidates not in WC 2022.
+	"UZB": "🇺🇿", // Uzbekistan — first-ever WC qualifier (AFC)
+	"CPV": "🇨🇻", // Cape Verde — first-ever WC qualifier (CAF)
+	"CUW": "🇨🇼", // Curaçao (CONCACAF)
+	"HAI": "🇭🇹", // Haiti
+	"SUR": "🇸🇷", // Suriname
+	"NCL": "🇳🇨", // New Caledonia (OFC playoff candidate)
+	"DOM": "🇩🇴", // Dominican Republic
+	"GUA": "🇬🇹", // Guatemala
+	"SLV": "🇸🇻", // El Salvador
+	"PRK": "🇰🇵", // North Korea / DPR Korea
+	// CAF coverage useful in 2026 qualifying rounds and intercontinental playoffs.
+	"BFA": "🇧🇫", // Burkina Faso
+	"ETH": "🇪🇹", // Ethiopia
+	"GAB": "🇬🇦", // Gabon
+	"LBY": "🇱🇾", // Libya
+	"NIG": "🇳🇪", // Niger
+	"MAD": "🇲🇬", // Madagascar
+	"MOZ": "🇲🇿", // Mozambique
+	"ANG": "🇦🇴", // Angola
+	"ZAM": "🇿🇲", // Zambia
+	"SLE": "🇸🇱", // Sierra Leone
+	"EQG": "🇬🇶", // Equatorial Guinea
+	"BEN": "🇧🇯", // Benin
+	"TOG": "🇹🇬", // Togo
+	"COM": "🇰🇲", // Comoros
+	"SDN": "🇸🇩", // Sudan
+	"MTN": "🇲🇷", // Mauritania
+	"NAM": "🇳🇦", // Namibia
+	"BOT": "🇧🇼", // Botswana
+	"RWA": "🇷🇼", // Rwanda
+	// AFC / UEFA tail coverage for qualifying rounds and FotMob's broader payload.
+	"KAZ": "🇰🇿", // Kazakhstan
+	"TJK": "🇹🇯", // Tajikistan
+	"KGZ": "🇰🇬", // Kyrgyzstan
+	"TKM": "🇹🇲", // Turkmenistan
+	"LUX": "🇱🇺", // Luxembourg
+	"CYP": "🇨🇾", // Cyprus
+	"MLT": "🇲🇹", // Malta
+	"LVA": "🇱🇻", // Latvia
+	"LTU": "🇱🇹", // Lithuania
+	"EST": "🇪🇪", // Estonia
+	"MDA": "🇲🇩", // Moldova
+	"BLR": "🇧🇾", // Belarus
+	"FRO": "🇫🇴", // Faroe Islands
+	"LIE": "🇱🇮", // Liechtenstein
+	"RUS": "🇷🇺", // Russia
 	// Common alternate codes
 	"HOL": "🇳🇱", // Netherlands alternate
 	"GBR": "🇬🇧",

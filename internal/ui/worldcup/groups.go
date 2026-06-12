@@ -318,9 +318,18 @@ func RenderGroupGrid(width, height int, wcData *api.WorldCupData, selectedGroupI
 }
 
 // renderGroupGridCell renders a mini standings table for a single group cell.
+//
+// The team-label column is rendered with an explicit lipgloss width so that
+// row alignment doesn't depend on the terminal agreeing with lipgloss on the
+// visual width of regional-indicator / tag-sequence flag clusters. Without
+// this pin, terminals following the legacy width table (or rendering tag
+// sequences without clustering) push neighboring rows out of column.
 func renderGroupGridCell(g api.WCGroup, width int) string {
 	title := GridGroupHeaderStyle.Render(g.Name)
 	lines := []string{title}
+	// labelTargetWidth is the visual budget every TeamLabel is padded to;
+	// add 1 cell of trailing breathing room before the points column.
+	const labelCellW = labelTargetWidth + 1
 	for i, t := range g.Teams {
 		pts := fmt.Sprintf("%2d", t.Points)
 
@@ -334,11 +343,11 @@ func renderGroupGridCell(g api.WCGroup, width int) string {
 			ts = GridTeamDimStyle
 		}
 
-		// Render emoji+code as a single styled chunk to avoid terminals
-		// dropping the regional-indicator pair when sandwiched between
-		// neighboring ANSI escape sequences.
-		label := ts.Render(TeamLabel(t.Team))
-		line := "  " + label + " " + ts.Render(pts)
+		// Render emoji+code as a single styled chunk pinned to a fixed
+		// width so rows align even when terminals disagree with lipgloss
+		// on flag-emoji visual widths.
+		label := ts.Width(labelCellW).Render(TeamLabel(t.Team))
+		line := "  " + label + ts.Render(pts)
 		lines = append(lines, line)
 	}
 	return strings.Join(lines, "\n")

@@ -88,10 +88,10 @@ func buildCapabilities() capabilities {
 			},
 			{
 				Name:        "match",
-				Description: "Get full match details (events, lineups, stats) for an ID returned by `live` or `finished`",
+				Description: "Get full match details (events, lineups, stats). BEST-EFFORT ONLY — cold calls against arbitrary IDs typically fail with upstream_error due to a FotMob slug-cache constraint. Reliable only with --mock or from the TUI. Not recommended for production agent pipelines.",
 				Args:        "<id>",
 				Flags:       commonFlags,
-				Example:     "golazo finished | jq -r '.data[0].id' | xargs golazo match",
+				Example:     "golazo match 2001 --mock",
 				ExitCodes:   []int{ExitOK, ExitUpstream, ExitInvalidArgs, ExitNotFound, ExitTimeout, ExitOffline},
 			},
 			{

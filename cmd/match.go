@@ -72,14 +72,22 @@ func runMatch(stdout, stderr io.Writer, flags cliFlags, args []string) int {
 
 var matchCmd = &cobra.Command{
 	Use:           "match <id>",
-	Short:         "Get match details as JSON",
-	Long: `Fetches detailed information (events, lineups, stats, formations) for a single match by ID and prints a JSON envelope to stdout.
+	Short:         "Get match details as JSON (best-effort; see notes)",
+	Long: `Fetches detailed information (events, lineups, stats, formations) for a single match by ID.
 
-IMPORTANT: cold-calling 'golazo match <id>' with an arbitrary ID is unreliable — FotMob's details endpoint requires a page slug only populated by a prior 'live' or 'finished' call in the same process. Use the chained pattern instead:
-  golazo finished | jq -r '.data[0].id' | xargs golazo match
+LIMITATION: This subcommand is BEST-EFFORT only. FotMob's match-details endpoint is gated behind Cloudflare and requires a page slug that this CLI cannot reliably obtain in a one-shot invocation. Cold calls with arbitrary IDs typically return upstream_error (HTTP 404), even for valid IDs returned by 'live' or 'finished' in a separate process.
+
+Reliable usage:
+  - With --mock: works against bundled mock IDs (e.g. 2001, 2002)
+  - From inside the TUI: 'golazo' (interactive) reliably loads match details
+
+Not recommended for production agent pipelines. Agents that need event-level data should rely on the 'live' and 'finished' subcommands, which return match metadata, scores, status, and round info without this constraint.
+
+Example (mock):
+  golazo match 2001 --mock
 
 Example output (truncated):
-  {"status":"ok","count":1,"data":[{"id":4506420,"home_team":{"name":"Liverpool"},"away_team":{"name":"Arsenal"},"status":"finished","home_score":3,"away_score":1,"events":[{"minute":12,"type":"goal","player":"Salah","team":{"name":"Liverpool"}}],"statistics":[{"key":"possession","label":"Possession","home_value":"58%","away_value":"42%"}],"venue":"Anfield"}]}`,
+  {"status":"ok","count":1,"data":[{"id":2001,"home_team":{"name":"Chelsea"},"away_team":{"name":"Tottenham"},"status":"live","home_score":2,"away_score":1,"events":[{"minute":12,"type":"goal","player":"Palmer","team":{"name":"Chelsea"}}],"statistics":[{"key":"possession","label":"Possession","home_value":"58%","away_value":"42%"}],"venue":"Stamford Bridge"}]}`,
 	Args:          cobra.ArbitraryArgs, // validated in runMatch for precise error envelope
 	SilenceUsage:  true,
 	SilenceErrors: true,

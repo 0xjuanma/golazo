@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Agentic CLI Mode** - New JSON subcommands (`golazo live`, `finished`, `match <id>`, `leagues`) that emit structured output to stdout for agents and scripts. Includes typed error codes, documented exit codes, `degraded` flag for partial multi-day failures, deterministic sort, and `GOLAZO_AGENT` / `GOLAZO_OFFLINE` env guardrails. TUI behavior is unchanged. See [docs/CLI.md](docs/CLI.md).
 
 ### Changed
 

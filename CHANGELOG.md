@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 ### Fixed
+- **World Cup Flag Resolution** - Fixed countries with ambiguous FotMob short codes (e.g. South Africa and South Korea both shipping `SOU`) rendering with the wrong code and no flag. The team-label resolver now falls back to the local name-to-code override map when the FotMob short code has no registered flag.
 
 ## [0.26.0] - 2026-06-10
 

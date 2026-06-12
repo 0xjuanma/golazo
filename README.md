@@ -18,6 +18,8 @@
 
 A minimalist terminal user interface (TUI) for following football (soccer) matches in real-time. Get live match updates, finished match statistics, and minute-by-minute events directly in your terminal.
 
+Golazo also ships a JSON CLI for agents and scripts (`golazo live`, `finished`, `match`, `leagues`, `capabilities`) — see **[CLI / Agent Mode](docs/CLI.md)**.
+
 Golazo was created for those moments when you can't stream or watch matches live. It gives you a handy, non-intrusive, and minimalist way to keep up with your favourite football leagues.
 
 *Perfect for developers and terminal enthusiasts who want match updates without leaving their workflow.*
@@ -44,6 +46,7 @@ Golazo was created for those moments when you can't stream or watch matches live
 - **Official Highlights & Replay Links**: Clickable links for official highlights and instant goal replays
 - **Goal Notifications**: Desktop notifications for goals as they happen
 - **65+ Leagues**: Organized by region (Europe, Americas, Global) with tab navigation in Settings
+- **JSON CLI for agents**: `golazo live`, `finished`, `match`, `leagues`, `capabilities` — structured output, typed error codes, exit code map. See [docs/CLI.md](docs/CLI.md).
 
 ## Installation & Update
 
@@ -89,10 +92,26 @@ golazo
 
 **Navigation:** `↑`/`↓` or `j`/`k` to move, `Enter` to select, `/` to filter, `Tab` to focus view, `Esc` to go back, `q` to quit.
 
+## CLI / Agent Mode
+
+For scripts and agentic tools (Claude Code, Codex, MCP servers), Golazo exposes JSON subcommands:
+
+```bash
+golazo capabilities | jq .                       # self-discover the contract
+golazo live                                       # live matches right now
+golazo finished --include-upcoming                # today's full slate
+golazo finished --days 3                          # last 3 days
+golazo match 2001 --mock                          # full match details (best-effort against real IDs; reliable with --mock)
+golazo leagues --all                              # every supported league
+```
+
+Full contract — JSON envelope, error codes, exit codes, retry policy, schema, jq recipes — in **[docs/CLI.md](docs/CLI.md)**.
+
 ## Docs
 
 - [Supported Leagues](docs/SUPPORTED_LEAGUES.md): Full list of available leagues and competitions, customize your preferences in the **Settings** menu.
 - [Notifications](docs/NOTIFICATIONS.md): Desktop notification setup and configuration
+- [CLI / Agent Mode](docs/CLI.md): JSON subcommands for agents and scripts (`golazo live`, `finished`, `match`, `leagues`)
 
 ---
 

@@ -1,0 +1,23 @@
+{
+  "schema_version": "1",
+  "name": "golazo",
+  "description": "JSON CLI for football match data (live, finished, details, leagues). Intended for agentic dev tools (Claude Code, Codex, MCP servers) and scripts.",
+  "homepage": "https://github.com/0xjuanma/golazo",
+  "docs": "https://github.com/0xjuanma/golazo/blob/main/docs/CLI.md",
+  "agent_mode": {
+    "binary": "golazo",
+    "discovery": "golazo capabilities",
+    "env": {
+      "GOLAZO_AGENT": "1",
+      "GOLAZO_OFFLINE": "0"
+    },
+    "output": {
+      "format": "json",
+      "channel": "stdout",
+      "errors_channel": "stderr"
+    },
+    "subcommands": ["live", "finished", "match", "leagues", "capabilities"],
+    "recommended_invocation": "GOLAZO_AGENT=1 golazo <subcommand> [flags]"
+  },
+  "tags": ["football", "soccer", "sports", "json", "cli", "agent-cli", "claude-code"]
+}

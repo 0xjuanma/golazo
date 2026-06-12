@@ -27,6 +27,10 @@ var rootCmd = &cobra.Command{
 	Use:   "golazo",
 	Short: "The beautiful game in your terminal",
 	Long:  `A minimal TUI for following football matches in real-time. Get live match updates, finished match statistics, and minute-by-minute events directly in your terminal.`,
+	// Suppress cobra's default plain-text error printing so we can wrap
+	// flag/subcommand errors in the agent-facing JSON envelope (see Execute).
+	SilenceErrors: true,
+	SilenceUsage:  true,
 	Run: func(cmd *cobra.Command, args []string) {
 		if versionFlag {
 			version.Print(Version)
@@ -215,11 +219,15 @@ func isListedInBrew() bool {
 }
 
 // Execute runs the root command.
-// Errors are written to stderr and the program exits with code 1 on failure.
+//
+// All subcommands call os.Exit() directly with the documented exit codes,
+// so any error reaching here is a cobra-level parse failure (unknown command,
+// unknown flag, invalid value). We surface those through the same JSON
+// envelope used by every other CLI failure so agents can rely on a single
+// error contract.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
+		os.Exit(WriteError(os.Stderr, ErrCodeInvalidArgs, err))
 	}
 }
 

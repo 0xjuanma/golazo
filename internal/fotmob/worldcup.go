@@ -159,6 +159,13 @@ func parseWCGroups(resp wcPageResponse) []api.WCGroup {
 
 		entries := make([]api.LeagueTableEntry, 0, len(t.Table.All))
 		for _, row := range t.Table.All {
+			// Skip placeholder rows (TBD slots, qualifier annotations)
+			// that FotMob occasionally interleaves with real teams. They
+			// would otherwise inflate the rendered cell height and push
+			// the grid out of alignment (#158).
+			if strings.TrimSpace(row.Name) == "" && strings.TrimSpace(row.ShortName) == "" {
+				continue
+			}
 			entries = append(entries, row.toAPITableEntry())
 		}
 

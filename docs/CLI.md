@@ -48,6 +48,8 @@ This pattern keeps the in-process page-slug cache populated, which is what makes
 
 ## Subcommands
 
+> **⚠ Important for agents using `match <id>`:** cold-calling this command with an arbitrary ID is unreliable and will most likely return `upstream_error`. FotMob's details endpoint requires a page slug only populated by a prior `live` or `finished` call in the same process. **Always chain**: `golazo finished | jq -r '.data[0].id' | xargs golazo match`. See [Known limitations](#known-limitations) for the full explanation.
+
 | Command | Description |
 |---|---|
 | `golazo live` | Live matches across active leagues |
@@ -260,7 +262,38 @@ golazo finished | jq -r '.data[0].id' | xargs golazo match \
 - List output is sorted deterministically (`match_time` then `id`) so repeated invocations diff cleanly.
 - The TUI experience is unchanged — no flags here alter the interactive default.
 
-## Known limitations
+## Failure modes & retry policy
+
+Use this table to decide whether to retry, fix the call, or give up.
+
+| Error code | Exit | Typical cause | Should agent retry? |
+|---|---|---|---|
+| `invalid_args` | `2` | Bad flag value (e.g. `--days 99`, non-numeric match ID) | **No** — fix the call. Retrying will keep failing. |
+| `not_found` | `3` | Unknown match ID (mock mode), or match has no data | **No** — pick a fresh ID via a list call. |
+| `timeout` | `4` | Upstream slow or network congested | **Yes**, with a larger `--timeout` (e.g. `--timeout 30s`). |
+| `upstream_error` | `1` | FotMob 4xx/5xx, network failure, Cloudflare challenge | **Once** — transient errors recover. If the same ID keeps failing on `match`, see the slug-cache note in [Known limitations](#known-limitations). |
+| `offline` | `5` | `GOLAZO_OFFLINE=1` is set | **No** — unset the env var, or pass `--mock` for synthetic data. |
+
+The exit code is the most reliable retry signal. The `code` field in the error envelope on stderr says the same thing in machine-readable form; agents should prefer the exit code (no JSON parsing required).
+
+## "No matches" vs "failure" semantics
+
+Two outputs look superficially similar but mean very different things:
+
+```json
+{"status":"ok","count":0,"data":[]}            // success, just nothing today
+{"status":"error","code":"upstream_error",...} // failure on stderr, exit 1
+```
+
+A `count: 0` result means **the request succeeded and there genuinely are no matches** matching the criteria (off-season, no World Cup games today, no live matches at 4am, etc.). It is **not** a silent failure. Do not retry on `count: 0` — you will get the same answer.
+
+Conversely, partial failures (`finished` over multiple days where some days fetched and others didn't) are surfaced as `degraded: true` with a `failed_dates` array — those are still exit code 0, but agents can choose to retry just the failed dates.
+
+## Rate limiting
+
+Golazo internally rate-limits FotMob requests to one every 200ms and caps concurrent requests at 10. Agents calling subcommands in tight loops will not be rejected — requests just queue. There is **no** explicit `rate_limited` error code today. If FotMob itself rate-limits the underlying client, that surfaces as `upstream_error`.
+
+
 
 ### `match <id>` requires IDs from a prior list call
 

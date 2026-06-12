@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/0xjuanma/golazo/internal/api"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/mattn/go-runewidth"
 )
 
 func TestTeamLabel(t *testing.T) {
@@ -76,8 +78,14 @@ func TestTeamLabel(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := TeamLabel(tt.team); got != tt.want {
-				t.Errorf("TeamLabel(%+v) = %q, want %q", tt.team, got, tt.want)
+			got := TeamLabel(tt.team)
+			if !strings.HasPrefix(got, tt.want) {
+				t.Errorf("TeamLabel(%+v) = %q, want prefix %q", tt.team, got, tt.want)
+			}
+			if !strings.HasPrefix(strings.TrimRight(got, " "), tt.want) &&
+				strings.TrimRight(got, " ") != tt.want {
+				t.Errorf("TeamLabel(%+v) trimmed = %q, want %q",
+					tt.team, strings.TrimRight(got, " "), tt.want)
 			}
 		})
 	}
@@ -104,8 +112,10 @@ func TestMatchupTeamLabel(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := MatchupTeamLabel(tt.short, tt.full, tt.tbd); got != tt.want {
-				t.Errorf("MatchupTeamLabel(%q, %q, %v) = %q, want %q",
+			got := MatchupTeamLabel(tt.short, tt.full, tt.tbd)
+			trimmed := strings.TrimRight(got, " ")
+			if trimmed != tt.want && !strings.HasPrefix(got, tt.want) {
+				t.Errorf("MatchupTeamLabel(%q, %q, %v) = %q, want %q (or padded)",
 					tt.short, tt.full, tt.tbd, got, tt.want)
 			}
 		})
@@ -162,9 +172,45 @@ func TestTeamLabel_WC2026Qualifiers(t *testing.T) {
 				t.Fatalf("missing flagEmojis entry for %s (%s)", tc.name, tc.code)
 			}
 			got := TeamLabel(api.Team{Name: tc.name})
-			want := flag + " " + tc.code
-			if got != want {
-				t.Errorf("TeamLabel({Name:%q}) = %q, want %q", tc.name, got, want)
+			wantPrefix := flag + " " + tc.code
+			if !strings.HasPrefix(got, wantPrefix) {
+				t.Errorf("TeamLabel({Name:%q}) = %q, want prefix %q", tc.name, got, wantPrefix)
+			}
+		})
+	}
+}
+
+// TestLabelWidthInvariant locks in the fix for #158: every team label must
+// occupy the same visual width regardless of which resolution branch
+// produced it. Without padding, with-flag labels measure 5 cells under
+// runewidth's tables while placeholder labels measure 6, which caused
+// per-row drift in terminals following the legacy width table after the
+// v0.27.0 flag/name-override backfill.
+func TestLabelWidthInvariant(t *testing.T) {
+	probes := []api.Team{
+		// Registered flag (regional indicator pair)
+		{Name: "Mexico", ShortName: "MEX"},
+		{Name: "Brazil", ShortName: "BRA"},
+		{Name: "South Korea", ShortName: "SOU"}, // exercises override fallback
+		// Registered flag (tag-sequence subdivision)
+		{Name: "England", ShortName: "ENG"},
+		{Name: "Wales", ShortName: "WAL"},
+		{Name: "Scotland", ShortName: "SCO"},
+		// No registered flag → placeholder branch
+		{Name: "Nowhereland", ShortName: "ZZZ"},
+		{Name: "Nowhereland", ShortName: ""},
+	}
+
+	for _, team := range probes {
+		t.Run(team.Name+"/"+team.ShortName, func(t *testing.T) {
+			label := TeamLabel(team)
+			if w := runewidth.StringWidth(label); w != labelTargetWidth {
+				t.Errorf("runewidth.StringWidth(%q) = %d, want %d",
+					label, w, labelTargetWidth)
+			}
+			if w := lipgloss.Width(label); w < labelTargetWidth {
+				t.Errorf("lipgloss.Width(%q) = %d, want >= %d",
+					label, w, labelTargetWidth)
 			}
 		})
 	}

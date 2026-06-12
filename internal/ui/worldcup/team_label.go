@@ -4,7 +4,14 @@ import (
 	"strings"
 
 	"github.com/0xjuanma/golazo/internal/api"
+	"github.com/mattn/go-runewidth"
 )
+
+// labelTargetWidth is the visual width every team label is padded to so rows
+// align across all WC views regardless of which resolution branch produced
+// the label or how the terminal measures regional-indicator / tag-sequence
+// flag clusters. Matches "   XYZ" (3-cell placeholder + 3-letter code).
+const labelTargetWidth = 6
 
 // TeamLabel returns the consistent World Cup display label for a team:
 // "<flag-emoji> <CODE>", where <CODE> is the FIFA 3-letter abbreviation.
@@ -75,16 +82,33 @@ func capCode(c string) string {
 	return c
 }
 
-// labelWithFlag renders "<emoji> <CODE>", padding the emoji slot with two
-// spaces when no flag is registered so columns line up across rows.
+// labelWithFlag renders "<emoji> <CODE>", padding to a fixed visual width so
+// every row aligns regardless of (a) whether the resolved code has a
+// registered flag and (b) how the terminal measures the emoji cluster. The
+// no-flag branch reserves a 3-cell placeholder so columns match the with-flag
+// branch under any width-table assumption.
 func labelWithFlag(code string) string {
 	if code == "" {
-		return "   " // 3-cell placeholder consistent with emoji + space slot
+		return padToLabelWidth("   ")
 	}
 	if emoji := FlagEmoji(code); emoji != "" {
-		return emoji + " " + code
+		return padToLabelWidth(emoji + " " + code)
 	}
-	return "   " + code
+	return padToLabelWidth("   " + code)
+}
+
+// padToLabelWidth right-pads s with spaces until its visual width matches
+// labelTargetWidth under runewidth's tables. lipgloss is consulted as a
+// second check so labels stay consistent between width metrics; whichever
+// table reports the larger width drives the padding floor, and the smaller
+// metric is filled to match. Strings already wider than the target are
+// returned unchanged.
+func padToLabelWidth(s string) string {
+	w := runewidth.StringWidth(s)
+	if w >= labelTargetWidth {
+		return s
+	}
+	return s + strings.Repeat(" ", labelTargetWidth-w)
 }
 
 // wcNameToCode covers WC teams whose FotMob payloads sometimes ship a full

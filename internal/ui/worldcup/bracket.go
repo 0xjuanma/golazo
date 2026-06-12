@@ -185,7 +185,11 @@ func renderBracketLine(mu api.WCMatchup) string {
 }
 
 func renderBracketLineRaw(mu api.WCMatchup, showArrow bool) string {
-	const nameW = 8 // "<emoji> CODE" → typically 6 visual cells; small slack
+	// Tie name column width to labelTargetWidth so any future change to the
+	// label budget (see team_label.go) propagates here. The extra cells of
+	// slack give the bracket some breathing room without affecting the
+	// per-row width-invariance guarantee.
+	const nameW = labelTargetWidth + 2
 	const scoreW = 7
 
 	home := MatchupTeamLabel(mu.HomeShort, mu.HomeTeam, mu.TBDHome)

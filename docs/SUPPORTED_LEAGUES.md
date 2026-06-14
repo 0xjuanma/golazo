@@ -128,6 +128,7 @@ Golazo supports **65+ leagues and competitions**. Customize your selection in Se
 | | League/Competition |
 |---|-------------------|
 | 🏆 | AFC Champions League Elite |
+| 🏆 | AFC Champions League Two |
 | 🇨🇳 | Chinese Super League |
 | 🇮🇳 | Indian Super League |
 | 🇯🇵 | J. League |

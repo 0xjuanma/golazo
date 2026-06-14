@@ -128,6 +128,7 @@ var AllSupportedLeagues = map[string][]LeagueInfo{
 		{ID: 536, Name: "Saudi Pro League", Country: "Saudi Arabia"},
 		// Asia
 		{ID: 525, Name: "AFC Champions League Elite", Country: "Asia"},
+		{ID: 9469, Name: "AFC Champions League Two", Country: "Asia"},
 		{ID: 9478, Name: "Indian Super League", Country: "India"},
 		{ID: 223, Name: "J. League", Country: "Japan"},
 		{ID: 9080, Name: "K League 1", Country: "South Korea"},

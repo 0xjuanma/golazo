@@ -201,6 +201,15 @@ func TestContainsTeamName(t *testing.T) {
 		{"partial multi-word", "manchester united vs liverpool", "manchester", true},
 		{"not found", "arsenal vs chelsea", "barcelona", false},
 		{"word in title", "real madrid vs barcelona", "barcelona", true},
+		{"country alias trkiye -> turkey", "australia [1] - 0 turkey - irankunda 27'", normalizeTeamName("Türkiye"), true},
+		{"country alias turkey -> trkiye", "australia 1-0 türkiye 27'", normalizeTeamName("Turkey"), true},
+		{"country alias ivory coast -> cte divoire", "côte d'ivoire 2-0 senegal", normalizeTeamName("Ivory Coast"), true},
+		{"country alias cte divoire -> ivory coast", "ivory coast 2-0 senegal", normalizeTeamName("Côte d'Ivoire"), true},
+		{"country alias czechia -> czech republic", "czech republic 1-1 poland", normalizeTeamName("Czechia"), true},
+		{"country alias south korea -> korea republic", "korea republic 2-1 japan", normalizeTeamName("South Korea"), true},
+		{"country alias usa -> united states", "united states 3-0 mexico", normalizeTeamName("USA"), true},
+		{"club name with country word should not over-match alias", "korea university 2-1 seoul fc", normalizeTeamName("Galatasaray"), false},
+		{"no alias expansion for clubs", "real madrid 1-0 barcelona", normalizeTeamName("Türkiye"), false},
 	}
 
 	for _, tt := range tests {

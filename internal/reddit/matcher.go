@@ -16,6 +16,32 @@ var (
 	playerNameCache    sync.Map // map[string]string
 )
 
+// countryAliases maps the normalized form of a national-team name (as produced
+// by normalizeTeamName) to additional normalized variants that may appear in
+// Reddit goal-post titles. Lookup is exact-key on the goal's normalized team
+// name, so this never affects club matches whose normalized names are not
+// keys in this map. Variants are kept unambiguous (e.g., "korea republic" not
+// bare "korea") to avoid cross-team collisions.
+var countryAliases = map[string][]string{
+	"trkiye":           {"turkey"},
+	"turkey":           {"trkiye"},
+	"cte divoire":      {"ivory coast"},
+	"ivory coast":      {"cte divoire"},
+	"czechia":          {"czech republic"},
+	"czech republic":   {"czechia"},
+	"korea republic":   {"south korea"},
+	"south korea":      {"korea republic"},
+	"usa":              {"united states"},
+	"united states":    {"usa"},
+	"north macedonia":  {"macedonia"},
+}
+
+// aliasesFor returns the list of alternative normalized names registered for
+// the given normalized team name. Returns nil if no aliases are known.
+func aliasesFor(teamNorm string) []string {
+	return countryAliases[teamNorm]
+}
+
 // Matcher provides loose matching for Reddit goal post titles.
 // Example titles:
 //   - "Wolves [3] - 0 West Ham - Mateus Mane 41'"
@@ -172,7 +198,25 @@ func normalizeNameUncached(name string) string {
 
 // containsTeamName checks if a title contains a team name (or part of it).
 // Normalizes the title first to handle variations like "FC Barcelona" vs "Barcelona".
+// For national teams listed in countryAliases, also checks anglicized/alternate
+// variants (e.g., goal team "Türkiye" → also tries "turkey"). Club matches are
+// unaffected because their normalized names are never keys in the alias map.
 func containsTeamName(title, teamNorm string) bool {
+	if containsTeamNameExact(title, teamNorm) {
+		return true
+	}
+	for _, alias := range aliasesFor(teamNorm) {
+		if containsTeamNameExact(title, alias) {
+			return true
+		}
+	}
+	return false
+}
+
+// containsTeamNameExact is the original substring/word-matching logic, without
+// alias expansion. Kept separate so containsTeamName can layer alias lookup on
+// top without duplicating the matching strategy.
+func containsTeamNameExact(title, teamNorm string) bool {
 	// Normalize the title for comparison (handles "FC Barcelona" -> "barcelona")
 	titleNorm := normalizeTeamName(title)
 

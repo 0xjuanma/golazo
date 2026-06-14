@@ -359,15 +359,18 @@ func padToHeight(s string, height int) string {
 // FotMob ships per group (4 in normal play, occasionally more in qualifier
 // formats or alongside playoff annotations).
 //
-// Selection is conveyed by switching the title color instead of drawing a
+// Selection is conveyed by swapping the plain red title for the gradient
+// "compact header" (gradient text + diagonal `╱` fill) instead of drawing a
 // border, because box-drawing characters disagree with neighboring cells'
-// flag-emoji widths across terminals (#158).
+// flag-emoji widths across terminals (#158). The diagonal fill is pure
+// ASCII-width and renders consistently across terminals.
 func renderGroupGridCell(g api.WCGroup, width int, selected bool) string {
-	titleStyle := GridGroupHeaderStyle
+	var title string
 	if selected {
-		titleStyle = GridSelectedGroupHeaderStyle
+		title = design.RenderHeader(g.Name, width)
+	} else {
+		title = GridGroupHeaderStyle.Render(g.Name)
 	}
-	title := titleStyle.Render(g.Name)
 	lines := []string{title}
 	// labelTargetWidth is the visual budget every TeamLabel is padded to;
 	// add 1 cell of trailing breathing room before the points column.

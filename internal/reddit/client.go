@@ -52,10 +52,12 @@ func NewPublicJSONFetcher() *PublicJSONFetcher {
 func (f *PublicJSONFetcher) Search(query string, limit int, matchTime time.Time, sort string) ([]SearchResult, error) {
 	f.rateLimiter.Wait()
 
-	// Build timestamp range for filtering (match day only ±12 hours)
-	// Goal videos are posted very soon after goals happen - limit to match day
-	startTime := matchTime.Add(-12 * time.Hour).Unix()
-	endTime := matchTime.Add(12 * time.Hour).Unix()
+	// Build timestamp range for filtering. Aligned with the matcher's
+	// accepted date window (matcher.go: -24h .. +48h) so search results are
+	// not narrower than what the matcher will validate. Late-uploaded goal
+	// videos for matches in distant timezones live in this wider band.
+	startTime := matchTime.Add(-24 * time.Hour).Unix()
+	endTime := matchTime.Add(48 * time.Hour).Unix()
 
 	// Default to relevance if sort is empty
 	if sort == "" {

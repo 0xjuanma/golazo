@@ -88,7 +88,7 @@ func renderWCUpcomingMatches(matches []api.Match) string {
 		line := fmt.Sprintf("  %s  %s %s %s", timeStr, home, vsStyle.Render("vs"), away)
 
 		if m.Round != "" {
-			line += "  " + roundStyle.Render(m.Round)
+			line += "  " + roundStyle.Render(roundLabel(m.Round))
 		}
 		lines = append(lines, line)
 	}

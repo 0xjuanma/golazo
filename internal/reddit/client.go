@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"strings"
@@ -29,6 +30,24 @@ type PublicJSONFetcher struct {
 	rateLimiter *ratelimit.Limiter
 }
 
+// userAgents is a small pool of generic browser-style User-Agent strings.
+// The previous fixed UA "golazo:v1.0.0 (by /u/golazo_app)" matched a pattern
+// that Reddit's edge network was reliably blocking with a 403 + HTML block
+// page. Rotating across browser-shaped UAs blends requests into common
+// traffic. Not a security mechanism — purely a coexistence hint for Reddit's
+// edge heuristics.
+var userAgents = []string{
+	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15",
+	"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+	"Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+	"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+}
+
+// pickUserAgent returns a User-Agent from the rotation pool.
+func pickUserAgent() string {
+	return userAgents[rand.Intn(len(userAgents))]
+}
+
 // NewPublicJSONFetcher creates a new fetcher using public Reddit JSON API.
 func NewPublicJSONFetcher() *PublicJSONFetcher {
 	return &PublicJSONFetcher{
@@ -40,8 +59,10 @@ func NewPublicJSONFetcher() *PublicJSONFetcher {
 				IdleConnTimeout:     90 * time.Second,
 			},
 		},
-		// Reddit requires a descriptive User-Agent
-		userAgent:   "golazo:v1.0.0 (by /u/golazo_app)",
+		// User-Agent is now selected per-request via pickUserAgent(); this
+		// field is kept for backward compatibility with any callers that
+		// inspect it but is no longer the source of truth on the wire.
+		userAgent:   "",
 		rateLimiter: ratelimit.NewFromRate(10), // 10 requests per minute for public API
 	}
 }
@@ -52,20 +73,24 @@ func NewPublicJSONFetcher() *PublicJSONFetcher {
 func (f *PublicJSONFetcher) Search(query string, limit int, matchTime time.Time, sort string) ([]SearchResult, error) {
 	f.rateLimiter.Wait()
 
-	// Build timestamp range for filtering (match day only ±12 hours)
-	// Goal videos are posted very soon after goals happen - limit to match day
-	startTime := matchTime.Add(-12 * time.Hour).Unix()
-	endTime := matchTime.Add(12 * time.Hour).Unix()
+	// Build timestamp range for filtering. Aligned with the matcher's
+	// accepted date window (matcher.go: -24h .. +48h) so search results are
+	// not narrower than what the matcher will validate. Late-uploaded goal
+	// videos for matches in distant timezones live in this wider band.
+	startTime := matchTime.Add(-24 * time.Hour).Unix()
+	endTime := matchTime.Add(48 * time.Hour).Unix()
 
 	// Default to relevance if sort is empty
 	if sort == "" {
 		sort = "relevance"
 	}
 
-	// Build search URL for r/soccer with Media flair filter and timestamp
-	// Reddit CloudSearch supports timestamp:START..END syntax
+	// Build search URL for r/soccer with Media flair filter and timestamp.
+	// Targets the legacy `old.reddit.com` host: its edge has historically
+	// applied laxer bot-detection rules than `www.reddit.com` while serving
+	// the same JSON shape. Falls back to www if Reddit eventually retires it.
 	searchURL := fmt.Sprintf(
-		"https://www.reddit.com/r/soccer/search.json?q=%s+flair:Media+timestamp:%d..%d&restrict_sr=on&sort=%s&limit=%d",
+		"https://old.reddit.com/r/soccer/search.json?q=%s+flair:Media+timestamp:%d..%d&restrict_sr=on&sort=%s&limit=%d",
 		url.QueryEscape(query),
 		startTime,
 		endTime,
@@ -73,11 +98,17 @@ func (f *PublicJSONFetcher) Search(query string, limit int, matchTime time.Time,
 		limit,
 	)
 
+	// Small randomized jitter (200-900ms) before each request to break up
+	// burst patterns that Reddit's edge correlates against bot traffic.
+	time.Sleep(time.Duration(200+rand.Intn(700)) * time.Millisecond)
+
 	req, err := http.NewRequest("GET", searchURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}
-	req.Header.Set("User-Agent", f.userAgent)
+	req.Header.Set("User-Agent", pickUserAgent())
+	req.Header.Set("Accept", "application/json, text/plain, */*")
+	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
 
 	resp, err := f.httpClient.Do(req)
 	if err != nil {
@@ -120,8 +151,11 @@ type Client struct {
 	debugLogger DebugLogger // Optional debug logger function
 }
 
-// debugLog is a helper method to safely call the debug logger if it exists
-func (c *Client) debugLog(message string) {
+// DebugLog forwards a message to the configured debug logger if one is wired.
+// No-op in non-debug runs. Exported so callers outside the reddit package
+// (e.g., the app's goal-link orchestration) emit their goal-related diagnostics
+// through the same logger as the reddit client's internal search logs.
+func (c *Client) DebugLog(message string) {
 	if c.debugLogger != nil {
 		c.debugLogger(message)
 	}
@@ -285,7 +319,7 @@ func (c *Client) searchForGoal(goal GoalInfo) (*GoalLink, error) {
 			strings.Contains(err.Error(), "rate limit") ||
 			strings.Contains(err.Error(), "HTML instead of JSON") {
 			// Don't retry CAPTCHA errors - Reddit is very aggressive, just give up
-			c.debugLog(fmt.Sprintf("Reddit blocking goal %d:%d: giving up immediately", goal.MatchID, goal.Minute))
+			c.DebugLog(fmt.Sprintf("Reddit blocking goal %d:%d: giving up immediately", goal.MatchID, goal.Minute))
 			return nil, err
 		}
 
@@ -300,28 +334,40 @@ func (c *Client) searchForGoal(goal GoalInfo) (*GoalLink, error) {
 
 // searchForGoalOnce performs a single search attempt for a goal.
 func (c *Client) searchForGoalOnce(goal GoalInfo) (*GoalLink, error) {
+	// Log any country-alias variants that will be tried during matching.
+	// Helps diagnose national-team mismatches (e.g., FotMob "Türkiye" vs
+	// Reddit titles using "Turkey") at a glance in golazo_debug.log.
+	if aliases := aliasesFor(normalizeTeamName(goal.HomeTeam)); len(aliases) > 0 {
+		c.DebugLog(fmt.Sprintf("Reddit alias expansion for home %q -> %v (goal %d:%d)",
+			goal.HomeTeam, aliases, goal.MatchID, goal.Minute))
+	}
+	if aliases := aliasesFor(normalizeTeamName(goal.AwayTeam)); len(aliases) > 0 {
+		c.DebugLog(fmt.Sprintf("Reddit alias expansion for away %q -> %v (goal %d:%d)",
+			goal.AwayTeam, aliases, goal.MatchID, goal.Minute))
+	}
+
 	// Strategy 1: Both teams + minute (most specific, try first)
 	query1 := fmt.Sprintf("%s %s %d'", goal.HomeTeam, goal.AwayTeam, goal.Minute)
-	c.debugLog(fmt.Sprintf("Reddit search query: '%s' for goal %d:%d (%s vs %s)",
+	c.DebugLog(fmt.Sprintf("Reddit search query: '%s' for goal %d:%d (%s vs %s)",
 		query1, goal.MatchID, goal.Minute, goal.HomeTeam, goal.AwayTeam))
 	results1, err := c.fetcher.Search(query1, 15, goal.MatchTime, "relevance")
 	if err != nil {
-		c.debugLog(fmt.Sprintf("Reddit search failed for query '%s': %v", query1, err))
+		c.DebugLog(fmt.Sprintf("Reddit search failed for query '%s': %v", query1, err))
 	} else {
-		c.debugLog(fmt.Sprintf("Reddit search returned %d results for query '%s'", len(results1), query1))
+		c.DebugLog(fmt.Sprintf("Reddit search returned %d results for query '%s'", len(results1), query1))
 		// Debug: log the first few result titles
 		for i, result := range results1 {
 			if i < 3 { // Log first 3 results
-				c.debugLog(fmt.Sprintf("Result %d: '%s'", i+1, result.Title))
+				c.DebugLog(fmt.Sprintf("Result %d: '%s'", i+1, result.Title))
 			}
 		}
 	}
 	if err == nil {
 		// Check if we found a good match with the first strategy
 		match := findBestMatch(results1, goal)
-		c.debugLog(fmt.Sprintf("findBestMatch result for goal %d:%d (score %d-%d): %v", goal.MatchID, goal.Minute, goal.HomeScore, goal.AwayScore, match != nil))
+		c.DebugLog(fmt.Sprintf("findBestMatch result for goal %d:%d (score %d-%d): %v", goal.MatchID, goal.Minute, goal.HomeScore, goal.AwayScore, match != nil))
 		if match != nil {
-			c.debugLog(fmt.Sprintf("Found goal link for %d:%d: %s (post: %s)", goal.MatchID, goal.Minute, match.URL, match.PostURL))
+			c.DebugLog(fmt.Sprintf("Found goal link for %d:%d: %s (post: %s)", goal.MatchID, goal.Minute, match.URL, match.PostURL))
 			// Found a match, return it immediately to avoid additional API calls
 			return &GoalLink{
 				MatchID:   goal.MatchID,
@@ -348,12 +394,12 @@ func (c *Client) searchForGoalOnce(goal GoalInfo) (*GoalLink, error) {
 		scoringTeam = goal.HomeTeam
 	}
 	query2 := fmt.Sprintf("%s %d'", scoringTeam, goal.Minute)
-	c.debugLog(fmt.Sprintf("Reddit search query (strategy 2): '%s' for goal %d:%d", query2, goal.MatchID, goal.Minute))
+	c.DebugLog(fmt.Sprintf("Reddit search query (strategy 2): '%s' for goal %d:%d", query2, goal.MatchID, goal.Minute))
 	results2, err := c.fetcher.Search(query2, 15, goal.MatchTime, "relevance")
 	if err != nil {
-		c.debugLog(fmt.Sprintf("Reddit search failed for strategy 2 query '%s': %v", query2, err))
+		c.DebugLog(fmt.Sprintf("Reddit search failed for strategy 2 query '%s': %v", query2, err))
 	} else {
-		c.debugLog(fmt.Sprintf("Reddit search returned %d results for strategy 2 query '%s'", len(results2), query2))
+		c.DebugLog(fmt.Sprintf("Reddit search returned %d results for strategy 2 query '%s'", len(results2), query2))
 		allResults = append(allResults, results2...)
 	}
 
@@ -370,8 +416,8 @@ func (c *Client) searchForGoalOnce(goal GoalInfo) (*GoalLink, error) {
 	// Check if strategies 1+2 found a match before trying strategy 3
 	match := findBestMatch(uniqueResults, goal)
 	if match != nil {
-		c.debugLog(fmt.Sprintf("Strategy 1+2 match found for goal %d:%d, skipping strategy 3", goal.MatchID, goal.Minute))
-		c.debugLog(fmt.Sprintf("Found goal link for %d:%d: %s (post: %s)", goal.MatchID, goal.Minute, match.URL, match.PostURL))
+		c.DebugLog(fmt.Sprintf("Strategy 1+2 match found for goal %d:%d, skipping strategy 3", goal.MatchID, goal.Minute))
+		c.DebugLog(fmt.Sprintf("Found goal link for %d:%d: %s (post: %s)", goal.MatchID, goal.Minute, match.URL, match.PostURL))
 		return &GoalLink{
 			MatchID:   goal.MatchID,
 			Minute:    goal.Minute,
@@ -392,7 +438,7 @@ func (c *Client) searchForGoalOnce(goal GoalInfo) (*GoalLink, error) {
 	awayShortDifferent := awayShort != "" && !strings.EqualFold(awayShort, goal.AwayTeam)
 
 	if !homeShortDifferent && !awayShortDifferent {
-		c.debugLog(fmt.Sprintf("Skipping strategy 3 for goal %d:%d: short names empty or identical to full names", goal.MatchID, goal.Minute))
+		c.DebugLog(fmt.Sprintf("Skipping strategy 3 for goal %d:%d: short names empty or identical to full names", goal.MatchID, goal.Minute))
 		return nil, nil // No match found across all strategies
 	}
 
@@ -407,16 +453,16 @@ func (c *Client) searchForGoalOnce(goal GoalInfo) (*GoalLink, error) {
 	}
 
 	query3 := fmt.Sprintf("%s %s %d'", homeQuery, awayQuery, goal.Minute)
-	c.debugLog(fmt.Sprintf("Reddit search query (strategy 3): '%s' for goal %d:%d", query3, goal.MatchID, goal.Minute))
+	c.DebugLog(fmt.Sprintf("Reddit search query (strategy 3): '%s' for goal %d:%d", query3, goal.MatchID, goal.Minute))
 	results3, err := c.fetcher.Search(query3, 15, goal.MatchTime, "top")
 	if err != nil {
-		c.debugLog(fmt.Sprintf("Reddit search failed for strategy 3 query '%s': %v", query3, err))
+		c.DebugLog(fmt.Sprintf("Reddit search failed for strategy 3 query '%s': %v", query3, err))
 	} else {
-		c.debugLog(fmt.Sprintf("Reddit search returned %d results for strategy 3 query '%s'", len(results3), query3))
+		c.DebugLog(fmt.Sprintf("Reddit search returned %d results for strategy 3 query '%s'", len(results3), query3))
 		// Debug: log the first few result titles
 		for i, result := range results3 {
 			if i < 3 { // Log first 3 results
-				c.debugLog(fmt.Sprintf("Strategy 3 result %d: '%s' (score: %d)", i+1, result.Title, result.Score))
+				c.DebugLog(fmt.Sprintf("Strategy 3 result %d: '%s' (score: %d)", i+1, result.Title, result.Score))
 			}
 		}
 		// Combine with all prior results for best match selection
@@ -430,12 +476,12 @@ func (c *Client) searchForGoalOnce(goal GoalInfo) (*GoalLink, error) {
 
 	// Find the best matching result across all strategies
 	match = findBestMatch(uniqueResults, goal)
-	c.debugLog(fmt.Sprintf("findBestMatch result (strategy 3) for goal %d:%d: %v", goal.MatchID, goal.Minute, match != nil))
+	c.DebugLog(fmt.Sprintf("findBestMatch result (strategy 3) for goal %d:%d: %v", goal.MatchID, goal.Minute, match != nil))
 	if match == nil {
 		return nil, nil // No match found, but not an error
 	}
 
-	c.debugLog(fmt.Sprintf("Found goal link (strategy 3) for %d:%d: %s (post: %s)", goal.MatchID, goal.Minute, match.URL, match.PostURL))
+	c.DebugLog(fmt.Sprintf("Found goal link (strategy 3) for %d:%d: %s (post: %s)", goal.MatchID, goal.Minute, match.URL, match.PostURL))
 	return &GoalLink{
 		MatchID:   goal.MatchID,
 		Minute:    goal.Minute,

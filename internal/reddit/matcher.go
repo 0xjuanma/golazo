@@ -1,12 +1,16 @@
 package reddit
 
 import (
-	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
+	"unicode"
+
+	"golang.org/x/text/runes"
+	"golang.org/x/text/transform"
+	"golang.org/x/text/unicode/norm"
 )
 
 var (
@@ -14,7 +18,53 @@ var (
 	reNonAlphaSpace    = regexp.MustCompile(`[^a-z\s]`)
 	teamNameCache      sync.Map // map[string]string
 	playerNameCache    sync.Map // map[string]string
+
+	// diacriticFolder folds Unicode diacritics so "Vinícius" → "Vinicius",
+	// "Müller" → "Muller", "Türkiye" → "Turkiye" (preserving the base letter)
+	// instead of stripping the entire grapheme. Applied before the lowercase
+	// regex strip so player/team-name matching stays loose across sources that
+	// use anglicized spellings.
+	diacriticFolder = transform.Chain(
+		norm.NFD,
+		runes.Remove(runes.In(unicode.Mn)),
+		norm.NFC,
+	)
 )
+
+// foldDiacritics returns s with combining diacritical marks removed.
+func foldDiacritics(s string) string {
+	out, _, err := transform.String(diacriticFolder, s)
+	if err != nil {
+		return s
+	}
+	return out
+}
+
+// countryAliases maps the normalized form of a national-team name (as produced
+// by normalizeTeamName) to additional normalized variants that may appear in
+// Reddit goal-post titles. Lookup is exact-key on the goal's normalized team
+// name, so this never affects club matches whose normalized names are not
+// keys in this map. Variants are kept unambiguous (e.g., "korea republic" not
+// bare "korea") to avoid cross-team collisions.
+var countryAliases = map[string][]string{
+	"turkiye":         {"turkey"},
+	"turkey":          {"turkiye"},
+	"cote divoire":    {"ivory coast"},
+	"ivory coast":     {"cote divoire"},
+	"czechia":         {"czech republic"},
+	"czech republic":  {"czechia"},
+	"korea republic":  {"south korea"},
+	"south korea":     {"korea republic"},
+	"usa":             {"united states"},
+	"united states":   {"usa"},
+	"north macedonia": {"macedonia"},
+}
+
+// aliasesFor returns the list of alternative normalized names registered for
+// the given normalized team name. Returns nil if no aliases are known.
+func aliasesFor(teamNorm string) []string {
+	return countryAliases[teamNorm]
+}
 
 // Matcher provides loose matching for Reddit goal post titles.
 // Example titles:
@@ -84,13 +134,12 @@ func findBestMatch(results []SearchResult, goal GoalInfo) *SearchResult {
 			score += 25
 		}
 
-		// Check for score match (required for high confidence)
-		scoreMatch := scorePattern.MatchString(result.Title)
-		if scoreMatch {
-			score += 20 // High bonus for score match
-		} else {
-			// If score doesn't match, heavily penalize this result
-			score -= 15
+		// Check for score match (advisory bonus only — no penalty)
+		// Score format varies wildly across r/soccer titles (bracketed, spaced,
+		// contiguous), so a missing match is not strong evidence of a wrong post.
+		// Country + time + scorer carry the matching weight.
+		if scorePattern.MatchString(result.Title) {
+			score += 20
 		}
 
 		// Check for scorer name if available
@@ -131,8 +180,10 @@ func normalizeTeamName(name string) string {
 }
 
 func normalizeTeamNameUncached(name string) string {
-	// Convert to lowercase
-	norm := strings.ToLower(name)
+	// Fold diacritics first ("Türkiye" → "Turkiye") so the lowercase strip
+	// below preserves the anglicized base letters instead of dropping them.
+	norm := foldDiacritics(name)
+	norm = strings.ToLower(norm)
 
 	// Remove common prefixes (e.g., "fc barcelona" -> "barcelona")
 	prefixes := []string{"fc ", "cf ", "sc ", "afc ", "ac ", "as "}
@@ -146,7 +197,7 @@ func normalizeTeamNameUncached(name string) string {
 		norm = strings.TrimSuffix(norm, suffix)
 	}
 
-	// Remove special characters
+	// Remove any remaining special characters
 	norm = reNonAlphanumSpace.ReplaceAllString(norm, "")
 
 	return strings.TrimSpace(norm)
@@ -164,15 +215,36 @@ func normalizeName(name string) string {
 }
 
 func normalizeNameUncached(name string) string {
-	norm := strings.ToLower(name)
-	// Remove special characters but keep spaces
+	// Fold diacritics so "Müller" → "muller", "Vinícius" → "vinicius" — the
+	// anglicized base letters survive the lowercase strip below.
+	norm := foldDiacritics(name)
+	norm = strings.ToLower(norm)
+	// Remove remaining special characters but keep spaces.
 	norm = reNonAlphaSpace.ReplaceAllString(norm, "")
 	return strings.TrimSpace(norm)
 }
 
 // containsTeamName checks if a title contains a team name (or part of it).
 // Normalizes the title first to handle variations like "FC Barcelona" vs "Barcelona".
+// For national teams listed in countryAliases, also checks anglicized/alternate
+// variants (e.g., goal team "Türkiye" → also tries "turkey"). Club matches are
+// unaffected because their normalized names are never keys in the alias map.
 func containsTeamName(title, teamNorm string) bool {
+	if containsTeamNameExact(title, teamNorm) {
+		return true
+	}
+	for _, alias := range aliasesFor(teamNorm) {
+		if containsTeamNameExact(title, alias) {
+			return true
+		}
+	}
+	return false
+}
+
+// containsTeamNameExact is the original substring/word-matching logic, without
+// alias expansion. Kept separate so containsTeamName can layer alias lookup on
+// top without duplicating the matching strategy.
+func containsTeamNameExact(title, teamNorm string) bool {
 	// Normalize the title for comparison (handles "FC Barcelona" -> "barcelona")
 	titleNorm := normalizeTeamName(title)
 
@@ -208,18 +280,36 @@ func containsTeamName(title, teamNorm string) bool {
 	return false
 }
 
-// containsName checks if a title contains a player name.
+// containsName checks if a title contains a player name. Both sides are
+// normalized (lowercased, diacritics stripped) before substring matching so
+// that "Müller" → "mller" can still match a title containing "Müller". Falls
+// back to last-name then first-significant-token match because Reddit titles
+// often abbreviate or simplify scorer names (e.g., "Vini Jr" for "Vinícius Jr.",
+// "Nuñez" vs "Núñez").
 func containsName(title, nameNorm string) bool {
-	// First try full name
-	if strings.Contains(title, nameNorm) {
+	titleNorm := normalizeName(title)
+
+	// Full normalized name
+	if strings.Contains(titleNorm, nameNorm) {
 		return true
 	}
 
-	// Try matching last name (usually more unique)
 	parts := strings.Fields(nameNorm)
-	if len(parts) > 0 {
-		lastName := parts[len(parts)-1]
-		if len(lastName) > 2 && strings.Contains(title, lastName) {
+	if len(parts) == 0 {
+		return false
+	}
+
+	// Last name (usually the most distinctive token)
+	lastName := parts[len(parts)-1]
+	if len(lastName) > 2 && strings.Contains(titleNorm, lastName) {
+		return true
+	}
+
+	// First significant token (e.g., "vinicius" for "Vinícius Jr."), helps
+	// when titles drop or abbreviate the surname.
+	if len(parts) > 1 {
+		first := parts[0]
+		if len(first) > 3 && strings.Contains(titleNorm, first) {
 			return true
 		}
 	}
@@ -279,15 +369,22 @@ func buildMinutePattern(goal GoalInfo) *regexp.Regexp {
 }
 
 // buildScorePattern creates a regex to match the score at the time of goal.
-// Matches various score formats like "1-0", "2-1", "[1-0]", etc.
+// Accepts several formats commonly used in r/soccer goal-video titles:
+//   - contiguous: "1-0"
+//   - spaced: "1 - 0"
+//   - bracketed on either side: "[1] - 0", "1 - [0]", "[1]-0", "1-[0]"
+//   - parenthesised on either side: "(1) - 0", "1 - (0)"
+// The brackets/parens may wrap either the home or away digit but not both.
 func buildScorePattern(homeScore, awayScore int) *regexp.Regexp {
-	scoreStr := fmt.Sprintf("%d-%d", homeScore, awayScore)
-	// Match score in various formats: "1-0", "[1-0]", "(1-0)", "1-0", etc.
-	patternStr := `[\[\(\s]*` + regexp.QuoteMeta(scoreStr) + `[\]\)\s]*`
+	h := strconv.Itoa(homeScore)
+	a := strconv.Itoa(awayScore)
+	// Per-digit optional bracket/paren wrappers (each digit may be wrapped
+	// independently), arbitrary whitespace around the dash.
+	patternStr := `[\[\(]?` + h + `[\]\)]?\s*-\s*[\[\(]?` + a + `[\]\)]?`
 	compiled, err := regexp.Compile(patternStr)
 	if err != nil {
 		// Fallback to exact match
-		return regexp.MustCompile(regexp.QuoteMeta(scoreStr))
+		return regexp.MustCompile(regexp.QuoteMeta(h + "-" + a))
 	}
 	return compiled
 }

@@ -2,6 +2,9 @@ package app
 
 import (
 	"context"
+	"fmt"
+	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -350,64 +353,117 @@ func fetchGoalLinks(redditClient *reddit.Client, details *api.MatchDetails) tea.
 			return goalLinksMsg{matchID: 0, links: nil}
 		}
 
-		// Extract goal events from match details
-		var goals []reddit.GoalInfo
-		for _, event := range details.Events {
-			if event.Type != "goal" {
-				continue
-			}
-
-			// Debug log goal extraction (will be logged when redditClient.GoalLinks is called)
-
-			scorer := ""
-			if event.Player != nil {
-				scorer = *event.Player
-			}
-
-			// Determine if goal is for home team
-			isHome := event.Team.ID == details.HomeTeam.ID
-
-			// Get scores at the time of goal (approximate)
-			homeScore := 0
-			awayScore := 0
-			if details.HomeScore != nil {
-				homeScore = *details.HomeScore
-			}
-			if details.AwayScore != nil {
-				awayScore = *details.AwayScore
-			}
-
-			// Get match time for date-based Reddit search
-			matchTime := time.Now() // Default to now for live matches
-			if details.MatchTime != nil {
-				matchTime = *details.MatchTime
-			}
-
-			goals = append(goals, reddit.GoalInfo{
-				MatchID:       details.ID,
-				HomeTeam:      details.HomeTeam.Name,
-				AwayTeam:      details.AwayTeam.Name,
-				HomeTeamShort: details.HomeTeam.ShortName,
-				AwayTeamShort: details.AwayTeam.ShortName,
-				ScorerName:    scorer,
-				Minute:        event.Minute,
-				DisplayMinute: event.DisplayMinute,
-				HomeScore:     homeScore,
-				AwayScore:     awayScore,
-				IsHomeTeam:    isHome,
-				MatchTime:     matchTime,
-			})
-		}
-
+		goals := buildGoalInfos(details)
 		if len(goals) == 0 {
 			return goalLinksMsg{matchID: details.ID, links: nil}
 		}
+
+		// Log the per-goal running scores so the corrected matcher inputs are
+		// observable in golazo_debug.log without trawling individual search
+		// queries. Useful for verifying World Cup / national-team retrievals.
+		redditClient.DebugLog(fmt.Sprintf("fetchGoalLinks: match=%d %s vs %s — %d goals: %s",
+			details.ID, details.HomeTeam.Name, details.AwayTeam.Name, len(goals),
+			formatGoalSummary(goals)))
 
 		// Fetch links for all goals (uses cache internally)
 		links := redditClient.GoalLinks(goals)
 
 		return goalLinksMsg{matchID: details.ID, links: links}
 	}
+}
+
+// formatGoalSummary renders a compact "27' AUS 1-0 (Irankunda)" list for debug
+// logging. Kept private to commands.go since it's purely a log-helper.
+func formatGoalSummary(goals []reddit.GoalInfo) string {
+	parts := make([]string, 0, len(goals))
+	for _, g := range goals {
+		team := g.AwayTeam
+		if g.IsHomeTeam {
+			team = g.HomeTeam
+		}
+		scorer := g.ScorerName
+		if scorer == "" {
+			scorer = "?"
+		}
+		parts = append(parts, fmt.Sprintf("%d' %s %d-%d (%s)",
+			g.Minute, team, g.HomeScore, g.AwayScore, scorer))
+	}
+	return strings.Join(parts, ", ")
+}
+
+// buildGoalInfos converts match details into Reddit goal-search inputs with a
+// per-goal running score. Goals are processed in minute order so each GoalInfo
+// carries the score AT THE TIME of that goal (not the final score), which is
+// what r/soccer goal-video titles encode. Own goals credit the opposing team.
+func buildGoalInfos(details *api.MatchDetails) []reddit.GoalInfo {
+	if details == nil {
+		return nil
+	}
+
+	// Collect goal events with their original index for stable ordering when
+	// minutes tie. Defensive-sort because event ordering is not guaranteed
+	// across data sources.
+	type indexedEvent struct {
+		event api.MatchEvent
+		idx   int
+	}
+	var goalEvents []indexedEvent
+	for i, ev := range details.Events {
+		if ev.Type == "goal" {
+			goalEvents = append(goalEvents, indexedEvent{event: ev, idx: i})
+		}
+	}
+	sort.SliceStable(goalEvents, func(i, j int) bool {
+		if goalEvents[i].event.Minute != goalEvents[j].event.Minute {
+			return goalEvents[i].event.Minute < goalEvents[j].event.Minute
+		}
+		return goalEvents[i].idx < goalEvents[j].idx
+	})
+
+	matchTime := time.Now()
+	if details.MatchTime != nil {
+		matchTime = *details.MatchTime
+	}
+
+	var goals []reddit.GoalInfo
+	runningHome, runningAway := 0, 0
+	for _, ge := range goalEvents {
+		ev := ge.event
+		isHome := ev.Team.ID == details.HomeTeam.ID
+		isOwnGoal := ev.OwnGoal != nil && *ev.OwnGoal
+		// Own goals are recorded against the scoring player's own team in the
+		// event stream, but the goal credits the opposing side on the scoreboard.
+		creditsHome := isHome
+		if isOwnGoal {
+			creditsHome = !isHome
+		}
+		if creditsHome {
+			runningHome++
+		} else {
+			runningAway++
+		}
+
+		scorer := ""
+		if ev.Player != nil {
+			scorer = *ev.Player
+		}
+
+		goals = append(goals, reddit.GoalInfo{
+			MatchID:       details.ID,
+			HomeTeam:      details.HomeTeam.Name,
+			AwayTeam:      details.AwayTeam.Name,
+			HomeTeamShort: details.HomeTeam.ShortName,
+			AwayTeamShort: details.AwayTeam.ShortName,
+			ScorerName:    scorer,
+			Minute:        ev.Minute,
+			DisplayMinute: ev.DisplayMinute,
+			HomeScore:     runningHome,
+			AwayScore:     runningAway,
+			IsHomeTeam:    creditsHome,
+			MatchTime:     matchTime,
+		})
+	}
+	return goals
 }
 
 // fetchStandings fetches league standings for a specific league.

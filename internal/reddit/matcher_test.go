@@ -24,9 +24,9 @@ func TestNormalizeTeamName(t *testing.T) {
 		{"CF suffix removed", "Valencia CF", "valencia"},
 		{"United suffix removed", "Manchester United", "manchester"},
 		{"City suffix removed", "Manchester City", "manchester"},
-		{"special chars removed", "Atlético Madrid", "atltico madrid"},
-		{"accented chars removed", "São Paulo", "so paulo"},
-		{"multiple normalizations", "FC Zürich", "zrich"},
+		{"special chars removed", "Atlético Madrid", "atletico madrid"},
+		{"accented chars removed", "São Paulo", "sao paulo"},
+		{"multiple normalizations", "FC Zürich", "zurich"},
 		{"already clean", "wolves", "wolves"},
 		{"whitespace trimmed", "  arsenal  ", "arsenal"},
 	}
@@ -50,10 +50,10 @@ func TestNormalizeName(t *testing.T) {
 	}{
 		{"simple name", "Rashford", "rashford"},
 		{"full name", "Marcus Rashford", "marcus rashford"},
-		{"accented chars", "Müller", "mller"},
+		{"accented chars", "Müller", "muller"},
 		{"hyphenated name", "Pierre-Emerick Aubameyang", "pierreemerick aubameyang"},
-		{"special chars", "Vinícius Jr.", "vincius jr"},
-		{"apostrophe", "N'Golo Kanté", "ngolo kant"},
+		{"special chars", "Vinícius Jr.", "vinicius jr"},
+		{"apostrophe", "N'Golo Kanté", "ngolo kante"},
 		{"already clean", "messi", "messi"},
 		{"whitespace trimmed", "  salah  ", "salah"},
 	}
@@ -201,6 +201,15 @@ func TestContainsTeamName(t *testing.T) {
 		{"partial multi-word", "manchester united vs liverpool", "manchester", true},
 		{"not found", "arsenal vs chelsea", "barcelona", false},
 		{"word in title", "real madrid vs barcelona", "barcelona", true},
+		{"country alias trkiye -> turkey", "australia [1] - 0 turkey - irankunda 27'", normalizeTeamName("Türkiye"), true},
+		{"country alias turkey -> trkiye", "australia 1-0 türkiye 27'", normalizeTeamName("Turkey"), true},
+		{"country alias ivory coast -> cte divoire", "côte d'ivoire 2-0 senegal", normalizeTeamName("Ivory Coast"), true},
+		{"country alias cte divoire -> ivory coast", "ivory coast 2-0 senegal", normalizeTeamName("Côte d'Ivoire"), true},
+		{"country alias czechia -> czech republic", "czech republic 1-1 poland", normalizeTeamName("Czechia"), true},
+		{"country alias south korea -> korea republic", "korea republic 2-1 japan", normalizeTeamName("South Korea"), true},
+		{"country alias usa -> united states", "united states 3-0 mexico", normalizeTeamName("USA"), true},
+		{"club name with country word should not over-match alias", "korea university 2-1 seoul fc", normalizeTeamName("Galatasaray"), false},
+		{"no alias expansion for clubs", "real madrid 1-0 barcelona", normalizeTeamName("Türkiye"), false},
 	}
 
 	for _, tt := range tests {
@@ -224,6 +233,10 @@ func TestContainsName(t *testing.T) {
 		{"last name match", "goal by rashford 67'", "marcus rashford", true},
 		{"not found", "goal by salah 67'", "marcus rashford", false},
 		{"single name", "goal by messi 45'", "messi", true},
+		{"diacritic in title matched by stripped name", "bayern - müller 67'", normalizeName("Müller"), true},
+		{"diacritic in title matched against vinicius", "real madrid - vinícius jr 89'", normalizeName("Vinícius Jr."), true},
+		{"first-name fallback when surname abbreviated", "vinicius scores for real 89'", normalizeName("Vinícius Junior"), true},
+		{"upper-case title with diacritic", "BAYERN [1] - 0 Dortmund - MÜLLER 67'", normalizeName("Müller"), true},
 	}
 
 	for _, tt := range tests {
@@ -246,14 +259,26 @@ func TestBuildScorePattern(t *testing.T) {
 		{
 			name: "1-0",
 			home: 1, away: 0,
-			shouldMatch:    []string{"1-0", "[1-0]", "(1-0)", " 1-0 "},
+			shouldMatch:    []string{"1-0", "[1-0]", "(1-0)", " 1-0 ", "1 - 0", "[1] - 0", "1 - [0]", "[1]-0", "1-[0]", "(1) - 0"},
 			shouldNotMatch: []string{"2-0", "1-1"},
 		},
 		{
 			name: "2-1",
 			home: 2, away: 1,
-			shouldMatch:    []string{"2-1", "[2-1]"},
+			shouldMatch:    []string{"2-1", "[2-1]", "[2] - 1", "2 - [1]"},
 			shouldNotMatch: []string{"1-2", "2-0"},
+		},
+		{
+			name: "bracketed real-world title — australia [1] - 0 türkiye",
+			home: 1, away: 0,
+			shouldMatch:    []string{"Australia [1] - 0 Türkiye - Irankunda 27'"},
+			shouldNotMatch: []string{"Australia [2] - 1 Türkiye"},
+		},
+		{
+			name: "bracketed 3-0 — wolves west ham fixture",
+			home: 3, away: 0,
+			shouldMatch:    []string{"Wolves [3] - 0 West Ham - Mane 41'"},
+			shouldNotMatch: []string{"Wolves 2-0 West Ham"},
 		},
 	}
 
@@ -398,6 +423,40 @@ func TestFindBestMatch(t *testing.T) {
 				t.Errorf("got URL %q, want %q", got.URL, tt.wantURL)
 			}
 		})
+	}
+}
+
+// TestFindBestMatchScoreAdvisory verifies that a candidate with strong team +
+// minute + scorer evidence is still selected even when the score string in the
+// title doesn't match (since r/soccer titles often use bracketed formats that
+// the matcher cannot perfectly parse). Score is an advisory bonus, not a gate.
+func TestFindBestMatchScoreAdvisory(t *testing.T) {
+	matchTime := time.Date(2025, 11, 10, 16, 0, 0, 0, time.UTC)
+	results := []SearchResult{
+		{
+			// Real bracketed format from r/soccer — note no contiguous "1-0".
+			Title:     "Australia [1] - 0 Türkiye - Nystrom Irankunda 27'",
+			URL:       "https://example.com/au-tr",
+			CreatedAt: matchTime.Add(2 * time.Hour),
+			Score:     500,
+		},
+	}
+	goal := GoalInfo{
+		HomeTeam:   "Australia",
+		AwayTeam:   "Türkiye",
+		ScorerName: "Nystrom Irankunda",
+		Minute:     27,
+		HomeScore:  1,
+		AwayScore:  0,
+		IsHomeTeam: true,
+		MatchTime:  matchTime,
+	}
+	got := findBestMatch(results, goal)
+	if got == nil {
+		t.Fatal("expected match for Australia [1] - 0 Türkiye title, got nil")
+	}
+	if got.URL != "https://example.com/au-tr" {
+		t.Errorf("got URL %q, want Australia/Türkiye URL", got.URL)
 	}
 }
 

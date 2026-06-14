@@ -6,6 +6,11 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
+
+	"golang.org/x/text/runes"
+	"golang.org/x/text/transform"
+	"golang.org/x/text/unicode/norm"
 )
 
 var (
@@ -13,7 +18,27 @@ var (
 	reNonAlphaSpace    = regexp.MustCompile(`[^a-z\s]`)
 	teamNameCache      sync.Map // map[string]string
 	playerNameCache    sync.Map // map[string]string
+
+	// diacriticFolder folds Unicode diacritics so "Vinícius" → "Vinicius",
+	// "Müller" → "Muller", "Türkiye" → "Turkiye" (preserving the base letter)
+	// instead of stripping the entire grapheme. Applied before the lowercase
+	// regex strip so player/team-name matching stays loose across sources that
+	// use anglicized spellings.
+	diacriticFolder = transform.Chain(
+		norm.NFD,
+		runes.Remove(runes.In(unicode.Mn)),
+		norm.NFC,
+	)
 )
+
+// foldDiacritics returns s with combining diacritical marks removed.
+func foldDiacritics(s string) string {
+	out, _, err := transform.String(diacriticFolder, s)
+	if err != nil {
+		return s
+	}
+	return out
+}
 
 // countryAliases maps the normalized form of a national-team name (as produced
 // by normalizeTeamName) to additional normalized variants that may appear in
@@ -22,17 +47,17 @@ var (
 // keys in this map. Variants are kept unambiguous (e.g., "korea republic" not
 // bare "korea") to avoid cross-team collisions.
 var countryAliases = map[string][]string{
-	"trkiye":           {"turkey"},
-	"turkey":           {"trkiye"},
-	"cte divoire":      {"ivory coast"},
-	"ivory coast":      {"cte divoire"},
-	"czechia":          {"czech republic"},
-	"czech republic":   {"czechia"},
-	"korea republic":   {"south korea"},
-	"south korea":      {"korea republic"},
-	"usa":              {"united states"},
-	"united states":    {"usa"},
-	"north macedonia":  {"macedonia"},
+	"turkiye":         {"turkey"},
+	"turkey":          {"turkiye"},
+	"cote divoire":    {"ivory coast"},
+	"ivory coast":     {"cote divoire"},
+	"czechia":         {"czech republic"},
+	"czech republic":  {"czechia"},
+	"korea republic":  {"south korea"},
+	"south korea":     {"korea republic"},
+	"usa":             {"united states"},
+	"united states":   {"usa"},
+	"north macedonia": {"macedonia"},
 }
 
 // aliasesFor returns the list of alternative normalized names registered for
@@ -155,8 +180,10 @@ func normalizeTeamName(name string) string {
 }
 
 func normalizeTeamNameUncached(name string) string {
-	// Convert to lowercase
-	norm := strings.ToLower(name)
+	// Fold diacritics first ("Türkiye" → "Turkiye") so the lowercase strip
+	// below preserves the anglicized base letters instead of dropping them.
+	norm := foldDiacritics(name)
+	norm = strings.ToLower(norm)
 
 	// Remove common prefixes (e.g., "fc barcelona" -> "barcelona")
 	prefixes := []string{"fc ", "cf ", "sc ", "afc ", "ac ", "as "}
@@ -170,7 +197,7 @@ func normalizeTeamNameUncached(name string) string {
 		norm = strings.TrimSuffix(norm, suffix)
 	}
 
-	// Remove special characters
+	// Remove any remaining special characters
 	norm = reNonAlphanumSpace.ReplaceAllString(norm, "")
 
 	return strings.TrimSpace(norm)
@@ -188,8 +215,11 @@ func normalizeName(name string) string {
 }
 
 func normalizeNameUncached(name string) string {
-	norm := strings.ToLower(name)
-	// Remove special characters but keep spaces
+	// Fold diacritics so "Müller" → "muller", "Vinícius" → "vinicius" — the
+	// anglicized base letters survive the lowercase strip below.
+	norm := foldDiacritics(name)
+	norm = strings.ToLower(norm)
+	// Remove remaining special characters but keep spaces.
 	norm = reNonAlphaSpace.ReplaceAllString(norm, "")
 	return strings.TrimSpace(norm)
 }
@@ -250,18 +280,36 @@ func containsTeamNameExact(title, teamNorm string) bool {
 	return false
 }
 
-// containsName checks if a title contains a player name.
+// containsName checks if a title contains a player name. Both sides are
+// normalized (lowercased, diacritics stripped) before substring matching so
+// that "Müller" → "mller" can still match a title containing "Müller". Falls
+// back to last-name then first-significant-token match because Reddit titles
+// often abbreviate or simplify scorer names (e.g., "Vini Jr" for "Vinícius Jr.",
+// "Nuñez" vs "Núñez").
 func containsName(title, nameNorm string) bool {
-	// First try full name
-	if strings.Contains(title, nameNorm) {
+	titleNorm := normalizeName(title)
+
+	// Full normalized name
+	if strings.Contains(titleNorm, nameNorm) {
 		return true
 	}
 
-	// Try matching last name (usually more unique)
 	parts := strings.Fields(nameNorm)
-	if len(parts) > 0 {
-		lastName := parts[len(parts)-1]
-		if len(lastName) > 2 && strings.Contains(title, lastName) {
+	if len(parts) == 0 {
+		return false
+	}
+
+	// Last name (usually the most distinctive token)
+	lastName := parts[len(parts)-1]
+	if len(lastName) > 2 && strings.Contains(titleNorm, lastName) {
+		return true
+	}
+
+	// First significant token (e.g., "vinicius" for "Vinícius Jr."), helps
+	// when titles drop or abbreviate the surname.
+	if len(parts) > 1 {
+		first := parts[0]
+		if len(first) > 3 && strings.Contains(titleNorm, first) {
 			return true
 		}
 	}

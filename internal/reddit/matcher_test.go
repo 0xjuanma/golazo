@@ -24,9 +24,9 @@ func TestNormalizeTeamName(t *testing.T) {
 		{"CF suffix removed", "Valencia CF", "valencia"},
 		{"United suffix removed", "Manchester United", "manchester"},
 		{"City suffix removed", "Manchester City", "manchester"},
-		{"special chars removed", "Atlético Madrid", "atltico madrid"},
-		{"accented chars removed", "São Paulo", "so paulo"},
-		{"multiple normalizations", "FC Zürich", "zrich"},
+		{"special chars removed", "Atlético Madrid", "atletico madrid"},
+		{"accented chars removed", "São Paulo", "sao paulo"},
+		{"multiple normalizations", "FC Zürich", "zurich"},
 		{"already clean", "wolves", "wolves"},
 		{"whitespace trimmed", "  arsenal  ", "arsenal"},
 	}
@@ -50,10 +50,10 @@ func TestNormalizeName(t *testing.T) {
 	}{
 		{"simple name", "Rashford", "rashford"},
 		{"full name", "Marcus Rashford", "marcus rashford"},
-		{"accented chars", "Müller", "mller"},
+		{"accented chars", "Müller", "muller"},
 		{"hyphenated name", "Pierre-Emerick Aubameyang", "pierreemerick aubameyang"},
-		{"special chars", "Vinícius Jr.", "vincius jr"},
-		{"apostrophe", "N'Golo Kanté", "ngolo kant"},
+		{"special chars", "Vinícius Jr.", "vinicius jr"},
+		{"apostrophe", "N'Golo Kanté", "ngolo kante"},
 		{"already clean", "messi", "messi"},
 		{"whitespace trimmed", "  salah  ", "salah"},
 	}
@@ -233,6 +233,10 @@ func TestContainsName(t *testing.T) {
 		{"last name match", "goal by rashford 67'", "marcus rashford", true},
 		{"not found", "goal by salah 67'", "marcus rashford", false},
 		{"single name", "goal by messi 45'", "messi", true},
+		{"diacritic in title matched by stripped name", "bayern - müller 67'", normalizeName("Müller"), true},
+		{"diacritic in title matched against vinicius", "real madrid - vinícius jr 89'", normalizeName("Vinícius Jr."), true},
+		{"first-name fallback when surname abbreviated", "vinicius scores for real 89'", normalizeName("Vinícius Junior"), true},
+		{"upper-case title with diacritic", "BAYERN [1] - 0 Dortmund - MÜLLER 67'", normalizeName("Müller"), true},
 	}
 
 	for _, tt := range tests {

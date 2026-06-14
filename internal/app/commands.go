@@ -2,7 +2,9 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -356,11 +358,37 @@ func fetchGoalLinks(redditClient *reddit.Client, details *api.MatchDetails) tea.
 			return goalLinksMsg{matchID: details.ID, links: nil}
 		}
 
+		// Log the per-goal running scores so the corrected matcher inputs are
+		// observable in golazo_debug.log without trawling individual search
+		// queries. Useful for verifying World Cup / national-team retrievals.
+		redditClient.DebugLog(fmt.Sprintf("fetchGoalLinks: match=%d %s vs %s — %d goals: %s",
+			details.ID, details.HomeTeam.Name, details.AwayTeam.Name, len(goals),
+			formatGoalSummary(goals)))
+
 		// Fetch links for all goals (uses cache internally)
 		links := redditClient.GoalLinks(goals)
 
 		return goalLinksMsg{matchID: details.ID, links: links}
 	}
+}
+
+// formatGoalSummary renders a compact "27' AUS 1-0 (Irankunda)" list for debug
+// logging. Kept private to commands.go since it's purely a log-helper.
+func formatGoalSummary(goals []reddit.GoalInfo) string {
+	parts := make([]string, 0, len(goals))
+	for _, g := range goals {
+		team := g.AwayTeam
+		if g.IsHomeTeam {
+			team = g.HomeTeam
+		}
+		scorer := g.ScorerName
+		if scorer == "" {
+			scorer = "?"
+		}
+		parts = append(parts, fmt.Sprintf("%d' %s %d-%d (%s)",
+			g.Minute, team, g.HomeScore, g.AwayScore, scorer))
+	}
+	return strings.Join(parts, ", ")
 }
 
 // buildGoalInfos converts match details into Reddit goal-search inputs with a

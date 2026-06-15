@@ -1,0 +1,20 @@
+name: Build nix
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      HAS_DEPLOY_KEY: ${{ secrets.SKILL_EVAL_DEPLOY_KEY != '' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@v17
+      - uses: DeterminateSystems/magic-nix-cache-action@v8
+      - name: Ensure build
+        run: nix build .

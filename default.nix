@@ -1,8 +1,8 @@
 {pkgs ? import <nixpkgs> {}, ...}:
 pkgs.buildGoModule {
   pname = "golazo";
-  version = "0.21.0";
-  vendorHash = "sha256-M2gfqU5rOfuiVSZnH/Dr8OVmDhyU2jYkgW7RuIUTd+E=";
+  version = "0.28.0";
+  vendorHash = "sha256-8p3JyLcFcHRAYoQn6/u43T4YsyVWzXIAYjLbzP8O584=";
 
   subPackages = ["."];
 

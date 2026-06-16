@@ -1,11 +1,21 @@
 package app
 
 import (
+	"io"
+	"log/slog"
 	"testing"
 	"time"
 
 	"github.com/0xjuanma/golazo/internal/api"
+	"github.com/0xjuanma/golazo/internal/reddit"
 )
+
+// testLogger returns a slog.Logger that discards output, matching the
+// debugLog-disabled path of initLogger. Required because handleGoalLink
+// calls m.debugLog which panics with nil m.logger.
+func testLogger() *slog.Logger {
+	return slog.New(slog.NewTextHandler(io.Discard, nil))
+}
 
 func TestBuildGoalInfosRunningScore(t *testing.T) {
 	home := api.Team{ID: 1, Name: "Australia", ShortName: "AUS"}
@@ -143,5 +153,63 @@ func TestBuildGoalInfosNoGoalsReturnsNil(t *testing.T) {
 func TestBuildGoalInfosNilDetails(t *testing.T) {
 	if got := buildGoalInfos(nil); got != nil {
 		t.Errorf("expected nil for nil details, got %d goals", len(got))
+	}
+}
+
+// TestHandleGoalLinkMergesSingle exercises the per-goal merge that the
+// subscription path relies on: a single goalLinkMsg must be applied to
+// m.goalLinks[key] and the reader Cmd must be re-armed against the same
+// channel. The behavior under test is the merge inside handleGoalLink — not
+// any wrapping fetch logic — so the test wires a channel directly without
+// invoking GoalLinksAsync.
+func TestHandleGoalLinkMergesSingle(t *testing.T) {
+	ch := make(chan reddit.GoalResult, 1)
+	defer close(ch)
+
+	m := model{
+		goalLinks:     make(map[reddit.GoalLinkKey]*reddit.GoalLink),
+		goalLinkChans: map[int]<-chan reddit.GoalResult{42: ch},
+		logger:        testLogger(),
+	}
+
+	link := &reddit.GoalLink{
+		MatchID: 42,
+		Minute:  17,
+		URL:     "https://example.com/replay",
+		Title:   "Iran 0 - [1] New Zealand - E. Just 7'",
+	}
+	key := reddit.GoalLinkKey{MatchID: 42, Minute: 17}
+
+	newModel, cmd := m.handleGoalLink(goalLinkMsg{matchID: 42, key: key, link: link})
+	mm, ok := newModel.(model)
+	if !ok {
+		t.Fatalf("handleGoalLink returned wrong model type: %T", newModel)
+	}
+	if got := mm.goalLinks[key]; got != link {
+		t.Errorf("goalLinks[%+v] = %+v, want %+v", key, got, link)
+	}
+	if cmd == nil {
+		t.Fatal("handleGoalLink returned nil Cmd; expected re-armed waitForGoalLink")
+	}
+}
+
+// TestHandleGoalLinkNotFoundIsRecorded verifies that nil/not-found results
+// are still stored in goalLinks so the UI can distinguish "search resolved
+// to no match" from "search still pending".
+func TestHandleGoalLinkNotFoundIsRecorded(t *testing.T) {
+	ch := make(chan reddit.GoalResult, 1)
+	defer close(ch)
+
+	m := model{
+		goalLinks:     make(map[reddit.GoalLinkKey]*reddit.GoalLink),
+		goalLinkChans: map[int]<-chan reddit.GoalResult{99: ch},
+		logger:        testLogger(),
+	}
+	key := reddit.GoalLinkKey{MatchID: 99, Minute: 45}
+
+	newModel, _ := m.handleGoalLink(goalLinkMsg{matchID: 99, key: key, link: nil})
+	mm := newModel.(model)
+	if _, ok := mm.goalLinks[key]; !ok {
+		t.Errorf("expected nil-link sentinel entry in goalLinks for %+v", key)
 	}
 }

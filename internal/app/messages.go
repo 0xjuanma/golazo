@@ -73,6 +73,36 @@ type goalLinksMsg struct {
 	links   map[reddit.GoalLinkKey]*reddit.GoalLink
 }
 
+// goalLinkStreamMsg hands a freshly-opened goal-link subscription channel to
+// the Update loop. The handler stashes the channel on the model (keyed by
+// matchID) and arms the first reader Cmd. Emitted once per match-details
+// load, before any goalLinkMsg for that match.
+type goalLinkStreamMsg struct {
+	matchID int
+	ch      <-chan reddit.GoalResult
+}
+
+// goalLinkMsg streams a single goal-link outcome from the reddit queue's
+// subscription channel. The match-level goalLinksMsg above remains for
+// initial cache-hit batches; goalLinkMsg carries per-goal results that
+// arrive at the queue's 30s cadence so the UI can render replay links
+// progressively instead of waiting for the entire match's goals to resolve.
+// Link is nil when the goal was searched but not found, was dropped because
+// Reddit returned ErrBlocked, or hit a transient fetch error.
+type goalLinkMsg struct {
+	matchID int
+	key     reddit.GoalLinkKey
+	link    *reddit.GoalLink
+}
+
+// goalLinksDoneMsg signals that the reddit queue's subscription channel for
+// a given match has closed — every queued goal has produced exactly one
+// goalLinkMsg. Used to stop the subscription tea.Cmd loop without leaking
+// goroutines.
+type goalLinksDoneMsg struct {
+	matchID int
+}
+
 // standingsMsg contains league standings from API response.
 // Used to populate the standings dialog.
 type standingsMsg struct {

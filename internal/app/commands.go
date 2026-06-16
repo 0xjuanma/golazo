@@ -362,31 +362,52 @@ func fetchStatsMatchDetailsFotmob(client *fotmob.Client, matchID int, useMockDat
 	}
 }
 
-// fetchGoalLinks fetches goal replay links from Reddit for all goals in a match.
-// This is called on-demand when match details are loaded/displayed.
-// Links are cached persistently to avoid redundant API calls.
+// fetchGoalLinks opens a streaming subscription to the reddit queue for all
+// goals in `details`. Returns a tea.Cmd that emits a goalLinkStreamMsg
+// carrying the result channel; the Update loop stashes the channel and arms
+// successive waitForGoalLink reader Cmds at the queue's cadence.
+//
+// Goals already in the persistent cache surface immediately (they're written
+// into the channel by GoalLinksAsync before queueing begins); uncached goals
+// arrive at QueueInterval cadence. Each emitted goalLinkMsg carries a single
+// result so the UI updates progressively instead of waiting for the entire
+// match's goals to resolve.
 func fetchGoalLinks(redditClient *reddit.Client, details *api.MatchDetails) tea.Cmd {
+	if redditClient == nil || details == nil {
+		return nil
+	}
+
+	goals := buildGoalInfos(details)
+	if len(goals) == 0 {
+		return nil
+	}
+
+	// Log the per-goal running scores so the corrected matcher inputs are
+	// observable in golazo_debug.log without trawling individual search
+	// queries. Useful for verifying World Cup / national-team retrievals.
+	redditClient.DebugLog(fmt.Sprintf("fetchGoalLinks: match=%d %s vs %s — %d goals: %s",
+		details.ID, details.HomeTeam.Name, details.AwayTeam.Name, len(goals),
+		formatGoalSummary(goals)))
+
+	matchID := details.ID
+	results := redditClient.GoalLinksAsync(goals)
+
 	return func() tea.Msg {
-		if redditClient == nil || details == nil {
-			return goalLinksMsg{matchID: 0, links: nil}
+		return goalLinkStreamMsg{matchID: matchID, ch: results}
+	}
+}
+
+// waitForGoalLink returns a tea.Cmd that blocks until the next GoalResult
+// arrives on results (or the channel closes), then emits a goalLinkMsg or a
+// terminal goalLinksDoneMsg. The Update handler re-arms this Cmd after each
+// goalLinkMsg, forming the subscription loop.
+func waitForGoalLink(matchID int, results <-chan reddit.GoalResult) tea.Cmd {
+	return func() tea.Msg {
+		r, ok := <-results
+		if !ok {
+			return goalLinksDoneMsg{matchID: matchID}
 		}
-
-		goals := buildGoalInfos(details)
-		if len(goals) == 0 {
-			return goalLinksMsg{matchID: details.ID, links: nil}
-		}
-
-		// Log the per-goal running scores so the corrected matcher inputs are
-		// observable in golazo_debug.log without trawling individual search
-		// queries. Useful for verifying World Cup / national-team retrievals.
-		redditClient.DebugLog(fmt.Sprintf("fetchGoalLinks: match=%d %s vs %s — %d goals: %s",
-			details.ID, details.HomeTeam.Name, details.AwayTeam.Name, len(goals),
-			formatGoalSummary(goals)))
-
-		// Fetch links for all goals (uses cache internally)
-		links := redditClient.GoalLinks(goals)
-
-		return goalLinksMsg{matchID: details.ID, links: links}
+		return goalLinkMsg{matchID: matchID, key: r.Key, link: r.Link}
 	}
 }
 

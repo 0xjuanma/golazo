@@ -159,6 +159,13 @@ type model struct {
 	// Goal replay links from Reddit (keyed by matchID:minute)
 	goalLinks map[reddit.GoalLinkKey]*reddit.GoalLink
 
+	// Active goal-link subscriptions keyed by matchID. The reddit client's
+	// GoalLinksAsync streams one GoalResult per goal at the queue's cadence;
+	// the Update loop drives a reader Cmd that re-arms from the same
+	// channel until it closes. Stored on the model so handleGoalLink can
+	// re-issue a wait Cmd without losing the channel reference.
+	goalLinkChans map[int]<-chan reddit.GoalResult
+
 	// Logging
 	logger  *slog.Logger
 	logFile *os.File // kept open for logger lifetime
@@ -280,6 +287,7 @@ func New(useMockData bool, debugMode bool, isDevBuild bool, newVersionAvailable 
 		parser:                 fotmob.NewLiveUpdateParser(),
 		redditClient:           redditClient,
 		goalLinks:              make(map[reddit.GoalLinkKey]*reddit.GoalLink),
+		goalLinkChans:          make(map[int]<-chan reddit.GoalResult),
 		logger:                 logger,
 		logFile:                logFile,
 		notifier:               notify.NewDesktopNotifier(),

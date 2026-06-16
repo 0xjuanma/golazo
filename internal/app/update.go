@@ -69,6 +69,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case goalLinksMsg:
 		return m.handleGoalLinks(msg)
 
+	case goalLinkStreamMsg:
+		return m.handleGoalLinkStream(msg)
+
+	case goalLinkMsg:
+		return m.handleGoalLink(msg)
+
+	case goalLinksDoneMsg:
+		return m.handleGoalLinksDone(msg)
+
 	case standingsMsg:
 		return m.handleStandings(msg)
 
@@ -1320,6 +1329,58 @@ func (m model) handleGoalLinks(msg goalLinksMsg) (tea.Model, tea.Cmd) {
 
 	m.debugLog(fmt.Sprintf("Goal link batch complete: %d valid, %d failed", validLinks, failedLinks))
 
+	return m, nil
+}
+
+// handleGoalLinkStream stashes a freshly-opened goal-link subscription
+// channel on the model and arms the first reader Cmd. One stream is tracked
+// per matchID; re-opening for the same match replaces the previous channel
+// (the old reader Cmd will receive a closed-channel signal next read and
+// exit cleanly via goalLinksDoneMsg).
+func (m model) handleGoalLinkStream(msg goalLinkStreamMsg) (tea.Model, tea.Cmd) {
+	if m.goalLinkChans == nil {
+		m.goalLinkChans = make(map[int]<-chan reddit.GoalResult)
+	}
+	m.goalLinkChans[msg.matchID] = msg.ch
+	m.debugLog(fmt.Sprintf("goalLinkStream: opened subscription for match %d", msg.matchID))
+	return m, waitForGoalLink(msg.matchID, msg.ch)
+}
+
+// handleGoalLink merges a single goal-link result into the model's
+// goalLinks map and re-arms the reader Cmd against the same stream. This is
+// where the per-goal behavior change lives: each link is applied
+// individually so the UI re-renders progressively at the queue's cadence.
+func (m model) handleGoalLink(msg goalLinkMsg) (tea.Model, tea.Cmd) {
+	if m.goalLinks == nil {
+		m.goalLinks = make(map[reddit.GoalLinkKey]*reddit.GoalLink)
+	}
+
+	if msg.link != nil && msg.link.URL != "" && msg.link.URL != reddit.NotFoundMarker {
+		m.goalLinks[msg.key] = msg.link
+		m.debugLog(fmt.Sprintf("goalLink: match=%d %d:%d → %s",
+			msg.matchID, msg.key.MatchID, msg.key.Minute, msg.link.URL))
+	} else {
+		// Record nil/not-found so the UI knows the search resolved (vs.
+		// pending) without rendering a broken link.
+		m.goalLinks[msg.key] = msg.link
+		m.debugLog(fmt.Sprintf("goalLink: match=%d %d:%d → no link",
+			msg.matchID, msg.key.MatchID, msg.key.Minute))
+	}
+
+	ch, ok := m.goalLinkChans[msg.matchID]
+	if !ok {
+		// Stream was torn down (e.g., user navigated away) — don't re-arm.
+		return m, nil
+	}
+	return m, waitForGoalLink(msg.matchID, ch)
+}
+
+// handleGoalLinksDone removes the closed subscription channel from the
+// model. Emitted by waitForGoalLink when the reddit queue's result channel
+// for this match has been fully drained.
+func (m model) handleGoalLinksDone(msg goalLinksDoneMsg) (tea.Model, tea.Cmd) {
+	delete(m.goalLinkChans, msg.matchID)
+	m.debugLog(fmt.Sprintf("goalLinkStream: closed subscription for match %d", msg.matchID))
 	return m, nil
 }
 

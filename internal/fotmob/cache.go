@@ -90,17 +90,6 @@ func (c *ResponseCache) ClearMatchDetails(matchID int) {
 	c.detailsCache.Delete(matchID)
 }
 
-// LiveMatches retrieves cached live matches, returns nil if not cached or expired.
-func (c *ResponseCache) LiveMatches() []api.Match {
-	c.liveMu.RLock()
-	defer c.liveMu.RUnlock()
-
-	if c.liveCache == nil || time.Now().After(c.liveCache.expiresAt) {
-		return nil
-	}
-	return c.liveCache.matches
-}
-
 // SetLiveMatches stores live matches in cache with TTL.
 func (c *ResponseCache) SetLiveMatches(matches []api.Match) {
 	c.liveMu.Lock()

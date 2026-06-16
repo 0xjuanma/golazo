@@ -96,7 +96,7 @@ func TestRunLive_TimeoutNotSwallowed(t *testing.T) {
 	t.Setenv(EnvAgent, "")
 
 	// 1ns timeout — the headless client's context is deadline-exceeded
-	// immediately. The underlying LiveMatches aggregator may return an
+	// immediately. The underlying LiveAndUpcoming aggregator may return an
 	// empty slice with nil error; the CLI must still report timeout.
 	var stdout, stderr bytes.Buffer
 	code := runLive(&stdout, &stderr, cliFlags{mock: false, timeout: 1})

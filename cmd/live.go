@@ -53,7 +53,10 @@ func applyPretty(f cliFlags) {
 type liveFetcher func(ctx context.Context) ([]api.Match, error)
 
 func defaultLiveFetcher(c *fotmob.Client) liveFetcher {
-	return c.LiveMatches
+	return func(ctx context.Context) ([]api.Match, error) {
+		live, _, err := c.LiveAndUpcoming(ctx)
+		return live, err
+	}
 }
 
 // runLive is the testable core of the `live` subcommand. It writes the JSON

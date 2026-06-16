@@ -61,12 +61,14 @@ func fetchLiveBatchData(parentCtx context.Context, client *fotmob.Client, useMoc
 			}
 		}
 
-		// Fetch all leagues in this batch concurrently
+		// Fetch all leagues in this batch concurrently.
+		// Classification (live vs upcoming) is done inside the fotmob client
+		// by status, not by UTC date, so live matches that started before
+		// the user's UTC midnight still surface here.
 		var wg sync.WaitGroup
 		var mu sync.Mutex
 		allLive := make([]api.Match, 0, (endIdx-startIdx)*5)
 		allUpcoming := make([]api.Match, 0, (endIdx-startIdx)*5)
-		today := time.Now()
 
 		for i := startIdx; i < endIdx; i++ {
 			wg.Add(1)
@@ -77,20 +79,17 @@ func fetchLiveBatchData(parentCtx context.Context, client *fotmob.Client, useMoc
 				ctx, cancel := context.WithTimeout(parentCtx, 10*time.Second)
 				defer cancel()
 
-				// Fetch all fixtures (live + upcoming) instead of just live
-				matches, err := client.MatchesForLeagueAndDate(ctx, leagueID, today, "fixtures")
-				if err != nil || len(matches) == 0 {
+				live, upcoming, err := client.LiveAndUpcomingForLeague(ctx, leagueID)
+				if err != nil {
+					return
+				}
+				if len(live) == 0 && len(upcoming) == 0 {
 					return
 				}
 
 				mu.Lock()
-				for _, m := range matches {
-					if m.Status == api.MatchStatusLive {
-						allLive = append(allLive, m)
-					} else if m.Status == api.MatchStatusNotStarted {
-						allUpcoming = append(allUpcoming, m)
-					}
-				}
+				allLive = append(allLive, live...)
+				allUpcoming = append(allUpcoming, upcoming...)
 				mu.Unlock()
 			}(i)
 		}
@@ -123,21 +122,12 @@ func scheduleLiveRefresh(client *fotmob.Client, useMockData bool) tea.Cmd {
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 
-		// Force refresh to bypass cache - fetch all fixtures to get both live and upcoming
-		today := time.Now()
+		// Force refresh to bypass cache. Classification (live vs upcoming)
+		// happens inside the fotmob client by status, not by UTC date.
 		client.Cache().ClearLive()
-		allMatches, err := client.MatchesByDateWithTabs(ctx, today, []string{"fixtures"})
+		live, upcoming, err := client.LiveAndUpcoming(ctx)
 		if err != nil {
 			return liveRefreshMsg{matches: nil}
-		}
-
-		var live, upcoming []api.Match
-		for _, m := range allMatches {
-			if m.Status == api.MatchStatusLive {
-				live = append(live, m)
-			} else if m.Status == api.MatchStatusNotStarted {
-				upcoming = append(upcoming, m)
-			}
 		}
 
 		return liveRefreshMsg{matches: live, upcoming: upcoming}

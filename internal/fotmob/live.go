@@ -60,6 +60,7 @@ func (c *Client) LiveAndUpcomingForLeague(ctx context.Context, leagueID int) (li
 
 	pageProps, err := fetchLeagueFromPage(ctx, c.httpClient, leagueID)
 	if err != nil {
+		c.debugLog("live: league page fetch failed", "leagueID", leagueID, "err", err)
 		return nil, nil, fmt.Errorf("fetch league %d page: %w", leagueID, err)
 	}
 
@@ -75,6 +76,7 @@ func (c *Client) LiveAndUpcomingForLeague(ctx context.Context, leagueID int) (li
 		} `json:"fixtures"`
 	}
 	if err := json.Unmarshal(pageProps, &leagueResponse); err != nil {
+		c.debugLog("live: league page decode failed", "leagueID", leagueID, "err", err)
 		return nil, nil, fmt.Errorf("decode league %d response: %w", leagueID, err)
 	}
 
@@ -93,7 +95,32 @@ func (c *Client) LiveAndUpcomingForLeague(ctx context.Context, leagueID int) (li
 	for _, m := range upcoming {
 		c.StorePageURL(m.ID, m.PageURL)
 	}
+
+	if c.logger != nil {
+		c.debugLog("live: classified league fixtures",
+			"leagueID", leagueID,
+			"league", leagueResponse.Details.Name,
+			"fixturesScanned", len(leagueResponse.Fixtures.AllMatches),
+			"live", len(live),
+			"liveMatches", matchTitles(live),
+			"upcoming", len(upcoming),
+			"upcomingMatches", matchTitles(upcoming),
+		)
+	}
+
 	return live, upcoming, nil
+}
+
+// matchTitles renders matches as a compact "Home vs Away" list for debug logs.
+func matchTitles(matches []api.Match) []string {
+	if len(matches) == 0 {
+		return nil
+	}
+	titles := make([]string, 0, len(matches))
+	for _, m := range matches {
+		titles = append(titles, fmt.Sprintf("%s vs %s", m.HomeTeam.Name, m.AwayTeam.Name))
+	}
+	return titles
 }
 
 // LiveAndUpcoming fetches live and upcoming matches across all active leagues

@@ -1,6 +1,7 @@
 package reddit
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -90,5 +91,28 @@ func TestPublicJSONFetcherSearchHonorsSortParam(t *testing.T) {
 	}
 	if got := capturedURL.Query().Get("limit"); got != strconv.Itoa(10) {
 		t.Errorf("limit param: got %q, want %q", got, strconv.Itoa(10))
+	}
+}
+
+// TestSearchReturnsErrBlockedOn403 pins the typed-error contract for HTTP 403
+// responses from Reddit's edge. The queue worker introduced in the goal-link
+// rework uses errors.Is(err, ErrBlocked) to enter cooldown; sniffing on
+// response body substrings was the previous (fragile) detection mechanism.
+func TestSearchReturnsErrBlockedOn403(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusForbidden)
+		_, _ = io.WriteString(w, `<html>You've been blocked by network security.</html>`)
+	}))
+	defer server.Close()
+
+	fetcher := NewPublicJSONFetcher()
+	fetcher.httpClient.Transport = &rewriteTransport{target: server.URL}
+
+	_, err := fetcher.Search("anything", 5, time.Now(), "relevance")
+	if err == nil {
+		t.Fatal("Search returned nil error for 403 response")
+	}
+	if !errors.Is(err, ErrBlocked) {
+		t.Fatalf("Search error %v is not ErrBlocked", err)
 	}
 }

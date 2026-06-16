@@ -2,6 +2,7 @@ package reddit
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"math/rand"
@@ -12,6 +13,11 @@ import (
 
 	"github.com/0xjuanma/golazo/internal/ratelimit"
 )
+
+// ErrBlocked indicates Reddit's edge returned an HTTP 403 (typically the
+// "blocked by network security" interstitial). Returned by Search so callers
+// can react with errors.Is without sniffing HTML response bodies.
+var ErrBlocked = errors.New("reddit: blocked (HTTP 403)")
 
 // DebugLogger is a function type for debug logging
 type DebugLogger func(message string)
@@ -118,6 +124,9 @@ func (f *PublicJSONFetcher) Search(query string, limit int, matchTime time.Time,
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
+		if resp.StatusCode == http.StatusForbidden {
+			return nil, fmt.Errorf("%w: body: %s", ErrBlocked, string(body))
+		}
 		return nil, fmt.Errorf("reddit API error: status %d, body: %s", resp.StatusCode, string(body))
 	}
 

@@ -2,13 +2,127 @@ package fotmob
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/0xjuanma/golazo/internal/api"
 )
+
+// classifyLeagueMatches splits a league's allMatches into currently-live and
+// upcoming sets. "Live" is determined by status only (Started && !Finished &&
+// !Cancelled) and is intentionally date-agnostic — a match that kicked off
+// before the user's UTC midnight is still live during its second half.
+// "Upcoming" is gated to matches scheduled on the same calendar day as `now`
+// in `now`'s timezone, so the upcoming list reflects what the user calls
+// "today" rather than what UTC calls today.
+//
+// The classifier is pure and deterministic given a fixed `now` — pass
+// time.Now() in production and a fixed clock in tests.
+func classifyLeagueMatches(allMatches []fotmobMatch, leagueInfo league, now time.Time) (live, upcoming []api.Match) {
+	loc := now.Location()
+	todayStr := now.Format("2006-01-02")
+	for _, m := range allMatches {
+		if m.Status.UTCTime == "" {
+			continue
+		}
+		if m.League.ID == 0 {
+			m.League = leagueInfo
+		}
+		apiM := m.toAPIMatch()
+		switch apiM.Status {
+		case api.MatchStatusLive:
+			live = append(live, apiM)
+		case api.MatchStatusNotStarted:
+			if apiM.MatchTime == nil {
+				continue
+			}
+			if apiM.MatchTime.In(loc).Format("2006-01-02") != todayStr {
+				continue
+			}
+			upcoming = append(upcoming, apiM)
+		}
+	}
+	return live, upcoming
+}
+
+// LiveAndUpcomingForLeague fetches a league's page and returns the matches
+// that are currently live (status-only) along with the matches scheduled for
+// the user's local "today". This replaces the older UTC-date-filtered path
+// that dropped live matches whose UTC date no longer matched the user's UTC
+// "today" (e.g. a 22:00Z kickoff during its second half for a user past UTC
+// midnight).
+func (c *Client) LiveAndUpcomingForLeague(ctx context.Context, leagueID int) (live, upcoming []api.Match, err error) {
+	c.rateLimiter.Wait()
+
+	pageProps, err := fetchLeagueFromPage(ctx, c.httpClient, leagueID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("fetch league %d page: %w", leagueID, err)
+	}
+
+	var leagueResponse struct {
+		Details struct {
+			ID          int    `json:"id"`
+			Name        string `json:"name"`
+			Country     string `json:"country"`
+			CountryCode string `json:"countryCode,omitempty"`
+		} `json:"details"`
+		Fixtures struct {
+			AllMatches []fotmobMatch `json:"allMatches"`
+		} `json:"fixtures"`
+	}
+	if err := json.Unmarshal(pageProps, &leagueResponse); err != nil {
+		return nil, nil, fmt.Errorf("decode league %d response: %w", leagueID, err)
+	}
+
+	leagueInfo := league{
+		ID:          leagueResponse.Details.ID,
+		Name:        leagueResponse.Details.Name,
+		Country:     leagueResponse.Details.Country,
+		CountryCode: leagueResponse.Details.CountryCode,
+	}
+
+	live, upcoming = classifyLeagueMatches(leagueResponse.Fixtures.AllMatches, leagueInfo, time.Now())
+
+	for _, m := range live {
+		c.StorePageURL(m.ID, m.PageURL)
+	}
+	for _, m := range upcoming {
+		c.StorePageURL(m.ID, m.PageURL)
+	}
+	return live, upcoming, nil
+}
+
+// LiveAndUpcoming fetches live and upcoming matches across all active leagues
+// concurrently using the status-only classifier. Best-effort aggregation: a
+// league that errors is skipped, the rest still return.
+func (c *Client) LiveAndUpcoming(ctx context.Context) (live, upcoming []api.Match, err error) {
+	activeLeagues := ActiveLeagues()
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+	for _, leagueID := range activeLeagues {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			c.maxConcurrent <- struct{}{}
+			defer func() { <-c.maxConcurrent }()
+
+			liveL, upL, err := c.LiveAndUpcomingForLeague(ctx, id)
+			if err != nil {
+				return
+			}
+			mu.Lock()
+			live = append(live, liveL...)
+			upcoming = append(upcoming, upL...)
+			mu.Unlock()
+		}(leagueID)
+	}
+	wg.Wait()
+	return live, upcoming, nil
+}
 
 // LiveMatches retrieves all currently live matches for today.
 // Fetches matches from supported leagues and filters for those that have started but not finished.

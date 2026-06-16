@@ -10,6 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 ### Changed
+
+### Fixed
+
+## [0.29.0] - 2026-06-15
+
+### Added
+
+### Changed
 - **Caching** — FotMob league page bodies are now cached for 60s and shared across the live, stats, World Cup, and standings views, reducing redundant network calls during quick navigation.
 - **Reddit goal-link retrieval** — goal replay links now load one-by-one in the match panel and recover gracefully when Reddit rate-limits the app, instead of all attempts failing in a burst.
 

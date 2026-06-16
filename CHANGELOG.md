@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - **Live matches view** — matches that kicked off before the user's UTC midnight (e.g. evening kickoffs for users in the Americas) are no longer dropped from the Live view.
 - **Live detection at kickoff** — matches flip to live the moment FotMob's `halfs.firstHalfStarted` timestamp moves into the past (the actual kickoff time), even if FotMob's `started` flag still lags. Future timestamps remain not-started, so scheduled matches with a published kickoff time are no longer misclassified as live.
+- **Right panel auto-load** — first match in the list auto-populates when the right panel is empty (live and finished views).
 - **Live matches refresh (R)** — pressing `r` on the live list (with no match opened) now force-refreshes the live list by bypassing the league-page cache. Previously `r` was a no-op on the list itself.
 
 ## [0.28.0] - 2026-06-14

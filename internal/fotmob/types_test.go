@@ -2,6 +2,7 @@ package fotmob
 
 import (
 	"testing"
+	"time"
 
 	"github.com/0xjuanma/golazo/internal/api"
 )
@@ -163,16 +164,30 @@ func TestToAPIMatch_StatusVariants(t *testing.T) {
 			api.MatchStatusNotStarted,
 		},
 		{
-			// FotMob's `started` boolean lags realtime by minutes around
-			// kickoff, but `halfs.firstHalfStarted` populates immediately.
+			// FotMob's `started` flag lags realtime by minutes around kickoff,
+			// but halfs.firstHalfStarted shifts to the actual kickoff time at
+			// kickoff. A timestamp well in the past = real kickoff happened.
 			// Iran vs New Zealand (World Cup 2026) hit this case.
-			"live via firstHalfStarted while started lags false",
+			"live via past firstHalfStarted while started lags false",
 			status{
 				Started:  boolPtr(false),
 				Finished: boolPtr(false),
-				Halfs:    &halfs{FirstHalfStarted: "16.06.2026 03:00:00"},
+				Halfs:    &halfs{FirstHalfStarted: "01.01.2000 12:00:00"},
 			},
 			api.MatchStatusLive,
+		},
+		{
+			// firstHalfStarted is also set for scheduled kickoffs (in the
+			// future) — those must remain NotStarted. Without checking the
+			// timestamp value we'd misclassify every match with a published
+			// kickoff time as live.
+			"not started when firstHalfStarted is in the future",
+			status{
+				Started:  boolPtr(false),
+				Finished: boolPtr(false),
+				Halfs:    &halfs{FirstHalfStarted: "01.01.2099 12:00:00"},
+			},
+			api.MatchStatusNotStarted,
 		},
 		{
 			// Finished beats firstHalfStarted (both will be present for a
@@ -181,7 +196,7 @@ func TestToAPIMatch_StatusVariants(t *testing.T) {
 			status{
 				Started:  boolPtr(true),
 				Finished: boolPtr(true),
-				Halfs:    &halfs{FirstHalfStarted: "16.06.2026 03:00:00"},
+				Halfs:    &halfs{FirstHalfStarted: "01.01.2000 12:00:00"},
 			},
 			api.MatchStatusFinished,
 		},
@@ -195,6 +210,70 @@ func TestToAPIMatch_StatusVariants(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestStatus_FirstHalfKickedOff(t *testing.T) {
+	// FotMob renders firstHalfStarted in Europe/Oslo wall-clock. Pin "now"
+	// in UTC; comparison is timezone-agnostic at the instant level.
+	now := time.Date(2026, 6, 16, 1, 30, 0, 0, time.UTC) // 03:30 in Oslo (CEST)
+
+	tests := []struct {
+		name  string
+		halfs *halfs
+		want  bool
+	}{
+		{
+			"nil halfs",
+			nil,
+			false,
+		},
+		{
+			"empty firstHalfStarted",
+			&halfs{FirstHalfStarted: ""},
+			false,
+		},
+		{
+			"unparseable timestamp",
+			&halfs{FirstHalfStarted: "not-a-time"},
+			false,
+		},
+		{
+			// Iran vs NZ: kicked off 03:03:54 Oslo = 01:03:54 UTC.
+			// now = 01:30 UTC → in the past by ~26 min → live.
+			"past timestamp (real kickoff)",
+			&halfs{FirstHalfStarted: "16.06.2026 03:03:54"},
+			true,
+		},
+		{
+			// France vs Senegal: scheduled 21:00 Oslo = 19:00 UTC later today.
+			// now = 01:30 UTC → ~17.5h in the future → not yet kicked off.
+			"future timestamp (scheduled kickoff)",
+			&halfs{FirstHalfStarted: "16.06.2026 21:00:00"},
+			false,
+		},
+		{
+			// Iraq vs Norway: scheduled tomorrow 00:00 Oslo = today 22:00 UTC.
+			"future timestamp tomorrow",
+			&halfs{FirstHalfStarted: "17.06.2026 00:00:00"},
+			false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := status{Halfs: tt.halfs}
+			if got := s.firstHalfKickedOff(now); got != tt.want {
+				t.Errorf("firstHalfKickedOff(%q) = %v, want %v",
+					halfsString(tt.halfs), got, tt.want)
+			}
+		})
+	}
+}
+
+func halfsString(h *halfs) string {
+	if h == nil {
+		return "<nil>"
+	}
+	return h.FirstHalfStarted
 }
 
 func TestToAPIMatch_ScoreFromScoreObj(t *testing.T) {

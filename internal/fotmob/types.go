@@ -37,11 +37,11 @@ type league struct {
 }
 
 type status struct {
-	UTCTime   string    `json:"utcTime"`   // Can be null/empty
-	Started   *bool     `json:"started"`   // Can be null; FotMob's SSR lags realtime by minutes around kickoff
-	Finished  *bool     `json:"finished"`  // Can be null
-	Cancelled *bool     `json:"cancelled"` // Can be null
-	Halfs     *halfs    `json:"halfs,omitempty"` // Realtime kickoff signal; firstHalfStarted populates before Started flips
+	UTCTime   string    `json:"utcTime"`         // Can be null/empty
+	Started   *bool     `json:"started"`         // Can be null; FotMob's SSR lags realtime by a few minutes around kickoff
+	Finished  *bool     `json:"finished"`        // Can be null
+	Cancelled *bool     `json:"cancelled"`       // Can be null
+	Halfs     *halfs    `json:"halfs,omitempty"` // FirstHalfStarted carries the scheduled kickoff time until the match actually starts, then shifts to the real kickoff time
 	LiveTime  *liveTime `json:"liveTime,omitempty"`
 	Score     *score    `json:"score,omitempty"`
 	ScoreStr  string    `json:"scoreStr,omitempty"` // Score as string (e.g., "4 - 2"), used when Score object is absent
@@ -49,6 +49,38 @@ type status struct {
 
 type halfs struct {
 	FirstHalfStarted string `json:"firstHalfStarted,omitempty"`
+}
+
+// fotmobKickoffLayout matches the wall-clock format FotMob uses in
+// status.halfs.firstHalfStarted: "DD.MM.YYYY HH:MM:SS".
+const fotmobKickoffLayout = "02.01.2006 15:04:05"
+
+// fotmobKickoffLoc is the timezone FotMob renders firstHalfStarted in
+// (their HQ wall-clock, Europe/Oslo). Loaded once; UTC fallback if the
+// platform lacks tzdata.
+var fotmobKickoffLoc = func() *time.Location {
+	loc, err := time.LoadLocation("Europe/Oslo")
+	if err != nil {
+		return time.UTC
+	}
+	return loc
+}()
+
+// firstHalfKickedOff reports whether status.halfs.firstHalfStarted is set
+// and its timestamp is at or before now. Before kickoff the field carries
+// the *scheduled* kickoff (always in the future); at kickoff FotMob
+// rewrites it to the *actual* kickoff (at or before now). Comparing
+// against now is therefore the reliable way to tell them apart even
+// when FotMob's `started` flag hasn't flipped yet.
+func (s status) firstHalfKickedOff(now time.Time) bool {
+	if s.Halfs == nil || s.Halfs.FirstHalfStarted == "" {
+		return false
+	}
+	t, err := time.ParseInLocation(fotmobKickoffLayout, s.Halfs.FirstHalfStarted, fotmobKickoffLoc)
+	if err != nil {
+		return false
+	}
+	return !t.After(now)
 }
 
 type liveTime struct {
@@ -111,10 +143,11 @@ func (m fotmobMatch) toAPIMatch() api.Match {
 
 	// Determine status - handle null boolean values.
 	// "Started" can lag realtime by several minutes on FotMob's SSR around
-	// kickoff. The "halfs.firstHalfStarted" timestamp populates immediately
-	// when play begins, so treat its presence as a kickoff signal too.
+	// kickoff. Cross-check halfs.firstHalfStarted: when its timestamp is at
+	// or before now, the match has actually started even if Started is still
+	// false. A future timestamp means it's only the scheduled kickoff.
 	isStarted := (m.Status.Started != nil && *m.Status.Started) ||
-		(m.Status.Halfs != nil && m.Status.Halfs.FirstHalfStarted != "")
+		m.Status.firstHalfKickedOff(time.Now())
 	if m.Status.Cancelled != nil && *m.Status.Cancelled {
 		match.Status = api.MatchStatusCancelled
 	} else if m.Status.Finished != nil && *m.Status.Finished {

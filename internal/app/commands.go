@@ -134,6 +134,34 @@ func scheduleLiveRefresh(client *fotmob.Client, useMockData bool) tea.Cmd {
 	})
 }
 
+// refreshLiveNow forces an immediate live-matches refresh by clearing the
+// FotMob league-page cache before re-fetching. Wired to the user-initiated
+// "r" key in the live view so the user can pull fresh data when FotMob's
+// server-rendered page lags realtime around kickoff.
+func refreshLiveNow(client *fotmob.Client, useMockData bool) tea.Cmd {
+	return func() tea.Msg {
+		if useMockData {
+			return liveRefreshMsg{matches: data.MockLiveMatches()}
+		}
+
+		if client == nil {
+			return liveRefreshMsg{matches: nil}
+		}
+
+		client.Cache().ClearPages()
+
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		live, upcoming, err := client.LiveAndUpcoming(ctx)
+		if err != nil {
+			return liveRefreshMsg{matches: nil}
+		}
+
+		return liveRefreshMsg{matches: live, upcoming: upcoming}
+	}
+}
+
 // fetchMatchDetails fetches match details from the API.
 // Returns mock data if useMockData is true, otherwise uses real API.
 func fetchMatchDetails(client *fotmob.Client, matchID int, useMockData bool) tea.Cmd {

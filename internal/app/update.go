@@ -471,15 +471,18 @@ func (m model) handleLiveMatchesSelection(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.loadMatchDetails(targetMatchID)
 	}
 
-	// Handle refresh key (r) to force refresh current match
+	// Handle refresh key (r):
+	//   - With a match selected → force-refresh that match's details.
+	//   - On the live list with no match open → force-refresh the live list
+	//     itself (clears the page-body cache so a fresh FotMob fetch runs).
 	if msg.String() == "r" {
 		m.debugLog(fmt.Sprintf("Live matches refresh key pressed - matchDetails is nil: %v", m.matchDetails == nil))
 		if m.matchDetails != nil {
 			m.debugLog(fmt.Sprintf("Forcing refresh for match ID: %d in live matches view", m.matchDetails.ID))
 			return m.loadMatchDetailsWithRefresh(m.matchDetails.ID, true)
-		} else {
-			m.debugLog("Cannot refresh - no match details currently loaded")
 		}
+		m.debugLog("Forcing live list refresh (clearing page-body cache)")
+		return m, refreshLiveNow(m.fotmobClient, m.useMockData)
 	}
 
 	return m, listCmd

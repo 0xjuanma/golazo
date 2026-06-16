@@ -101,3 +101,9 @@ func (c *ResponseCache) SetPage(leagueID int, body json.RawMessage) {
 	c.pageCache.Set(leagueID, body)
 }
 
+// ClearPages invalidates all cached league-page bodies. Use this when the
+// caller needs a forced refresh (e.g. user-initiated reload of the live list).
+func (c *ResponseCache) ClearPages() {
+	c.pageCache.Clear()
+}
+

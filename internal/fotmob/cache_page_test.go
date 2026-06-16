@@ -114,6 +114,29 @@ func TestFetchLeaguePage_DifferentLeaguesDoNotShareCache(t *testing.T) {
 	}
 }
 
+func TestFetchLeaguePage_ClearPagesForcesRefetch(t *testing.T) {
+	client, hits := pageCacheTestClient(t, 5*time.Second)
+
+	if _, err := client.fetchLeaguePage(context.Background(), 77); err != nil {
+		t.Fatalf("first fetch failed: %v", err)
+	}
+	if _, err := client.fetchLeaguePage(context.Background(), 77); err != nil {
+		t.Fatalf("cached fetch failed: %v", err)
+	}
+	if got := hits.Load(); got != 1 {
+		t.Fatalf("network hits before clear = %d, want 1", got)
+	}
+
+	client.cache.ClearPages()
+
+	if _, err := client.fetchLeaguePage(context.Background(), 77); err != nil {
+		t.Fatalf("post-clear fetch failed: %v", err)
+	}
+	if got := hits.Load(); got != 2 {
+		t.Errorf("network hits after ClearPages = %d, want 2 (force-refresh path)", got)
+	}
+}
+
 // extractIDFromPath pulls the league ID from "/leagues/{id}" so each cached
 // body carries a distinct identifier (helps catch any cross-key contamination).
 func extractIDFromPath(path string) int {

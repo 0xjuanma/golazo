@@ -17,8 +17,11 @@ const (
 	// 7 days keeps the cache file small while covering recent matches.
 	CacheTTL = 7 * 24 * time.Hour // 7 days
 	// NotFoundTTL defines how long to cache "not found" results.
-	// Shorter than CacheTTL since links might appear later.
-	NotFoundTTL = 5 * time.Minute // 5 minutes
+	// Shorter than CacheTTL since links might appear later. 1h is a balance:
+	// long enough to avoid re-hitting Reddit for the same missing goal within
+	// a single viewing session (queue is paced at 30s/request), short enough
+	// that late-uploaded videos surface on the next app run.
+	NotFoundTTL = 1 * time.Hour
 	// NotFoundMarker is a special URL indicating "searched but not found"
 	NotFoundMarker = "__NOT_FOUND__"
 )

@@ -12,6 +12,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 ### Fixed
+
+## [0.29.1] - 2026-06-17
+
+### Added
+
+### Changed
+
+### Fixed
 - **Team name derivation** - Fix bug causing mislabeling in WC team name derivation
 
 ## [0.29.0] - 2026-06-15

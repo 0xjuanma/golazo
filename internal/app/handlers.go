@@ -48,9 +48,9 @@ func (m model) handleMainViewKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.wcLastError = ""
 			m.currentView = viewWorldCup
 			if m.useMockData {
-				return m, fetchWorldCupMockData()
+				return m, fetchWorldCupMockData(m.wcYear)
 			}
-			return m, fetchWorldCupData(m.loadCtx, m.fotmobClient)
+			return m, fetchWorldCupData(m.loadCtx, m.fotmobClient, m.wcYear)
 		}
 
 		m.mainViewLoading = true

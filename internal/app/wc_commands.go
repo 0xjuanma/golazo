@@ -16,16 +16,21 @@ import (
 // when fetching upcoming World Cup matches.
 const wcUpcomingDays = 4
 
-// fetchWorldCupMockData returns the hardcoded Qatar 2022 World Cup data immediately.
-func fetchWorldCupMockData() tea.Cmd {
+// fetchWorldCupMockData returns hardcoded World Cup data immediately.
+// season selects the dataset: "2026" returns the 2026 bracket preview;
+// any other value (including "") returns the completed 2022 Qatar data.
+func fetchWorldCupMockData(season string) tea.Cmd {
 	return func() tea.Msg {
+		if season == "2026" {
+			return wcDataMsg{data: data.MockWorldCupData2026()}
+		}
 		return wcDataMsg{data: data.MockWorldCupData()}
 	}
 }
 
 // fetchWorldCupData fetches live World Cup data from FotMob.
-// Uses the current/latest season (2026).
-func fetchWorldCupData(parentCtx context.Context, client *fotmob.Client) tea.Cmd {
+// season is passed to the API (e.g. "2026", "2022"); "" means current/latest.
+func fetchWorldCupData(parentCtx context.Context, client *fotmob.Client, season string) tea.Cmd {
 	return func() tea.Msg {
 		if client == nil {
 			return wcDataMsg{data: data.MockWorldCupData()}
@@ -34,7 +39,7 @@ func fetchWorldCupData(parentCtx context.Context, client *fotmob.Client) tea.Cmd
 		ctx, cancel := context.WithTimeout(parentCtx, 20*time.Second)
 		defer cancel()
 
-		wcData, err := client.WorldCupData(ctx, "")
+		wcData, err := client.WorldCupData(ctx, season)
 		if err != nil {
 			return wcDataMsg{err: err}
 		}

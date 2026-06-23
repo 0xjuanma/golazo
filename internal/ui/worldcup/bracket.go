@@ -30,12 +30,14 @@ func BracketLineCount(wcData *api.WorldCupData) int {
 }
 
 // renderBracketRoundLineCount returns the number of lines for a single round.
+// Each pair (mu1, mu2) produces 4 lines: mu1 on its own line, then mu2
+// embedded in the ──╮ connector line, ├─, and ──╯. mu2 is NOT a separate
+// line, so the correct formula is pairs*4 (not n+pairs*3).
 func renderBracketRoundLineCount(round api.WCKnockoutRound, roundIdx int) int {
 	n := len(round.Matchups)
-	// Paired connector lines: every two matchups share a connector (3 lines)
 	pairs := n / 2
 	singles := n % 2
-	return n + pairs*3 + singles
+	return pairs*4 + singles
 }
 
 // RenderBracket renders the knockout bracket with box-drawing connectors

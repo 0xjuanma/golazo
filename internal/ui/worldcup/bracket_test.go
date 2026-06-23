@@ -79,6 +79,58 @@ func TestRenderBracketRound_ConnectorAlignment(t *testing.T) {
 
 func intPtrLocal(i int) *int { return &i }
 
+// TestBracketLineCount verifies that BracketLineCount matches the number of
+// lines renderBracketRound actually emits per round. This pins the formula
+// against the renderer so they can't silently diverge (the stale
+// api.WorldCupData.BracketLineCount used n+pairs*3 which overcounted because
+// mu2 is embedded in the ──╮ connector line, not a separate line).
+func TestBracketLineCount(t *testing.T) {
+	winner := 1
+	makeMatchup := func(home, away string) api.WCMatchup {
+		return api.WCMatchup{
+			HomeTeam: home, HomeTeamID: 1, HomeShort: home[:3],
+			AwayTeam: away, AwayTeamID: 2, AwayShort: away[:3],
+			HomeScore: intPtrLocal(1), AwayScore: intPtrLocal(0),
+			WinnerID: &winner,
+		}
+	}
+
+	cases := []struct {
+		label    string
+		n        int // matchup count
+		wantLine int // lines renderBracketRound emits: pairs*4 + singles
+	}{
+		{"final (n=1)", 1, 1},
+		{"sf (n=2)", 2, 4},
+		{"qf (n=4)", 4, 8},
+		{"r16 (n=8)", 8, 16},
+		{"r32 (n=16)", 16, 32},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.label, func(t *testing.T) {
+			matchups := make([]api.WCMatchup, tc.n)
+			for i := range matchups {
+				matchups[i] = makeMatchup("Argentina", "France")
+			}
+			round := api.WCKnockoutRound{Stage: "1/8", Label: "Round", Matchups: matchups}
+			data := &api.WorldCupData{KnockoutRounds: []api.WCKnockoutRound{round}}
+
+			renderedLines := renderBracketRound(round, 120)
+			if len(renderedLines) != tc.wantLine {
+				t.Errorf("renderBracketRound n=%d: got %d lines, want %d", tc.n, len(renderedLines), tc.wantLine)
+			}
+
+			// 3 overhead (roundHdr + blank + trailing blank) + round lines
+			wantCount := 3 + tc.wantLine
+			got := BracketLineCount(data)
+			if got != wantCount {
+				t.Errorf("BracketLineCount n=%d: got %d, want %d", tc.n, got, wantCount)
+			}
+		})
+	}
+}
+
 // TestRenderBracketLineRaw_WidthInvariant locks in the fix for #158: bracket
 // match lines must render at the same total visual width regardless of which
 // flag form (regional-indicator pair, tag-sequence subdivision, or no-flag

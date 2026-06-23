@@ -5,6 +5,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/0xjuanma/golazo/internal/ui"
+	"github.com/0xjuanma/golazo/internal/ui/worldcup"
 )
 
 // handleWorldCupKeys routes keyboard input to the active WC sub-view handler.
@@ -183,7 +184,7 @@ func (m model) handleWCData(msg wcDataMsg) (tea.Model, tea.Cmd) {
 	}
 	m.wcData = msg.data
 	m.wcLastError = ""
-	m.wcBracketLines = msg.data.BracketLineCount()
+	m.wcBracketLines = worldcup.BracketLineCount(msg.data)
 
 	items := make([]list.Item, len(msg.data.Groups))
 	for i, g := range msg.data.Groups {

@@ -55,10 +55,11 @@ func (m model) handleWCGroupsKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "b":
 		if len(m.wcData.KnockoutRounds) > 0 {
-			m.wcBracketScroll = 0
+			m.wcBracketTab = 0
 			m.wcSubView = wcSubViewBracket
 			return m, tea.ClearScreen
 		}
+		m.wcLastError = "Bracket not available yet — group stage in progress"
 		return m, nil
 
 	case "u":
@@ -95,14 +96,10 @@ func (m model) handleWCBracketKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.wcUpcomingLoading = true
 		m.wcUpcomingLastError = ""
 		return m, tea.Batch(tea.ClearScreen, fetchWorldCupUpcoming(m.loadCtx, m.fotmobClient))
-	case "j", "down":
-		if m.wcBracketLines > 0 && m.wcBracketScroll < m.wcBracketLines-1 {
-			m.wcBracketScroll++
-		}
-	case "k", "up":
-		if m.wcBracketScroll > 0 {
-			m.wcBracketScroll--
-		}
+	case "right", "l":
+		m.wcBracketTab = 1
+	case "left", "h":
+		m.wcBracketTab = 0
 	}
 	return m, nil
 }
@@ -140,10 +137,13 @@ func (m model) handleWCGroupGridKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "b":
 		if len(m.wcData.KnockoutRounds) > 0 {
-			m.wcBracketScroll = 0
+			m.wcBracketTab = 0
 			m.wcSubView = wcSubViewBracket
 			return m, tea.ClearScreen
 		}
+		m.wcLastError = "Bracket not available yet — group stage in progress"
+		m.wcSubView = wcSubViewGroups
+		return m, tea.ClearScreen
 
 	case "u":
 		m.wcSubView = wcSubViewUpcoming
@@ -183,7 +183,6 @@ func (m model) handleWCData(msg wcDataMsg) (tea.Model, tea.Cmd) {
 	}
 	m.wcData = msg.data
 	m.wcLastError = ""
-	m.wcBracketLines = msg.data.BracketLineCount()
 
 	items := make([]list.Item, len(msg.data.Groups))
 	for i, g := range msg.data.Groups {

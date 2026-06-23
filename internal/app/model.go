@@ -125,6 +125,7 @@ type model struct {
 	newVersionAvailable bool   // Whether a new version of Golazo is available
 	appVersion          string // Current application version string
 	statsDateRange      int    // 1, 3, or 5 days (default: 1)
+	wcYear            string // World Cup season override (e.g. "2026"); "" = current
 
 	// Settings view state
 	settingsState *ui.SettingsState
@@ -135,8 +136,7 @@ type model struct {
 	wcSubView         wcSubView
 	wcSelectedGroup   int
 	wcGroupsList      list.Model // bubbles list for the groups overview
-	wcBracketScroll   int
-	wcBracketLines    int // total content lines in bracket view; used for scroll clamping
+	wcBracketTab      int
 	wcLastError       string
 	wcGridSelectedIdx int // selected group index in the grid overview
 
@@ -183,7 +183,7 @@ type model struct {
 // isDevBuild indicates if this is a development build.
 // newVersionAvailable indicates if a newer version is available.
 // appVersion is the current application version string.
-func New(useMockData bool, debugMode bool, isDevBuild bool, newVersionAvailable bool, appVersion string) model {
+func New(useMockData bool, debugMode bool, isDevBuild bool, newVersionAvailable bool, appVersion string, wcYear string) model {
 	// Initialize structured logger
 	logger, logFile := initLogger(debugMode)
 
@@ -283,6 +283,7 @@ func New(useMockData bool, debugMode bool, isDevBuild bool, newVersionAvailable 
 		isDevBuild:             isDevBuild,
 		newVersionAvailable:    newVersionAvailable,
 		appVersion:             appVersion,
+		wcYear:               wcYear,
 		fotmobClient:           newFotmobClient(logger),
 		parser:                 fotmob.NewLiveUpdateParser(),
 		redditClient:           redditClient,

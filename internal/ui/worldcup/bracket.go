@@ -9,35 +9,6 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// BracketLineCount returns the total number of content lines the bracket
-// view produces. Must stay in sync with RenderBracket's line construction.
-func BracketLineCount(wcData *api.WorldCupData) int {
-	if wcData == nil {
-		return 0
-	}
-	count := 0
-	for i, round := range wcData.KnockoutRounds {
-		count += 2 + 1 // roundHdr + blank + trailing blank
-		count += renderBracketRoundLineCount(round, i)
-	}
-	if wcData.BronzeFinal != nil {
-		count += 4 // bronzeHdr + blank + matchup + trailing blank
-	}
-	if wcData.Champion != nil {
-		count += 2 // blank + champion line
-	}
-	return count
-}
-
-// renderBracketRoundLineCount returns the number of lines for a single round.
-func renderBracketRoundLineCount(round api.WCKnockoutRound, roundIdx int) int {
-	n := len(round.Matchups)
-	// Paired connector lines: every two matchups share a connector (3 lines)
-	pairs := n / 2
-	singles := n % 2
-	return n + pairs*3 + singles
-}
-
 // RenderBracket renders the knockout bracket with box-drawing connectors
 // between paired matchups to visually convey the bracket progression.
 func RenderBracket(width, height int, wcData *api.WorldCupData, scrollOffset int, statusBanner string) string {

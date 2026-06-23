@@ -106,3 +106,77 @@ func TestHandleWCUpcoming_StoresError(t *testing.T) {
 		t.Error("wcUpcomingLastError should be set after error message")
 	}
 }
+
+// ── bracket unavailable feedback (Phase 2) ───────────────────────────────────
+
+// TestHandleWCGroupsKeys_BWithNoKnockoutRounds verifies that pressing 'b' from
+// the groups list view sets wcLastError and keeps the sub-view unchanged when
+// there are no knockout rounds yet.
+func TestHandleWCGroupsKeys_BWithNoKnockoutRounds(t *testing.T) {
+	m := newWCTestModel()
+	m.wcSubView = wcSubViewGroups
+	// KnockoutRounds is nil (zero value from newWCTestModel)
+
+	next, _ := m.handleWCGroupsKeys(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'b'}})
+
+	nm := next.(model)
+	if nm.wcLastError == "" {
+		t.Error("wcLastError should be set when KnockoutRounds is empty")
+	}
+	if nm.wcSubView == wcSubViewBracket {
+		t.Error("wcSubView should not switch to bracket when KnockoutRounds is empty")
+	}
+}
+
+// TestHandleWCGroupsKeys_BWithKnockoutRounds verifies the inverse: when rounds
+// exist, 'b' opens the bracket and leaves wcLastError empty. This pins both
+// sides of the branch so a off-by-one on the guard condition fails.
+func TestHandleWCGroupsKeys_BWithKnockoutRounds(t *testing.T) {
+	m := newWCTestModel()
+	m.wcSubView = wcSubViewGroups
+	m.wcData.KnockoutRounds = []api.WCKnockoutRound{{Stage: "1/8"}}
+
+	next, _ := m.handleWCGroupsKeys(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'b'}})
+
+	nm := next.(model)
+	if nm.wcLastError != "" {
+		t.Errorf("wcLastError = %q, want empty when rounds present", nm.wcLastError)
+	}
+	if nm.wcSubView != wcSubViewBracket {
+		t.Errorf("wcSubView = %v, want wcSubViewBracket", nm.wcSubView)
+	}
+}
+
+// TestHandleWCGroupGridKeys_BWithNoKnockoutRounds verifies that pressing 'b'
+// from the grid view navigates to the groups list (where the error is rendered)
+// and sets wcLastError when there are no knockout rounds.
+func TestHandleWCGroupGridKeys_BWithNoKnockoutRounds(t *testing.T) {
+	m := newWCTestModel()
+	// KnockoutRounds is nil (zero value)
+
+	next, _ := m.handleWCGroupGridKeys(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'b'}})
+
+	nm := next.(model)
+	if nm.wcLastError == "" {
+		t.Error("wcLastError should be set when KnockoutRounds is empty")
+	}
+	if nm.wcSubView != wcSubViewGroups {
+		t.Errorf("wcSubView = %v, want wcSubViewGroups (so error is visible)", nm.wcSubView)
+	}
+}
+
+// TestHandleWCGroupGridKeys_BWithKnockoutRounds verifies the inverse.
+func TestHandleWCGroupGridKeys_BWithKnockoutRounds(t *testing.T) {
+	m := newWCTestModel()
+	m.wcData.KnockoutRounds = []api.WCKnockoutRound{{Stage: "1/8"}}
+
+	next, _ := m.handleWCGroupGridKeys(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'b'}})
+
+	nm := next.(model)
+	if nm.wcLastError != "" {
+		t.Errorf("wcLastError = %q, want empty when rounds present", nm.wcLastError)
+	}
+	if nm.wcSubView != wcSubViewBracket {
+		t.Errorf("wcSubView = %v, want wcSubViewBracket", nm.wcSubView)
+	}
+}

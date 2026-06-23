@@ -22,6 +22,7 @@ var mockFlag bool
 var updateFlag bool
 var versionFlag bool
 var debugFlag bool
+var wcYearFlag string
 
 var rootCmd = &cobra.Command{
 	Use:   "golazo",
@@ -69,7 +70,7 @@ var rootCmd = &cobra.Command{
 			}
 		}()
 
-		p := tea.NewProgram(app.New(mockFlag, debugFlag, isDevBuild, newVersionAvailable, Version), tea.WithAltScreen())
+		p := tea.NewProgram(app.New(mockFlag, debugFlag, isDevBuild, newVersionAvailable, Version, wcYearFlag), tea.WithAltScreen())
 		if _, err := p.Run(); err != nil {
 			fmt.Fprintf(os.Stderr, "Error running application: %v\n", err)
 			os.Exit(1)
@@ -236,4 +237,5 @@ func init() {
 	rootCmd.Flags().BoolVar(&debugFlag, "debug", false, "Enable debug logging to "+data.DebugLogPath())
 	rootCmd.Flags().BoolVarP(&updateFlag, "update", "u", false, "Update golazo to the latest version")
 	rootCmd.Flags().BoolVarP(&versionFlag, "version", "v", false, "Display version information")
+	rootCmd.Flags().StringVar(&wcYearFlag, "wc-year", "", "World Cup year to display (e.g. 2026). With --mock uses bundled preview data; without --mock fetches from API.")
 }

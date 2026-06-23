@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **World Cup Bracket** — symmetric two-tab layout with ← → navigation; outer rounds on tab 0, quarterfinals through Final on tab 1.
 
 ### Changed
 

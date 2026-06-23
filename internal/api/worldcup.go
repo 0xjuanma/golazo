@@ -66,20 +66,4 @@ func (d *WorldCupData) DeriveFinalists() (*Team, *Team) {
 	return nil, nil
 }
 
-// BracketLineCount returns the total number of content lines the bracket view
-// produces for this data. Must stay in sync with ui.RenderWorldCupBracket's
-// line construction.
-func (d *WorldCupData) BracketLineCount() int {
-	count := 0
-	for _, round := range d.KnockoutRounds {
-		count += 2 + len(round.Matchups) + 1 // roundHdr + blank + matchups + trailing blank
-	}
-	if d.BronzeFinal != nil {
-		count += 4 // bronzeHdr + blank + matchup + trailing blank
-	}
-	if d.Champion != nil {
-		count += 2 // blank + champion line
-	}
-	return count
-}
 

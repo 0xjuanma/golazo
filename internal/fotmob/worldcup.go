@@ -70,6 +70,12 @@ type wcMatchupRaw struct {
 func (c *Client) WorldCupData(ctx context.Context, season string) (*api.WorldCupData, error) {
 	c.rateLimiter.Wait()
 
+	url := "https://www.fotmob.com/leagues/77/overview/world-cup"
+	if season != "" {
+		url += "?season=" + season
+	}
+	c.debugLog("WorldCupData: fetching", "url", url, "season", season)
+
 	pageProps, err := fetchWorldCupPage(ctx, c.httpClient, season)
 	if err != nil {
 		return nil, fmt.Errorf("fetch world cup page: %w", err)

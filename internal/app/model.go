@@ -136,8 +136,7 @@ type model struct {
 	wcSubView         wcSubView
 	wcSelectedGroup   int
 	wcGroupsList      list.Model // bubbles list for the groups overview
-	wcBracketScroll   int
-	wcBracketLines    int // total content lines in bracket view; used for scroll clamping
+	wcBracketTab      int
 	wcLastError       string
 	wcGridSelectedIdx int // selected group index in the grid overview
 

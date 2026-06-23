@@ -48,13 +48,13 @@ func RenderWorldCupGroupGrid(width, height int, wcData *api.WorldCupData, select
 	return worldcup.RenderGroupGrid(width, height, wcData, selectedGroupIdx, banner)
 }
 
-// RenderWorldCupBracket renders the knockout bracket with box-drawing connectors.
-func RenderWorldCupBracket(width, height int, wcData *api.WorldCupData, scrollOffset int, bannerType constants.StatusBannerType) string {
+// RenderWorldCupBracket renders the symmetric two-tab knockout bracket.
+func RenderWorldCupBracket(width, height int, wcData *api.WorldCupData, tab int, bannerType constants.StatusBannerType) string {
 	banner := renderStatusBanner(bannerType, width)
 	if banner != "" {
 		banner += "\n"
 	}
-	return worldcup.RenderBracket(width, height, wcData, scrollOffset, banner)
+	return worldcup.RenderSymmetricBracket(width, height, wcData, tab, banner)
 }
 
 // RenderWorldCupUpcoming renders the upcoming-matches sub-view. This is a

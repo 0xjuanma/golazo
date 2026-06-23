@@ -5,7 +5,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 
 	"github.com/0xjuanma/golazo/internal/ui"
-	"github.com/0xjuanma/golazo/internal/ui/worldcup"
 )
 
 // handleWorldCupKeys routes keyboard input to the active WC sub-view handler.
@@ -56,7 +55,7 @@ func (m model) handleWCGroupsKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "b":
 		if len(m.wcData.KnockoutRounds) > 0 {
-			m.wcBracketScroll = 0
+			m.wcBracketTab = 0
 			m.wcSubView = wcSubViewBracket
 			return m, tea.ClearScreen
 		}
@@ -97,14 +96,10 @@ func (m model) handleWCBracketKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.wcUpcomingLoading = true
 		m.wcUpcomingLastError = ""
 		return m, tea.Batch(tea.ClearScreen, fetchWorldCupUpcoming(m.loadCtx, m.fotmobClient))
-	case "j", "down":
-		if m.wcBracketLines > 0 && m.wcBracketScroll < m.wcBracketLines-1 {
-			m.wcBracketScroll++
-		}
-	case "k", "up":
-		if m.wcBracketScroll > 0 {
-			m.wcBracketScroll--
-		}
+	case "right", "l":
+		m.wcBracketTab = 1
+	case "left", "h":
+		m.wcBracketTab = 0
 	}
 	return m, nil
 }
@@ -142,7 +137,7 @@ func (m model) handleWCGroupGridKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "b":
 		if len(m.wcData.KnockoutRounds) > 0 {
-			m.wcBracketScroll = 0
+			m.wcBracketTab = 0
 			m.wcSubView = wcSubViewBracket
 			return m, tea.ClearScreen
 		}
@@ -188,7 +183,6 @@ func (m model) handleWCData(msg wcDataMsg) (tea.Model, tea.Cmd) {
 	}
 	m.wcData = msg.data
 	m.wcLastError = ""
-	m.wcBracketLines = worldcup.BracketLineCount(msg.data)
 
 	items := make([]list.Item, len(msg.data.Groups))
 	for i, g := range msg.data.Groups {

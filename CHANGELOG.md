@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- **World Cup Bracket** — symmetric two-tab layout with ← → navigation; outer rounds on tab 0, quarterfinals through Final on tab 1.
+- **World Cup Bracket** — single-tab symmetric bracket covering all rounds (R32 → Final for 2026, R16 → Final for 2022); eliminates tab navigation, auto-updates with winner/loser styling as matches are played.
 
 ### Changed
 

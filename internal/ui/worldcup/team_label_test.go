@@ -94,6 +94,7 @@ func TestTeamLabel(t *testing.T) {
 func TestMatchupTeamLabel(t *testing.T) {
 	argFlag := FlagEmoji("ARG")
 	nedFlag := FlagEmoji("NED")
+	gerFlag := FlagEmoji("GER")
 
 	tests := []struct {
 		name  string
@@ -102,12 +103,21 @@ func TestMatchupTeamLabel(t *testing.T) {
 		tbd   bool
 		want  string
 	}{
-		{name: "tbd returns TBD", tbd: true, want: "TBD"},
-		{name: "tbd takes precedence over short", short: "ARG", full: "Argentina", tbd: true, want: "TBD"},
-		{name: "empty short and full returns TBD", want: "TBD"},
+		// Confirmed team (tbd=false) — existing behaviour unchanged.
 		{name: "short present", short: "ARG", full: "Argentina", want: argFlag + " ARG"},
 		{name: "short empty, name in override", full: "Netherlands", want: nedFlag + " NED"},
 		{name: "short empty, unknown name truncates", full: "Nowhereland", want: "   NOW"},
+		{name: "empty short and full returns ?", want: "   ?"},
+
+		// TBD slot — formula contains exactly one known nation: show its label.
+		{name: "tbd single known team shows label", short: "ARG", full: "Argentina", tbd: true, want: argFlag + " ARG"},
+		{name: "tbd formula one known team", full: "Germany/3ABCDF", tbd: true, want: gerFlag + " GER"},
+
+		// TBD slot — formula ambiguous or fully unknown: show ?.
+		{name: "tbd both known nations returns ?", full: "South Africa/Canada", tbd: true, want: "   ?"},
+		{name: "tbd no known team returns ?", full: "1I/3CDFGH", tbd: true, want: "   ?"},
+		{name: "tbd future slot returns ?", full: "Winner QF 1", tbd: true, want: "   ?"},
+		{name: "tbd empty returns ?", tbd: true, want: "   ?"},
 	}
 
 	for _, tt := range tests {

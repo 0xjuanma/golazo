@@ -34,17 +34,45 @@ func TeamLabel(t api.Team) string {
 
 // MatchupTeamLabel is the matchup-shape variant: bracket matchups carry
 // (short, full, tbd) as separate fields on api.WCMatchup rather than an
-// api.Team value. It applies the same code resolution chain as TeamLabel
-// and returns "TBD" for unresolved bracket slots.
+// api.Team value. It applies the same code resolution chain as TeamLabel.
+//
+// When tbd is true the slot is unresolved. FotMob encodes R32 feeders as
+// "KnownTeam/Placeholder" (e.g. "Germany/3ABCDF"). If exactly one part of
+// that formula is a registered WC nation the confirmed team's flag+code is
+// shown; otherwise "?" is returned (padded to labelTargetWidth). This makes
+// it clear that no data is missing — the match simply hasn't been played yet.
 func MatchupTeamLabel(short, full string, tbd bool) string {
-	if tbd {
-		return "TBD"
+	if !tbd {
+		if short == "" && full == "" {
+			return padToLabelWidth("   ?")
+		}
+		code := teamCode(short, full)
+		return labelWithFlag(code)
 	}
-	if short == "" && full == "" {
-		return "TBD"
+	if label := knownTeamFromFormula(full); label != "" {
+		return label
 	}
-	code := teamCode(short, full)
-	return labelWithFlag(code)
+	return padToLabelWidth("   ?")
+}
+
+// knownTeamFromFormula parses a FotMob "/" placeholder formula and returns
+// the flag+code label when exactly one part maps to a registered WC nation.
+// Returns "" when zero or both parts are known nations (genuinely undecided).
+func knownTeamFromFormula(formula string) string {
+	var known []string
+	for _, part := range strings.SplitN(formula, "/", 2) {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		if _, ok := wcNameToCode[strings.ToLower(part)]; ok {
+			known = append(known, part)
+		}
+	}
+	if len(known) == 1 {
+		return labelWithFlag(teamCode("", known[0]))
+	}
+	return ""
 }
 
 // teamCode resolves a team to its canonical 3-letter code using the chain

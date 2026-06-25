@@ -351,7 +351,7 @@ func symFinalLabel(fin []api.WCMatchup, wcData *api.WorldCupData) string {
 			}
 			return WinnerStyle.Render(home) + " " + score + " " + WinnerStyle.Render(away)
 		}
-		if home != "TBD" || away != "TBD" {
+		if !mu.TBDHome || !mu.TBDAway {
 			return MatchLineStyle.Render(home) + " " + ScoreStyle.Render("vs") + " " + MatchLineStyle.Render(away)
 		}
 	}

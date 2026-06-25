@@ -55,7 +55,6 @@ func (m model) handleWCGroupsKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "b":
 		if len(m.wcData.KnockoutRounds) > 0 {
-			m.wcBracketTab = 0
 			m.wcSubView = wcSubViewBracket
 			return m, tea.ClearScreen
 		}
@@ -96,10 +95,6 @@ func (m model) handleWCBracketKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.wcUpcomingLoading = true
 		m.wcUpcomingLastError = ""
 		return m, tea.Batch(tea.ClearScreen, fetchWorldCupUpcoming(m.loadCtx, m.fotmobClient))
-	case "right", "l":
-		m.wcBracketTab = 1
-	case "left", "h":
-		m.wcBracketTab = 0
 	}
 	return m, nil
 }
@@ -137,7 +132,6 @@ func (m model) handleWCGroupGridKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	case "b":
 		if len(m.wcData.KnockoutRounds) > 0 {
-			m.wcBracketTab = 0
 			m.wcSubView = wcSubViewBracket
 			return m, tea.ClearScreen
 		}

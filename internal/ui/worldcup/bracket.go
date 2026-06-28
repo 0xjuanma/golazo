@@ -202,10 +202,9 @@ func renderBracketLineRaw(mu api.WCMatchup, showArrow bool) string {
 		penStr = " " + PenStyle.Render("(p)")
 	}
 	winner := WinnerStyle.Render(winnerLabel) + penStr
-	arrow := MatchLineStyle.Render("  ──► ")
 
-	return fmt.Sprintf("  %s  %s  %s%s%s",
-		homeStr, scoreStr, awayStr, arrow, winner)
+	return fmt.Sprintf("  %s  %s  %s  %s",
+		homeStr, scoreStr, awayStr, winner)
 }
 
 func max(a, b int) int {

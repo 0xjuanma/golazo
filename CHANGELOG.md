@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 ### Fixed
+- **World Cup Bracket** — Remove arrow connector between matchup score and winner label
 
 ## [0.30.0] - 2026-06-25
 

@@ -67,6 +67,9 @@ func (m model) handleWCGroupsKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.wcUpcomingLastError = ""
 		return m, tea.Batch(tea.ClearScreen, fetchWorldCupUpcoming(m.loadCtx, m.fotmobClient))
 
+	case "s":
+		return m.openTopScorersDialog()
+
 	default:
 		var cmd tea.Cmd
 		m.wcGroupsList, cmd = m.wcGroupsList.Update(msg)
@@ -95,6 +98,9 @@ func (m model) handleWCBracketKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.wcUpcomingLoading = true
 		m.wcUpcomingLastError = ""
 		return m, tea.Batch(tea.ClearScreen, fetchWorldCupUpcoming(m.loadCtx, m.fotmobClient))
+
+	case "s":
+		return m.openTopScorersDialog()
 	}
 	return m, nil
 }
@@ -144,6 +150,9 @@ func (m model) handleWCGroupGridKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.wcUpcomingLoading = true
 		m.wcUpcomingLastError = ""
 		return m, tea.Batch(tea.ClearScreen, fetchWorldCupUpcoming(m.loadCtx, m.fotmobClient))
+
+	case "s":
+		return m.openTopScorersDialog()
 
 	case "right", "l":
 		if m.wcGridSelectedIdx < n-1 {
@@ -207,4 +216,27 @@ func (m model) handleWCUpcoming(msg wcUpcomingMsg) (tea.Model, tea.Cmd) {
 	m.wcUpcoming = msg.matches
 	m.wcUpcomingLastError = ""
 	return m, nil
+}
+
+// handleWCTopScorers processes the top scorers response, stores the data, and opens the dialog.
+func (m model) handleWCTopScorers(msg wcTopScorersMsg) (tea.Model, tea.Cmd) {
+	m.wcTopScorersLoading = false
+	if msg.err != nil {
+		return m, nil
+	}
+	m.wcTopScorers = msg.scorers
+	if m.dialogOverlay != nil {
+		m.dialogOverlay.OpenDialog(ui.NewTopScorersDialog(msg.scorers))
+	}
+	return m, nil
+}
+
+// openTopScorersDialog opens the top scorers dialog, using cached data when available.
+func (m model) openTopScorersDialog() (tea.Model, tea.Cmd) {
+	if len(m.wcTopScorers) > 0 && m.dialogOverlay != nil {
+		m.dialogOverlay.OpenDialog(ui.NewTopScorersDialog(m.wcTopScorers))
+		return m, nil
+	}
+	m.wcTopScorersLoading = true
+	return m, fetchWorldCupTopScorers(m.loadCtx, m.fotmobClient, m.wcYear)
 }

@@ -264,6 +264,52 @@ func TestConvertMatchup_NotYetPlayed(t *testing.T) {
 	}
 }
 
+func TestParseWCTopScorers_Empty(t *testing.T) {
+	got := parseWCTopScorers(wcStatList{})
+	if got != nil {
+		t.Errorf("expected nil for empty stat list, got %v", got)
+	}
+}
+
+func TestParseWCTopScorers_RoundTrip(t *testing.T) {
+	fixture := wcStatList{
+		TopLists: []struct {
+			StatList []struct {
+				ParticipantName string  `json:"ParticipantName"`
+				TeamName        string  `json:"TeamName"`
+				StatValue       float64 `json:"StatValue"`
+				Rank            int     `json:"Rank"`
+			} `json:"StatList"`
+		}{
+			{
+				StatList: []struct {
+					ParticipantName string  `json:"ParticipantName"`
+					TeamName        string  `json:"TeamName"`
+					StatValue       float64 `json:"StatValue"`
+					Rank            int     `json:"Rank"`
+				}{
+					{ParticipantName: "Lionel Messi", TeamName: "Argentina", StatValue: 6, Rank: 1},
+					{ParticipantName: "Kylian Mbappé", TeamName: "France", StatValue: 4, Rank: 2},
+				},
+			},
+		},
+	}
+
+	got := parseWCTopScorers(fixture)
+	if len(got) != 2 {
+		t.Fatalf("len(scorers) = %d, want 2", len(got))
+	}
+	if got[0].PlayerName != "Lionel Messi" {
+		t.Errorf("scorers[0].PlayerName = %q, want %q", got[0].PlayerName, "Lionel Messi")
+	}
+	if got[0].Goals != 6 {
+		t.Errorf("scorers[0].Goals = %d, want 6", got[0].Goals)
+	}
+	if got[1].Team != "France" {
+		t.Errorf("scorers[1].Team = %q, want %q", got[1].Team, "France")
+	}
+}
+
 // --- helpers ---
 
 // buildMockWCPageResponse builds a wcPageResponse with n groups, each having 4 teams.

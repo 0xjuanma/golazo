@@ -31,6 +31,25 @@ type wcPageResponse struct {
 	Overview struct {
 		SelectedSeason string `json:"selectedSeason"`
 	} `json:"overview"`
+	Stats struct {
+		Players []struct {
+			Header      string `json:"header"`
+			Name        string `json:"name"`
+			FetchAllURL string `json:"fetchAllUrl"`
+		} `json:"players"`
+	} `json:"stats"`
+}
+
+// wcStatList is the shape of the data.fotmob.com stats JSON endpoint.
+type wcStatList struct {
+	TopLists []struct {
+		StatList []struct {
+			ParticipantName string  `json:"ParticipantName"`
+			TeamName        string  `json:"TeamName"`
+			StatValue       float64 `json:"StatValue"`
+			Rank            int     `json:"Rank"`
+		} `json:"StatList"`
+	} `json:"TopLists"`
 }
 
 type wcPlayoff struct {
@@ -318,3 +337,76 @@ func wcGroupLetter(name string) string {
 }
 
 func intPtr(v int) *int { i := v; return &i }
+
+// WorldCupTopScorers fetches the top scorers for the current World Cup season.
+// It reuses the same page fetch as WorldCupData to obtain the stats URL, then
+// makes one additional call to data.fotmob.com for the full ranked list.
+func (c *Client) WorldCupTopScorers(ctx context.Context, season string) ([]api.WCTopScorer, error) {
+	c.rateLimiter.Wait()
+
+	pageProps, err := fetchWorldCupPage(ctx, c.httpClient, season)
+	if err != nil {
+		return nil, fmt.Errorf("fetch world cup page for scorers: %w", err)
+	}
+
+	var resp wcPageResponse
+	if err := json.Unmarshal(pageProps, &resp); err != nil {
+		return nil, fmt.Errorf("parse world cup page props for scorers: %w", err)
+	}
+
+	// Find the "Top scorer" / "goals" stat entry to get the full-list URL.
+	fetchURL := ""
+	for _, p := range resp.Stats.Players {
+		if p.Name == "goals" {
+			fetchURL = p.FetchAllURL
+			break
+		}
+	}
+	if fetchURL == "" {
+		return nil, fmt.Errorf("top scorer stat URL not found in world cup page")
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "GET", fetchURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("create top scorers request: %w", err)
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
+	req.Header.Set("Referer", "https://www.fotmob.com/")
+
+	statResp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("fetch top scorers data: %w", err)
+	}
+	defer func() { _ = statResp.Body.Close() }()
+
+	if statResp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("top scorers endpoint returned status %d", statResp.StatusCode)
+	}
+
+	var statList wcStatList
+	if err := json.NewDecoder(statResp.Body).Decode(&statList); err != nil {
+		return nil, fmt.Errorf("decode top scorers response: %w", err)
+	}
+
+	if len(statList.TopLists) == 0 {
+		return nil, nil
+	}
+	return parseWCTopScorers(statList), nil
+}
+
+// parseWCTopScorers converts a raw stat list response into API top scorer entries.
+func parseWCTopScorers(statList wcStatList) []api.WCTopScorer {
+	if len(statList.TopLists) == 0 {
+		return nil
+	}
+	entries := statList.TopLists[0].StatList
+	scorers := make([]api.WCTopScorer, 0, len(entries))
+	for _, e := range entries {
+		scorers = append(scorers, api.WCTopScorer{
+			PlayerName: e.ParticipantName,
+			Team:       e.TeamName,
+			Goals:      int(e.StatValue),
+		})
+	}
+	return scorers
+}

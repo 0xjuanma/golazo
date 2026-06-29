@@ -107,6 +107,62 @@ func TestHandleWCUpcoming_StoresError(t *testing.T) {
 	}
 }
 
+func TestHandleWCTopScorers_StoresScorers(t *testing.T) {
+	m := newWCTestModel()
+	m.wcTopScorersLoading = true
+
+	scorers := []api.WCTopScorer{
+		{PlayerName: "Messi", Team: "Argentina", Goals: 6},
+		{PlayerName: "Mbappé", Team: "France", Goals: 4},
+	}
+	next, _ := m.handleWCTopScorers(wcTopScorersMsg{scorers: scorers})
+
+	nm := next.(model)
+	if nm.wcTopScorersLoading {
+		t.Error("wcTopScorersLoading should be false after message handled")
+	}
+	if len(nm.wcTopScorers) != 2 {
+		t.Errorf("wcTopScorers len = %d, want 2", len(nm.wcTopScorers))
+	}
+	if nm.wcTopScorers[0].Goals != 6 {
+		t.Errorf("wcTopScorers[0].Goals = %d, want 6", nm.wcTopScorers[0].Goals)
+	}
+}
+
+func TestHandleWCGroupsKeys_SEmitsTopScorersCmd(t *testing.T) {
+	m := newWCTestModel()
+	m.wcSubView = wcSubViewGroups
+
+	_, cmd := m.handleWCGroupsKeys(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}})
+	if cmd == nil {
+		t.Error("expected non-nil tea.Cmd after pressing s (top scorers fetch)")
+	}
+}
+
+func TestHandleWCGroupGridKeys_SEmitsTopScorersCmd(t *testing.T) {
+	m := newWCTestModel()
+
+	_, cmd := m.handleWCGroupGridKeys(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'s'}})
+	if cmd == nil {
+		t.Error("expected non-nil tea.Cmd after pressing s (top scorers fetch)")
+	}
+}
+
+func TestHandleWCTopScorers_ErrorClearsLoading(t *testing.T) {
+	m := newWCTestModel()
+	m.wcTopScorersLoading = true
+
+	next, _ := m.handleWCTopScorers(wcTopScorersMsg{err: context.DeadlineExceeded})
+
+	nm := next.(model)
+	if nm.wcTopScorersLoading {
+		t.Error("wcTopScorersLoading should be false after error")
+	}
+	if len(nm.wcTopScorers) != 0 {
+		t.Errorf("wcTopScorers should be empty after error, got %d entries", len(nm.wcTopScorers))
+	}
+}
+
 // ── bracket unavailable feedback (Phase 2) ───────────────────────────────────
 
 // TestHandleWCGroupsKeys_BWithNoKnockoutRounds verifies that pressing 'b' from

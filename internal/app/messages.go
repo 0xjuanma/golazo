@@ -118,3 +118,9 @@ type wcUpcomingMsg struct {
 	matches []api.Match
 	err     error
 }
+
+// wcTopScorersMsg contains World Cup top scorer data fetched from FotMob.
+type wcTopScorersMsg struct {
+	scorers []api.WCTopScorer
+	err     error
+}

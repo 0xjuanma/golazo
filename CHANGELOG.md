@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **World Cup Top Scorers** — Press `s` in the World Cup view to open a ranked top scorers table with live goal tallies for the 2026 World Cup.
 
 ### Changed
 

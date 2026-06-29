@@ -23,7 +23,7 @@ func RenderBracket(width, height int, wcData *api.WorldCupData, scrollOffset int
 	}
 
 	header := design.RenderHeader(wcData.Name+" — Knockout Bracket", width-2)
-	help := HelpStyle.Width(width).Render("j/k: scroll  u: upcoming  Esc: back to grid  q: quit")
+	help := HelpStyle.Width(width).Render("j/k: scroll  u: upcoming  s: top scorers  Esc: back to grid  q: quit")
 
 	var lines []string
 

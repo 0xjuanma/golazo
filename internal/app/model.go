@@ -144,6 +144,10 @@ type model struct {
 	wcUpcomingLoading   bool
 	wcUpcomingLastError string
 
+	// World Cup top scorers state
+	wcTopScorers        []api.WCTopScorer
+	wcTopScorersLoading bool
+
 	// Dialog overlay for modal dialogs
 	dialogOverlay *ui.DialogOverlay
 

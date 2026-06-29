@@ -17,6 +17,7 @@ const (
 	StandingsDialogID  = "standings"
 	FormationsDialogID = "formations"
 	StatisticsDialogID = "statistics"
+	TopScorersDialogID = "top_scorers"
 )
 
 // DialogAction represents an action returned by a dialog after handling a message.

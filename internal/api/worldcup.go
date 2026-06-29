@@ -34,6 +34,14 @@ type WCKnockoutRound struct {
 	Matchups []WCMatchup
 }
 
+// WCTopScorer represents a player's top scorer entry for the current World Cup.
+type WCTopScorer struct {
+	PlayerName string
+	Team       string
+	Goals      int
+	Assists    int
+}
+
 // WorldCupData contains all World Cup tournament data.
 type WorldCupData struct {
 	Season         string // "2022", "2026"
@@ -43,6 +51,7 @@ type WorldCupData struct {
 	BronzeFinal    *WCMatchup
 	Champion       *Team
 	RunnerUp       *Team
+	TopScorers     []WCTopScorer
 }
 
 // DeriveFinalists extracts champion and runner-up from the final matchup's WinnerID.

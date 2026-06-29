@@ -123,3 +123,21 @@ func fetchWorldCupUpcoming(parentCtx context.Context, client *fotmob.Client) tea
 		return wcUpcomingMsg{matches: matches}
 	}
 }
+
+// fetchWorldCupTopScorers fetches the current WC top scorers from FotMob and
+// emits a wcTopScorersMsg. Falls back to nil scorers when client is nil.
+func fetchWorldCupTopScorers(parentCtx context.Context, client *fotmob.Client, season string) tea.Cmd {
+	return func() tea.Msg {
+		if client == nil {
+			return wcTopScorersMsg{}
+		}
+		ctx, cancel := context.WithTimeout(parentCtx, 20*time.Second)
+		defer cancel()
+
+		scorers, err := client.WorldCupTopScorers(ctx, season)
+		if err != nil {
+			return wcTopScorersMsg{err: err}
+		}
+		return wcTopScorersMsg{scorers: scorers}
+	}
+}

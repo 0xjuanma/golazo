@@ -19,10 +19,12 @@ type WCMatchup struct {
 	AwayTeam    string
 	AwayTeamID  int
 	AwayShort   string
-	HomeScore   *int
-	AwayScore   *int
-	WinnerID    *int
-	IsPenalties bool
+	HomeScore    *int
+	AwayScore    *int
+	HomePenScore *int
+	AwayPenScore *int
+	WinnerID     *int
+	IsPenalties  bool
 	TBDHome     bool
 	TBDAway     bool
 }

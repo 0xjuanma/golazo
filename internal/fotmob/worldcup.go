@@ -69,16 +69,19 @@ type wcMatchupRaw struct {
 	AwayTeam          string `json:"awayTeam"`
 	AwayTeamID        int    `json:"awayTeamId"`
 	AwayTeamShortName string `json:"awayTeamShortName"`
+	WinnerID          int    `json:"winnerId"`
 	TBDTeam1          bool   `json:"tbdTeam1"`
 	TBDTeam2          bool   `json:"tbdTeam2"`
 	Matches           []struct {
 		Home struct {
-			Score  int  `json:"score"`
-			Winner bool `json:"winner"`
+			Score    int  `json:"score"`
+			PenScore int  `json:"penScore"`
+			Winner   bool `json:"winner"`
 		} `json:"home"`
 		Away struct {
-			Score  int  `json:"score"`
-			Winner bool `json:"winner"`
+			Score    int  `json:"score"`
+			PenScore int  `json:"penScore"`
+			Winner   bool `json:"winner"`
 		} `json:"away"`
 		Status struct {
 			Finished bool `json:"finished"`
@@ -306,18 +309,27 @@ func convertMatchup(r wcMatchupRaw) api.WCMatchup {
 	}
 
 	if len(r.Matches) > 0 && r.Matches[0].Status.Finished {
-		m.HomeScore = intPtr(r.Matches[0].Home.Score)
-		m.AwayScore = intPtr(r.Matches[0].Away.Score)
+		match := r.Matches[0]
+		m.HomeScore = intPtr(match.Home.Score)
+		m.AwayScore = intPtr(match.Away.Score)
 
-		if r.Matches[0].Home.Winner {
+		if match.Home.Winner {
 			m.WinnerID = intPtr(r.HomeTeamID)
-		} else if r.Matches[0].Away.Winner {
+		} else if match.Away.Winner {
 			m.WinnerID = intPtr(r.AwayTeamID)
+		} else if r.WinnerID != 0 {
+			// fallback: FotMob bracket sometimes omits per-team winner flags
+			// and expresses the overall winner at the matchup level instead
+			m.WinnerID = intPtr(r.WinnerID)
 		}
 
-		// Detect penalties: scores level at final whistle but there's a winner
+		// penalties: tied score at full time with a declared winner
 		if m.WinnerID != nil && *m.HomeScore == *m.AwayScore {
 			m.IsPenalties = true
+			if match.Home.PenScore != 0 || match.Away.PenScore != 0 {
+				m.HomePenScore = intPtr(match.Home.PenScore)
+				m.AwayPenScore = intPtr(match.Away.PenScore)
+			}
 		}
 	}
 

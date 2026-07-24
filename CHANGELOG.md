@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+### Changed
+
+### Fixed
+
+## [0.32.0] - 2026-07-23
+
 > [!NOTE]
 > Update your Golazo app by running `golazo --update`; and check out: https://thegolazo.app
 

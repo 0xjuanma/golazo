@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 ### Changed
+- Config/cache directory resolution now uses `cli-toolkit/dirs` internally instead of hand-rolled logic; no change in behavior or config location.
 
 ### Fixed
 

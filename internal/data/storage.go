@@ -8,44 +8,19 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"time"
+
+	"github.com/0xjuanma/cli-toolkit/dirs"
 )
 
-const (
-	configDir = ".golazo"
-)
+var appDirs = dirs.New("golazo")
 
 // ConfigDir returns the path to the golazo config directory.
 // On Linux, follows XDG Base Directory spec (~/.config/golazo).
 // On other systems (macOS, Windows), uses ~/.golazo.
 func ConfigDir() (string, error) {
-	var configPath string
-
-	if runtime.GOOS == "linux" {
-		if xdgConfig := os.Getenv("XDG_CONFIG_HOME"); xdgConfig != "" {
-			configPath = filepath.Join(xdgConfig, "golazo")
-		} else {
-			homeDir, err := os.UserHomeDir()
-			if err != nil {
-				return "", fmt.Errorf("get home directory: %w", err)
-			}
-			configPath = filepath.Join(homeDir, ".config", "golazo")
-		}
-	} else {
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			return "", fmt.Errorf("get home directory: %w", err)
-		}
-		configPath = filepath.Join(homeDir, configDir)
-	}
-
-	if err := os.MkdirAll(configPath, 0755); err != nil {
-		return "", fmt.Errorf("create config directory: %w", err)
-	}
-
-	return configPath, nil
+	return appDirs.ConfigDir()
 }
 
 // DebugLogPath returns the user-facing path to the debug log file, with the
@@ -53,16 +28,7 @@ func ConfigDir() (string, error) {
 // and mirrors the location used by ConfigDir, but performs no filesystem I/O
 // and does not create any directories. Safe to call from init() / flag help.
 func DebugLogPath() string {
-	const logFile = "golazo_debug.log"
-
-	if runtime.GOOS == "linux" {
-		if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
-			return filepath.Join(xdg, "golazo", logFile)
-		}
-		return filepath.Join("~", ".config", "golazo", logFile)
-	}
-
-	return filepath.Join("~", configDir, logFile)
+	return appDirs.ConfigFileDisplay("golazo_debug.log")
 }
 
 // CacheDir returns the path to the golazo cache directory.
@@ -71,17 +37,7 @@ func DebugLogPath() string {
 //   - macOS: ~/Library/Caches/golazo
 //   - Windows: %LocalAppData%/golazo
 func CacheDir() (string, error) {
-	userCache, err := os.UserCacheDir()
-	if err != nil {
-		return "", fmt.Errorf("get user cache directory: %w", err)
-	}
-
-	cachePath := filepath.Join(userCache, "golazo")
-	if err := os.MkdirAll(cachePath, 0755); err != nil {
-		return "", fmt.Errorf("create cache directory: %w", err)
-	}
-
-	return cachePath, nil
+	return appDirs.CacheDir()
 }
 
 // MockDataPath returns the path to the mock data file.

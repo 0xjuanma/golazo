@@ -3,6 +3,7 @@ module github.com/0xjuanma/golazo
 go 1.25.0
 
 require (
+	github.com/0xjuanma/cli-toolkit v0.1.0
 	github.com/charmbracelet/bubbles v0.21.0
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0

@@ -18,6 +18,16 @@ import (
 // LiveRefreshInterval is the interval between automatic live matches list refreshes.
 const LiveRefreshInterval = 5 * time.Minute
 
+func fetchFIFARanking(parentCtx context.Context, client *fotmob.Client, gender string) tea.Cmd {
+	return func() tea.Msg {
+		if client == nil {
+			return fifaRankingMsg{err: fmt.Errorf("FotMob client is unavailable"), gender: gender}
+		}
+		ranking, err := client.FIFARanking(parentCtx, gender)
+		return fifaRankingMsg{ranking: ranking, err: err, gender: gender}
+	}
+}
+
 // LiveBatchSize is the number of leagues to fetch concurrently in each batch.
 const LiveBatchSize = 4
 

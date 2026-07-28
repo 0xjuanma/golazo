@@ -4,6 +4,7 @@ package constants
 const (
 	MenuStats       = "Finished Matches"
 	MenuLiveMatches = "Live Matches"
+	MenuFIFARanking = "FIFA World Ranking"
 	MenuSettings    = "Settings"
 	MenuWorldCup    = "World Cup 2026"
 )

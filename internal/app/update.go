@@ -87,6 +87,22 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case wcTopScorersMsg:
 		return m.handleWCTopScorers(msg)
 
+	case fifaRankingMsg:
+		// A slower response from the previously selected tab must not replace
+		// the currently selected men's/women's ranking.
+		if msg.gender != m.fifaRankingGender {
+			return m, nil
+		}
+		m.fifaRankingLoading = false
+		if msg.err != nil {
+			m.fifaRankingError = constants.ErrorLoadFailed
+			m.debugLog(fmt.Sprintf("fetch FIFA ranking failed: %v", msg.err))
+		} else {
+			m.fifaRanking = msg.ranking
+			m.fifaRankingError = ""
+		}
+		return m, nil
+
 	default:
 		// Fallback handler for ui.TickMsg type assertion
 		if _, ok := msg.(ui.TickMsg); ok {
@@ -375,6 +391,8 @@ func (m model) handleKeyPress(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m.handleLiveMatchesSelection(msg)
 	case viewStats:
 		return m.handleStatsSelection(msg)
+	case viewFIFARanking:
+		return m.handleFIFARankingKeys(msg)
 	case viewSettings:
 		return m.handleSettingsViewKeys(msg)
 	case viewWorldCup:

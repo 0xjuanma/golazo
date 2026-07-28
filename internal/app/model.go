@@ -31,6 +31,7 @@ const (
 	viewMain view = iota
 	viewLiveMatches
 	viewStats
+	viewFIFARanking
 	viewSettings
 	viewWorldCup
 )
@@ -80,15 +81,23 @@ type model struct {
 	// Stats data cache - stores 5 days of data, filtered client-side for Today/3d/5d views
 	statsData *fotmob.StatsData
 
+	// FIFA ranking view state
+	fifaRanking         *api.FIFARanking
+	fifaRankingGender   string
+	fifaRankingOffset   int
+	fifaRankingSelected int
+	fifaRankingLoading  bool
+	fifaRankingError    string
+
 	// Progressive loading state (stats view)
 	statsDaysLoaded int // Number of days loaded so far (0-5)
 	statsTotalDays  int // Total days to load (5)
 
 	// Progressive loading state (live view) - batch-based for parallel fetching
-	liveBatchesLoaded   int         // Number of batches loaded so far
-	liveTotalBatches    int         // Total batches to load
-	liveMatchesBuffer   []api.Match // Buffer to accumulate live matches during progressive load
-	liveUpcomingBuffer  []api.Match // Buffer to accumulate upcoming matches during progressive load
+	liveBatchesLoaded  int         // Number of batches loaded so far
+	liveTotalBatches   int         // Total batches to load
+	liveMatchesBuffer  []api.Match // Buffer to accumulate live matches during progressive load
+	liveUpcomingBuffer []api.Match // Buffer to accumulate upcoming matches during progressive load
 
 	// UI components
 	spinner          spinner.Model
@@ -125,7 +134,7 @@ type model struct {
 	newVersionAvailable bool   // Whether a new version of Golazo is available
 	appVersion          string // Current application version string
 	statsDateRange      int    // 1, 3, or 5 days (default: 1)
-	wcYear            string // World Cup season override (e.g. "2026"); "" = current
+	wcYear              string // World Cup season override (e.g. "2026"); "" = current
 
 	// Settings view state
 	settingsState *ui.SettingsState
@@ -286,7 +295,7 @@ func New(useMockData bool, debugMode bool, isDevBuild bool, newVersionAvailable 
 		isDevBuild:             isDevBuild,
 		newVersionAvailable:    newVersionAvailable,
 		appVersion:             appVersion,
-		wcYear:               wcYear,
+		wcYear:                 wcYear,
 		fotmobClient:           newFotmobClient(logger),
 		parser:                 fotmob.NewLiveUpdateParser(),
 		redditClient:           redditClient,
@@ -306,10 +315,11 @@ func New(useMockData bool, debugMode bool, isDevBuild bool, newVersionAvailable 
 		statsRightPanelFocused: false, // Start with left panel focused
 		statsScrollOffset:      0,     // Start at top
 		statsDateRange:         1,
+		fifaRankingGender:      "men",
 		pendingSelection:       -1,                    // No pending selection
 		dialogOverlay:          ui.NewDialogOverlay(), // Initialize dialog overlay
 		animatedLogo:           animatedLogo,          // Initialize animated logo
-		wcGroupsList:           wcList,                 // Initialize World Cup groups list
+		wcGroupsList:           wcList,                // Initialize World Cup groups list
 	}
 }
 

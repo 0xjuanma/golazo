@@ -124,3 +124,9 @@ type wcTopScorersMsg struct {
 	scorers []api.WCTopScorer
 	err     error
 }
+
+type fifaRankingMsg struct {
+	ranking *api.FIFARanking
+	err     error
+	gender  string
+}

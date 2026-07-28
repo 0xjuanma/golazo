@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **FIFA World Rankings** — New TUI dashboard for the latest official men's and women's national-team rankings from FotMob, including ranking points, point changes, responsive columns, and keyboard navigation.
 
 ### Changed
 - Config/cache directory resolution now uses `cli-toolkit/dirs` internally instead of hand-rolled logic; no change in behavior or config location.
@@ -442,4 +443,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Beautiful TUI with neon-styled interface
 - FotMob API integration for match data
 - Cross-platform support (macOS, Linux)
-

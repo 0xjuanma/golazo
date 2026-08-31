@@ -45,6 +45,8 @@ type queuedWork struct {
 //   - drop-on-block semantics: a fetch that returns ErrBlocked is not cached
 //     and not re-enqueued; callers receive a nil GoalResult.Link and the
 //     queue stops fetching for CooldownPeriod
+//   - cooldown persisted to disk (when a store is configured) so a block
+//     survives process restarts
 //
 // The worker goroutine is started lazily on the first Enqueue call (via
 // sync.Once) so constructing a Client without using the async API does not
@@ -62,19 +64,22 @@ type goalQueue struct {
 	fetch fetchFunc
 	cache *GoalLinkCache
 	log   DebugLogger
+	store *queueStateStore
 }
 
 // newGoalQueue constructs a queue. interval and cooldown default to
 // QueueInterval / CooldownPeriod when zero. cache is required (callers rely
-// on the queue persisting successful results); fetch is required.
-func newGoalQueue(fetch fetchFunc, cache *GoalLinkCache, log DebugLogger, interval, cooldown time.Duration) *goalQueue {
+// on the queue persisting successful results); fetch is required. store is
+// optional — when non-nil, a cooldown already in effect from a prior process
+// is restored, and future cooldowns are persisted to it.
+func newGoalQueue(fetch fetchFunc, cache *GoalLinkCache, log DebugLogger, interval, cooldown time.Duration, store *queueStateStore) *goalQueue {
 	if interval <= 0 {
 		interval = QueueInterval
 	}
 	if cooldown <= 0 {
 		cooldown = CooldownPeriod
 	}
-	return &goalQueue{
+	q := &goalQueue{
 		keys:     make(chan GoalLinkKey, 1024),
 		interval: interval,
 		cooldown: cooldown,
@@ -82,7 +87,12 @@ func newGoalQueue(fetch fetchFunc, cache *GoalLinkCache, log DebugLogger, interv
 		fetch:    fetch,
 		cache:    cache,
 		log:      log,
+		store:    store,
 	}
+	if store != nil {
+		q.cooldownUntil = store.load().CooldownUntil
+	}
+	return q
 }
 
 // Enqueue schedules a fetch for goal. The result is delivered on reply. If a
@@ -154,7 +164,13 @@ func (q *goalQueue) run() {
 		if err != nil && errors.Is(err, ErrBlocked) {
 			q.mu.Lock()
 			q.cooldownUntil = time.Now().Add(q.cooldown)
+			until := q.cooldownUntil
 			q.mu.Unlock()
+			if q.store != nil {
+				if err := q.store.save(queueState{CooldownUntil: until}); err != nil {
+					q.debugf("queue: failed to persist cooldown state: %v", err)
+				}
+			}
 			q.debugf("queue: goal %d:%d hit ErrBlocked — cooldown for %v",
 				key.MatchID, key.Minute, q.cooldown)
 			q.complete(key, nil, false)

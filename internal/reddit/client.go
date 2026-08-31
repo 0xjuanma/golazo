@@ -299,7 +299,12 @@ func (c *Client) GoalLinksAsync(goals []GoalInfo) <-chan GoalResult {
 // caller actually opts into the async API.
 func (c *Client) goalQueueLazy() *goalQueue {
 	c.queueOnce.Do(func() {
-		c.queue = newGoalQueue(c.searchForGoalOnce, c.cache, c.debugLogger, 0, 0)
+		store, err := newQueueStateStore()
+		if err != nil {
+			c.DebugLog(fmt.Sprintf("failed to init queue state store: %v", err))
+			store = nil
+		}
+		c.queue = newGoalQueue(c.searchForGoalOnce, c.cache, c.debugLogger, 0, 0, store)
 	})
 	return c.queue
 }

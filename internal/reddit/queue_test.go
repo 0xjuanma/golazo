@@ -66,7 +66,7 @@ func TestQueueIntervalPacing(t *testing.T) {
 			{MatchID: 1, Minute: 3, URL: "https://example.com/3"},
 		},
 	}
-	q := newGoalQueue(hook.fetch, newTestCache(t), nil, interval, time.Minute)
+	q := newGoalQueue(hook.fetch, newTestCache(t), nil, interval, time.Minute, nil)
 
 	replies := make(chan GoalResult, 3)
 	for i := 1; i <= 3; i++ {
@@ -100,7 +100,7 @@ func TestQueueCooldownOnBlocked(t *testing.T) {
 	hook := &recordingFetchHook{
 		errors: []error{ErrBlocked}, // first (and only) attempt blocked
 	}
-	q := newGoalQueue(hook.fetch, newTestCache(t), nil, time.Millisecond, time.Hour)
+	q := newGoalQueue(hook.fetch, newTestCache(t), nil, time.Millisecond, time.Hour, nil)
 
 	replies := make(chan GoalResult, 2)
 	q.Enqueue(GoalInfo{MatchID: 1, Minute: 1}, replies)
@@ -132,7 +132,7 @@ func TestQueueCooldownOnBlocked(t *testing.T) {
 func TestQueueDropsOnBlocked(t *testing.T) {
 	hook := &recordingFetchHook{errors: []error{ErrBlocked}}
 	cache := newTestCache(t)
-	q := newGoalQueue(hook.fetch, cache, nil, time.Millisecond, time.Hour)
+	q := newGoalQueue(hook.fetch, cache, nil, time.Millisecond, time.Hour, nil)
 
 	replies := make(chan GoalResult, 1)
 	key := GoalLinkKey{MatchID: 99, Minute: 33}
@@ -160,7 +160,7 @@ func TestQueueDedupesInFlight(t *testing.T) {
 		gate: gate,
 		link: &GoalLink{MatchID: 5, Minute: 10, URL: "https://example.com/dedup"},
 	}
-	q := newGoalQueue(hook.fetch, newTestCache(t), nil, time.Millisecond, time.Hour)
+	q := newGoalQueue(hook.fetch, newTestCache(t), nil, time.Millisecond, time.Hour, nil)
 
 	r1 := make(chan GoalResult, 1)
 	r2 := make(chan GoalResult, 1)
@@ -209,7 +209,7 @@ func TestQueueLazyStart(t *testing.T) {
 	hook := &recordingFetchHook{
 		results: []*GoalLink{{MatchID: 1, Minute: 1, URL: "https://example.com/lazy"}},
 	}
-	q := newGoalQueue(hook.fetch, newTestCache(t), nil, time.Millisecond, time.Hour)
+	q := newGoalQueue(hook.fetch, newTestCache(t), nil, time.Millisecond, time.Hour, nil)
 
 	// Give a hypothetical eager worker plenty of scheduler ticks to run.
 	time.Sleep(50 * time.Millisecond)
@@ -226,5 +226,50 @@ func TestQueueLazyStart(t *testing.T) {
 	}
 	if got := atomic.LoadInt32(&hook.callCount); got != 1 {
 		t.Errorf("expected 1 fetch after Enqueue, got %d", got)
+	}
+}
+
+// TestQueueCooldownPersistsAcrossRestart verifies that a cooldown entered by
+// one goalQueue is visible to a second goalQueue constructed later against
+// the same store — simulating a process restart mid-block.
+func TestQueueCooldownPersistsAcrossRestart(t *testing.T) {
+	store := &queueStateStore{filePath: filepath.Join(t.TempDir(), "reddit_queue_state.json")}
+
+	hookA := &recordingFetchHook{errors: []error{ErrBlocked}}
+	qA := newGoalQueue(hookA.fetch, newTestCache(t), nil, time.Millisecond, time.Hour, store)
+
+	repliesA := make(chan GoalResult, 1)
+	qA.Enqueue(GoalInfo{MatchID: 1, Minute: 1}, repliesA)
+	select {
+	case <-repliesA:
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for blocked reply from queue A")
+	}
+
+	persisted := store.load()
+	if persisted.CooldownUntil.IsZero() || !persisted.CooldownUntil.After(time.Now()) {
+		t.Fatalf("expected persisted CooldownUntil in the future, got %v", persisted.CooldownUntil)
+	}
+
+	// Queue B simulates a fresh process reading the same store: it must
+	// inherit the cooldown and drop the goal without ever calling fetch.
+	hookB := &recordingFetchHook{
+		results: []*GoalLink{{MatchID: 2, Minute: 2, URL: "https://example.com/should-not-be-fetched"}},
+	}
+	qB := newGoalQueue(hookB.fetch, newTestCache(t), nil, time.Millisecond, time.Hour, store)
+
+	repliesB := make(chan GoalResult, 1)
+	qB.Enqueue(GoalInfo{MatchID: 2, Minute: 2}, repliesB)
+	select {
+	case r := <-repliesB:
+		if r.Link != nil {
+			t.Errorf("expected nil Link — goal should be dropped under inherited cooldown, got %+v", r.Link)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("timed out waiting for reply from queue B")
+	}
+
+	if calls := atomic.LoadInt32(&hookB.callCount); calls != 0 {
+		t.Errorf("expected 0 fetch attempts on queue B (inherited cooldown), got %d", calls)
 	}
 }

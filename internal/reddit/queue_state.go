@@ -13,7 +13,8 @@ const queueStateFileName = "reddit_queue_state.json"
 
 // queueState is the on-disk representation of goalQueue's block state.
 type queueState struct {
-	CooldownUntil time.Time `json:"cooldown_until"`
+	CooldownUntil     time.Time `json:"cooldown_until"`
+	ConsecutiveBlocks int       `json:"consecutive_blocks"`
 }
 
 // queueStateStore persists goalQueue's block state so a cooldown survives

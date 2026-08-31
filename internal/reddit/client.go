@@ -358,6 +358,11 @@ func (c *Client) searchForGoalOnce(goal GoalInfo) (*GoalLink, error) {
 	match := findBestMatch(results, goal)
 	c.DebugLog(fmt.Sprintf("findBestMatch result for goal %d:%d (score %d-%d): %v",
 		goal.MatchID, goal.Minute, goal.HomeScore, goal.AwayScore, match != nil))
+
+	if match == nil && goal.ScorerName != "" {
+		match = c.retrySearchForGoal(goal)
+	}
+
 	if match == nil {
 		return nil, nil
 	}
@@ -372,6 +377,35 @@ func (c *Client) searchForGoalOnce(goal GoalInfo) (*GoalLink, error) {
 		PostURL:   match.PostURL,
 		FetchedAt: time.Now(),
 	}, nil
+}
+
+// retrySearchForGoal re-searches once with the scorer token dropped from the
+// query, for goals whose first (full) query found no match. Only called when
+// goal.ScorerName is non-empty — a goal with no scorer name already searched
+// with this exact relaxed shape (buildGoalQuery omits the scorer token when
+// ScorerName is empty), so retrying it would be a wasted duplicate request.
+//
+// findBestMatch is re-run against the original goal (ScorerName intact, not
+// the relaxed one), so a scorer name that still appears incidentally in a
+// relaxed-query result's title earns its normal matcher bonus.
+func (c *Client) retrySearchForGoal(goal GoalInfo) *SearchResult {
+	relaxed := goal
+	relaxed.ScorerName = ""
+	query := buildGoalQuery(relaxed)
+	c.DebugLog(fmt.Sprintf("Reddit relaxed retry query: %q for goal %d:%d (no match on first attempt)",
+		query, goal.MatchID, goal.Minute))
+
+	results, err := c.fetcher.Search(query, 15, goal.MatchTime, "relevance")
+	if err != nil {
+		c.DebugLog(fmt.Sprintf("Reddit relaxed retry failed for query %q: %v", query, err))
+		return nil
+	}
+	c.DebugLog(fmt.Sprintf("Reddit relaxed retry returned %d results for query %q", len(results), query))
+
+	match := findBestMatch(results, goal)
+	c.DebugLog(fmt.Sprintf("findBestMatch result for relaxed retry on goal %d:%d: %v",
+		goal.MatchID, goal.Minute, match != nil))
+	return match
 }
 
 // buildGoalQuery returns the single Reddit search query for a goal:

@@ -45,6 +45,7 @@ Golazo was created for those moments when you can't stream or watch matches live
 - **Match Statistics & Details**: Possession, shots, passes, standings, formations with player ratings, and more in focused dialogs
 - **Official Highlights & Replay Links**: Clickable links for official highlights and instant goal replays
 - **Goal Notifications**: Desktop notifications for goals as they happen
+- **FIFA World Rankings**: Browse the latest official men's and women's national-team rankings, points, and changes
 - **65+ Leagues**: Organized by region (Europe, Americas, Global) with tab navigation in Settings
 - **JSON CLI for agents**: `golazo live`, `finished`, `match`, `leagues`, `capabilities` — structured output, typed error codes, exit code map. See [docs/CLI.md](docs/CLI.md).
 
@@ -65,11 +66,13 @@ brew upgrade 0xjuanma/tap/golazo
 ### Install script
 
 **macOS / Linux:**
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/0xjuanma/golazo/main/scripts/install.sh | bash
 ```
 
 **Windows (PowerShell):**
+
 ```powershell
 irm https://raw.githubusercontent.com/0xjuanma/golazo/main/scripts/install.ps1 | iex
 ```
@@ -86,11 +89,12 @@ go build
 ## Usage
 
 Run the application:
+
 ```bash
 golazo
 ```
 
-**Navigation:** `↑`/`↓` or `j`/`k` to move, `Enter` to select, `/` to filter, `Tab` to focus view, `Esc` to go back, `q` to quit.
+**Navigation:** `↑`/`↓` or `j`/`k` to move, `←`/`→` or `h`/`l` to switch tabs where available, `Enter` to select, `/` to filter, `Tab` to focus view, `Esc` to go back, `q` to quit.
 
 ## CLI / Agent Mode
 

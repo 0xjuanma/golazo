@@ -65,6 +65,10 @@ func (m model) View() string {
 			m.lastError,
 		)
 
+	case viewFIFARanking:
+		return ui.RenderFIFARanking(m.width, m.height, m.fifaRanking, m.fifaRankingGender, m.fifaRankingLoading,
+			m.fifaRankingError, m.fifaRankingOffset, m.fifaRankingSelected, m.getStatusBannerType())
+
 	case viewSettings:
 		return ui.RenderSettingsView(m.width, m.height, m.settingsState, m.getStatusBannerType())
 

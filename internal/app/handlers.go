@@ -17,7 +17,7 @@ import (
 func (m model) handleMainViewKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "j", "down":
-		if m.selected < 3 && !m.mainViewLoading { // 4 menu items: 0, 1, 2, 3
+		if m.selected < 4 && !m.mainViewLoading {
 			m.selected++
 		}
 	case "k", "up":
@@ -31,13 +31,28 @@ func (m model) handleMainViewKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 		// Handle Settings view separately (no API calls needed)
 		if m.selected == 2 {
+			if m.loadCancel != nil {
+				m.loadCancel()
+			}
+			m.loadCtx, m.loadCancel = context.WithCancel(context.Background())
+			m.currentView = viewFIFARanking
+			m.fifaRanking = nil
+			m.fifaRankingGender = "men"
+			m.fifaRankingOffset = 0
+			m.fifaRankingSelected = 0
+			m.fifaRankingLoading = true
+			m.fifaRankingError = ""
+			return m, fetchFIFARanking(m.loadCtx, m.fotmobClient, m.fifaRankingGender)
+		}
+
+		if m.selected == 3 {
 			m.settingsState = ui.NewSettingsState()
 			m.currentView = viewSettings
 			return m, nil
 		}
 
 		// Handle World Cup view (immediate switch, loads data async)
-		if m.selected == 3 {
+		if m.selected == 4 {
 			if m.loadCancel != nil {
 				m.loadCancel()
 			}
@@ -109,6 +124,38 @@ func (m model) handleMainViewKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 
 		return m, tea.Batch(cmds...)
+	}
+	return m, nil
+}
+
+func (m model) handleFIFARankingKeys(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "j", "down":
+		if m.fifaRanking != nil {
+			visible := max(m.height-13, 1)
+			m.fifaRankingSelected = min(m.fifaRankingSelected+1, len(m.fifaRanking.Teams)-1)
+			if m.fifaRankingSelected >= m.fifaRankingOffset+visible {
+				m.fifaRankingOffset = m.fifaRankingSelected - visible + 1
+			}
+		}
+	case "k", "up":
+		m.fifaRankingSelected = max(m.fifaRankingSelected-1, 0)
+		if m.fifaRankingSelected < m.fifaRankingOffset {
+			m.fifaRankingOffset = m.fifaRankingSelected
+		}
+	case "h", "left", "l", "right":
+		if m.fifaRankingGender == "men" {
+			m.fifaRankingGender = "women"
+		} else {
+			m.fifaRankingGender = "men"
+		}
+		fallthrough
+	case "r":
+		m.fifaRankingLoading = true
+		m.fifaRankingError = ""
+		m.fifaRankingOffset = 0
+		m.fifaRankingSelected = 0
+		return m, fetchFIFARanking(m.loadCtx, m.fotmobClient, m.fifaRankingGender)
 	}
 	return m, nil
 }

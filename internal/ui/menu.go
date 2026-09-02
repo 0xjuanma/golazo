@@ -43,6 +43,7 @@ func RenderMainMenu(width, height, selected int, sp spinner.Model, randomSpinner
 	menuItems := []string{
 		constants.MenuStats,
 		constants.MenuLiveMatches,
+		constants.MenuFIFARanking,
 		constants.MenuSettings,
 		constants.MenuWorldCup,
 	}

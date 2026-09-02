@@ -119,31 +119,41 @@ func TestSearchReturnsErrBlockedOn403(t *testing.T) {
 
 // recordingFetcher captures queries passed to Search so tests can assert on
 // the exact query string searchForGoalOnce constructs (vs. e2e-asserting via
-// httptest, which would re-test url-escaping). Returns whatever results are
-// pre-loaded.
+// httptest, which would re-test url-escaping). resultSets is indexed by call
+// count — call N returns resultSets[N], or no results if N is out of range —
+// so tests can program a first (full-query) call that finds nothing and a
+// second (relaxed-retry) call that does.
 type recordingFetcher struct {
-	queries []string
-	results []SearchResult
-	err     error
+	queries    []string
+	resultSets [][]SearchResult
+	err        error
 }
 
 func (r *recordingFetcher) Search(query string, _ int, _ time.Time, _ string) ([]SearchResult, error) {
+	idx := len(r.queries)
 	r.queries = append(r.queries, query)
 	if r.err != nil {
 		return nil, r.err
 	}
-	return r.results, nil
+	if idx < len(r.resultSets) {
+		return r.resultSets[idx], nil
+	}
+	return nil, nil
 }
 
-// TestSearchForGoalOnceQueryFormat pins the single-query format produced by
+// TestSearchForGoalOnceQueryFormat pins the query format produced by
 // buildGoalQuery / searchForGoalOnce: "<home> <hScore> <aScore> <away>
 // <scorerLast>", with the scorer token omitted when ScorerName is empty.
-// Asserts exactly one fetcher.Search call (strategies 2 and 3 are gone).
+// Each scorer-present case programs a matching first-call result so it
+// resolves without triggering the relaxed retry (that path is covered
+// separately by TestSearchForGoalOnceFallbackOnNoMatch) — asserts exactly
+// one fetcher.Search call.
 func TestSearchForGoalOnceQueryFormat(t *testing.T) {
 	cases := []struct {
-		name      string
-		goal      GoalInfo
-		wantQuery string
+		name        string
+		goal        GoalInfo
+		wantQuery   string
+		firstResult []SearchResult // nil is fine when no retry is possible anyway (empty ScorerName)
 	}{
 		{
 			name: "scorer present uses last token",
@@ -159,6 +169,12 @@ func TestSearchForGoalOnceQueryFormat(t *testing.T) {
 				MatchTime:  time.Now(),
 			},
 			wantQuery: "Iran 0 1 New Zealand Just",
+			firstResult: []SearchResult{{
+				Title:     "Iran 0 - [1] New Zealand - E. Just 7'",
+				URL:       "https://example.com/iran-nz",
+				PostURL:   "https://www.reddit.com/r/soccer/comments/iran-nz",
+				CreatedAt: time.Now(),
+			}},
 		},
 		{
 			name: "empty scorer falls back to teams + score",
@@ -187,12 +203,18 @@ func TestSearchForGoalOnceQueryFormat(t *testing.T) {
 				MatchTime:  time.Now(),
 			},
 			wantQuery: "Liverpool 2 0 Wolves Nunez",
+			firstResult: []SearchResult{{
+				Title:     "Liverpool [2] - 0 Wolves - Darwin Nunez 12'",
+				URL:       "https://example.com/liv-wolves",
+				PostURL:   "https://www.reddit.com/r/soccer/comments/liv-wolves",
+				CreatedAt: time.Now(),
+			}},
 		},
 	}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			fetcher := &recordingFetcher{}
+			fetcher := &recordingFetcher{resultSets: [][]SearchResult{tc.firstResult}}
 			client := NewClientWithFetcher(fetcher, &GoalLinkCache{links: make(map[string]GoalLink)})
 
 			_, err := client.searchForGoalOnce(tc.goal)
@@ -200,12 +222,91 @@ func TestSearchForGoalOnceQueryFormat(t *testing.T) {
 				t.Fatalf("searchForGoalOnce returned err: %v", err)
 			}
 			if len(fetcher.queries) != 1 {
-				t.Fatalf("expected exactly 1 fetcher.Search call (single-strategy), got %d: %v",
+				t.Fatalf("expected exactly 1 fetcher.Search call (matched on first attempt), got %d: %v",
 					len(fetcher.queries), fetcher.queries)
 			}
 			if fetcher.queries[0] != tc.wantQuery {
 				t.Errorf("query mismatch:\n  got  %q\n  want %q", fetcher.queries[0], tc.wantQuery)
 			}
 		})
+	}
+}
+
+// TestSearchForGoalOnceFallbackOnNoMatch verifies that when the first (full)
+// query finds no match and the goal has a scorer name, searchForGoalOnce
+// retries once with the scorer token dropped and uses the retry's match.
+func TestSearchForGoalOnceFallbackOnNoMatch(t *testing.T) {
+	goal := GoalInfo{
+		MatchID:    3,
+		HomeTeam:   "Wolves",
+		AwayTeam:   "West Ham",
+		HomeScore:  3,
+		AwayScore:  0,
+		ScorerName: "Mateus Mane",
+		Minute:     41,
+		MatchTime:  time.Now(),
+	}
+	fetcher := &recordingFetcher{
+		resultSets: [][]SearchResult{
+			{}, // full query (with scorer token): no results
+			{{ // relaxed retry (scorer token dropped): a match
+				Title:     "Wolves [3] - 0 West Ham - Mateus Mane 41'",
+				URL:       "https://example.com/relaxed-match",
+				PostURL:   "https://www.reddit.com/r/soccer/comments/relaxed",
+				CreatedAt: goal.MatchTime,
+			}},
+		},
+	}
+	client := NewClientWithFetcher(fetcher, &GoalLinkCache{links: make(map[string]GoalLink)})
+
+	link, err := client.searchForGoalOnce(goal)
+	if err != nil {
+		t.Fatalf("searchForGoalOnce returned err: %v", err)
+	}
+	if len(fetcher.queries) != 2 {
+		t.Fatalf("expected exactly 2 fetcher.Search calls (full + relaxed retry), got %d: %v",
+			len(fetcher.queries), fetcher.queries)
+	}
+	if want := "Wolves 3 0 West Ham Mane"; fetcher.queries[0] != want {
+		t.Errorf("first query = %q, want %q", fetcher.queries[0], want)
+	}
+	if want := "Wolves 3 0 West Ham"; fetcher.queries[1] != want {
+		t.Errorf("retry query = %q, want %q (scorer token dropped)", fetcher.queries[1], want)
+	}
+	if link == nil {
+		t.Fatal("expected a link from the relaxed retry, got nil")
+	}
+	if link.URL != "https://example.com/relaxed-match" {
+		t.Errorf("link URL = %q, want the relaxed-retry result", link.URL)
+	}
+}
+
+// TestSearchForGoalOnceNoFallbackWhenScorerAlreadyEmpty verifies that a goal
+// with no scorer name never triggers the relaxed retry: its first query is
+// already the relaxed shape (buildGoalQuery omits an empty scorer token), so
+// retrying it would be a wasted duplicate request against Reddit.
+func TestSearchForGoalOnceNoFallbackWhenScorerAlreadyEmpty(t *testing.T) {
+	goal := GoalInfo{
+		MatchID:   4,
+		HomeTeam:  "Barcelona",
+		AwayTeam:  "Real Madrid",
+		HomeScore: 1,
+		AwayScore: 1,
+		Minute:    60,
+		MatchTime: time.Now(),
+	}
+	fetcher := &recordingFetcher{} // no results at any call index
+	client := NewClientWithFetcher(fetcher, &GoalLinkCache{links: make(map[string]GoalLink)})
+
+	link, err := client.searchForGoalOnce(goal)
+	if err != nil {
+		t.Fatalf("searchForGoalOnce returned err: %v", err)
+	}
+	if link != nil {
+		t.Errorf("expected nil link (no results), got %+v", link)
+	}
+	if len(fetcher.queries) != 1 {
+		t.Fatalf("expected exactly 1 fetcher.Search call (no retry for empty-scorer goal), got %d: %v",
+			len(fetcher.queries), fetcher.queries)
 	}
 }

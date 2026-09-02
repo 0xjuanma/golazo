@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Config/cache directory resolution now uses `cli-toolkit/dirs` internally instead of hand-rolled logic; no change in behavior or config location.
+- **Reddit goal-link retrieval** — cooldown after a Reddit block now persists across app restarts and grows exponentially (with jitter) on repeated blocks, instead of resetting on restart and staying fixed at 10 minutes.
+- **Reddit goal-link retrieval** — goal searches get one retry with a relaxed query (scorer name dropped) when the first attempt finds no match.
 
 ### Fixed
 

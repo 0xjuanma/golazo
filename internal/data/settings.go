@@ -95,6 +95,7 @@ var AllSupportedLeagues = map[string][]LeagueInfo{
 		{ID: 297, Name: "CONCACAF Champions Cup", Country: "North America"},
 		{ID: 298, Name: "CONCACAF Gold Cup", Country: "North America"},
 		{ID: 9821, Name: "CONCACAF Nations League", Country: "North America"},
+		{ID: 10043, Name: "Leagues Cup", Country: "North America"},
 		// South America
 		{ID: 268, Name: "Brasileirão Série A", Country: "Brazil"},
 		{ID: 8814, Name: "Brasileirão Série B", Country: "Brazil"},

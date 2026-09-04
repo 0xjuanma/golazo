@@ -1,18 +1,46 @@
 package ui
 
 import (
+	"strings"
+
 	"github.com/0xjuanma/golazo/internal/constants"
 	"github.com/0xjuanma/golazo/internal/data"
 	"github.com/0xjuanma/golazo/internal/ui/design"
 	"github.com/charmbracelet/lipgloss"
 )
 
-// Truncate truncates text to fit the specified width, appending "..." if truncated.
+// Truncate truncates text to fit the specified display width, appending "..."
+// if truncated. Width is measured in terminal cells (via lipgloss.Width) so that
+// multi-byte glyphs such as the arrow keys in help strings (↑/↓/←/→) are counted
+// by how wide they render, not by their byte length.
 func Truncate(text string, width int) string {
-	if len(text) <= width {
+	if lipgloss.Width(text) <= width {
 		return text
 	}
-	return text[:width-3] + "..."
+	// Not enough room for the ellipsis itself: return what fits, cell by cell.
+	if width <= 3 {
+		return truncateToWidth(text, width)
+	}
+	return truncateToWidth(text, width-3) + "..."
+}
+
+// truncateToWidth returns the longest prefix of text whose display width does
+// not exceed width, counting in terminal cells.
+func truncateToWidth(text string, width int) string {
+	if width <= 0 {
+		return ""
+	}
+	var b strings.Builder
+	used := 0
+	for _, r := range text {
+		rw := lipgloss.Width(string(r))
+		if used+rw > width {
+			break
+		}
+		b.WriteRune(r)
+		used += rw
+	}
+	return b.String()
 }
 
 // renderStatusBanner renders a status banner based on the specified type.

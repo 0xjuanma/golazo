@@ -1,6 +1,6 @@
 # Supported Leagues
 
-Golazo supports **65+ leagues and competitions**. Customize your selection in Settings.
+Golazo supports **100+ leagues and competitions**. Customize your selection in Settings.
 
 > **Missing your favourite league?** [Create an issue](https://github.com/0xjuanma/golazo/issues/new) and we'll add it!
 
@@ -31,7 +31,7 @@ Golazo supports **65+ leagues and competitions**. Customize your selection in Se
 |---|--------|
 | 🇸🇪 | Allsvenskan |
 | 🇦🇹 | Austrian Bundesliga |
-| 🇧🇪 | Belgian Pro League |
+| 🇧🇪 | Belgian First Division |
 | 🏴󠁧󠁢󠁥󠁮󠁧󠁿 | EFL Championship |
 | 🏴󠁧󠁢󠁥󠁮󠁧󠁿 | EFL League One |
 | 🏴󠁧󠁢󠁥󠁮󠁧󠁿 | EFL League Two |
@@ -114,6 +114,7 @@ Golazo supports **65+ leagues and competitions**. Customize your selection in Se
 | 🏆 | CONCACAF Champions Cup |
 | 🏆 | CONCACAF Gold Cup |
 | 🏆 | CONCACAF Nations League |
+| 🏆 | Leagues Cup |
 | 🇲🇽 | Liga MX |
 | 🇺🇸 | MLS |
 | 🇺🇸 | USL Championship |
@@ -133,7 +134,7 @@ Golazo supports **65+ leagues and competitions**. Customize your selection in Se
 |---|-------------------|
 | 🏆 | AFC Champions League Elite |
 | 🏆 | AFC Champions League Two |
-| 🇨🇳 | Chinese Super League |
+| 🇨🇳 | Chinese League One |
 | 🇮🇳 | Indian Super League |
 | 🇯🇵 | J. League |
 | 🇰🇷 | K League 1 |

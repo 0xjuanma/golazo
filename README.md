@@ -45,7 +45,7 @@ Golazo was created for those moments when you can't stream or watch matches live
 - **Match Statistics & Details**: Possession, shots, passes, standings, formations with player ratings, and more in focused dialogs
 - **Official Highlights & Replay Links**: Clickable links for official highlights and instant goal replays
 - **Goal Notifications**: Desktop notifications for goals as they happen
-- **65+ Leagues**: Organized by region (Europe, Americas, Global) with tab navigation in Settings
+- **100+ Leagues**: Organized by region (Europe, Americas, Global) with tab navigation in Settings
 - **JSON CLI for agents**: `golazo live`, `finished`, `match`, `leagues`, `capabilities` — structured output, typed error codes, exit code map. See [docs/CLI.md](docs/CLI.md).
 
 ## Installation & Update

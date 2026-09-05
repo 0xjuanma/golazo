@@ -31,6 +31,7 @@ var AllSupportedLeagues = map[string][]LeagueInfo{
 		// Top 5 European Leagues
 		{ID: 47, Name: "Premier League", Country: "England"},
 		{ID: 87, Name: "La Liga", Country: "Spain"},
+		{ID: 140, Name: "La Liga2", Country: "Spain"},
 		{ID: 54, Name: "Bundesliga", Country: "Germany"},
 		{ID: 146, Name: "2. Bundesliga", Country: "Germany"},
 		{ID: 208, Name: "3. Liga", Country: "Germany"},

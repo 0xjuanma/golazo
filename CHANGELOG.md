@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Leagues Cup** - Added support for the Leagues Cup, the annual MLS vs. Liga MX club tournament, to the Americas region.
+- **La Liga 2** - Added support for Spanish La Liga 2 (second division). (Thanks @Qv1ko!)
 
 ### Changed
 - Config/cache directory resolution now uses `cli-toolkit/dirs` internally instead of hand-rolled logic; no change in behavior or config location.

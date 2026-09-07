@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+> [!NOTE]
+> Update your Golazo app by running `golazo --update`; and check out: https://thegolazo.app
+
 ### Added
 - **Leagues Cup** - Added support for the Leagues Cup, the annual MLS vs. Liga MX club tournament, to the Americas region.
 - **La Liga 2** - Added support for Spanish La Liga 2 (second division). (Thanks @Qv1ko!)

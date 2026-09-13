@@ -164,6 +164,13 @@ func (c *Client) MatchesByDateWithTabs(ctx context.Context, date time.Time, tabs
 	// Track skipped leagues for logging/debugging
 	var skippedFromCache int
 
+	// Track league queries that were attempted and how many failed. A failure
+	// means the aggregate below is incomplete, so it must not be cached as an
+	// authoritative answer for this date (guarded by mu, like allMatches).
+	attempted := 0
+	failed := 0
+	var firstErr error
+
 	// Determine which statuses to include based on requested tabs
 	wantFinished := false
 	wantLive := false
@@ -178,6 +185,15 @@ func (c *Client) MatchesByDateWithTabs(ctx context.Context, date time.Time, tabs
 		}
 	}
 
+	recordFailure := func(err error) {
+		mu.Lock()
+		defer mu.Unlock()
+		failed++
+		if firstErr == nil {
+			firstErr = err
+		}
+	}
+
 	// Query each league by fetching its page (the old /api/leagues JSON endpoint is gone)
 	for _, leagueID := range activeLeagues {
 		// Check empty cache before spawning goroutine
@@ -186,6 +202,7 @@ func (c *Client) MatchesByDateWithTabs(ctx context.Context, date time.Time, tabs
 			continue
 		}
 
+		attempted++
 		wg.Add(1)
 		go func(id int) {
 			defer wg.Done()
@@ -196,6 +213,7 @@ func (c *Client) MatchesByDateWithTabs(ctx context.Context, date time.Time, tabs
 			pageProps, err := c.fetchLeaguePage(ctx, id)
 			if err != nil {
 				// Skip this league on error - best effort aggregation
+				recordFailure(fmt.Errorf("fetch league %d page: %w", id, err))
 				return
 			}
 
@@ -213,6 +231,7 @@ func (c *Client) MatchesByDateWithTabs(ctx context.Context, date time.Time, tabs
 
 			if err := json.Unmarshal(pageProps, &leagueResponse); err != nil {
 				// Skip this league on parse error - best effort aggregation
+				recordFailure(fmt.Errorf("decode league %d response: %w", id, err))
 				return
 			}
 
@@ -293,11 +312,26 @@ func (c *Client) MatchesByDateWithTabs(ctx context.Context, date time.Time, tabs
 
 	wg.Wait()
 
-	// Cache the results before returning
-	c.cache.SetMatches(requestDateStr, allMatches)
-
 	// Persist empty results cache to disk (best-effort)
 	_ = c.SaveEmptyCache()
+
+	// A league that failed contributed no matches, so the aggregate is not a
+	// complete answer for this date. Caching it would keep serving the gap for
+	// the whole matches TTL even after the source recovers, so leave the date
+	// uncached and let the next call retry.
+	if failed > 0 {
+		if failed == attempted {
+			// Nothing succeeded: report the failure instead of an empty day.
+			return nil, fmt.Errorf("all %d league queries failed for %s: %w", failed, requestDateStr, firstErr)
+		}
+		c.debugLog("matches by date: partial result left uncached",
+			"date", requestDateStr, "failed", failed, "attempted", attempted, "matches", len(allMatches))
+		return allMatches, nil
+	}
+
+	// Every attempted league answered, so this is a complete result - including
+	// a genuinely empty day, which is worth caching.
+	c.cache.SetMatches(requestDateStr, allMatches)
 
 	return allMatches, nil
 }

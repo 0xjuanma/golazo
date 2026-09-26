@@ -66,7 +66,7 @@ func RenderMainMenu(width, height, selected int, sp spinner.Model, randomSpinner
 		Width(logoWidth).
 		Align(lipgloss.Center).
 		Render(logoContent)
-	help := menuHelpStyle.Render(constants.HelpMainMenu)
+	help := renderMenuHelp(constants.HelpMainMenu, width)
 
 	// Spinner with fixed spacing - always reserve space to prevent movement
 	// Use multiple spinner instances for a longer, more prominent animation
@@ -108,6 +108,20 @@ func RenderMainMenu(width, height, selected int, sp spinner.Model, randomSpinner
 		lipgloss.Center,
 		content,
 	)
+}
+
+// renderMenuHelp renders the main-menu nav-tip/help footer constrained to the
+// available terminal width. When the help string is wider than width it is
+// truncated to a single line (with an ellipsis) via the Truncate helper instead
+// of being wrapped at arbitrary points by lipgloss, which is what produced the
+// broken multi-line footer at narrow widths / large fonts (issue #124).
+func renderMenuHelp(text string, width int) string {
+	// Guard against unset/degenerate widths (e.g. before the first WindowSizeMsg).
+	if width <= 0 {
+		return menuHelpStyle.Render(text)
+	}
+	truncated := Truncate(text, width)
+	return menuHelpStyle.Width(width).MaxWidth(width).Render(truncated)
 }
 
 // RenderGradientText applies a gradient (cyan to red) to multi-line text.

@@ -41,7 +41,7 @@ golazo finished --include-upcoming | jq '.data[] | {
 }'
 ```
 
-For events / lineups / stats: use `golazo match <id> --mock` against the bundled mock IDs (2001, 2002, ...) to validate your jq pipeline, then accept that against real IDs the call is best-effort.
+For events / stats: use `golazo match <id> --mock` against the bundled mock IDs (2001, 2002, ...) to validate your jq pipeline, then accept that against real IDs the call is best-effort. Mock details carry events, statistics, venue, referee and attendance, but no lineups or formations (see [Known limitations](#known-limitations)).
 
 ## Subcommands
 
@@ -341,7 +341,7 @@ FotMob's match-details endpoint is gated behind Cloudflare Turnstile when called
 
 - `golazo match <id>` is **not** a dependable building block for production agent pipelines.
 - Treat `live` and `finished` as the authoritative agent-facing endpoints. Both already include teams, scores, status, league, kickoff time, round, and `page_url` — enough to answer most match-level questions without needing `match`.
-- For **testing** your jq pipeline against match details, use `--mock` with the bundled mock IDs (e.g. `golazo match 2001 --mock`). The mock data exposes the full `MatchDetails` shape (events, lineups, stats, formations).
+- For **testing** your jq pipeline against match details, use `--mock` with the bundled mock IDs (e.g. `golazo match 2001 --mock`). Mock details cover `events`, `statistics`, `venue`, `referee` and `attendance`; they do **not** include `home_lineup` / `away_lineup`, `home_starting` / `away_starting` or `home_formation` / `away_formation`, and `display_minute` is only populated on some bundled events. Validate those fields against real matches in the TUI instead.
 - For **human / interactive** access to a specific match, use the TUI (`golazo`, no subcommand) and select the match.
 
 We chose not to work around this limitation in the CLI: persisting the slug cache to disk would add complexity and a new failure mode, and FotMob's gating may change at any time. The `page_url` field on every `Match` is the slug FotMob uses; documented here in case future versions of the CLI accept it as an explicit input.

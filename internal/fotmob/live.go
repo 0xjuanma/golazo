@@ -124,10 +124,17 @@ func matchTitles(matches []api.Match) []string {
 // LiveAndUpcoming fetches live and upcoming matches across all active leagues
 // concurrently using the status-only classifier. Best-effort aggregation: a
 // league that errors is skipped, the rest still return.
+//
+// If every league fetch fails the error is returned instead of an empty
+// success, so callers can tell "FotMob is unreachable/blocking us" apart from
+// "no matches are live right now" (docs/CLI.md documents count: 0 as a
+// successful, genuinely-empty answer).
 func (c *Client) LiveAndUpcoming(ctx context.Context) (live, upcoming []api.Match, err error) {
 	activeLeagues := ActiveLeagues()
 	var mu sync.Mutex
 	var wg sync.WaitGroup
+	successCount := 0
+	var firstErr error
 	for _, leagueID := range activeLeagues {
 		wg.Add(1)
 		go func(id int) {
@@ -137,15 +144,25 @@ func (c *Client) LiveAndUpcoming(ctx context.Context) (live, upcoming []api.Matc
 
 			liveL, upL, err := c.LiveAndUpcomingForLeague(ctx, id)
 			if err != nil {
+				mu.Lock()
+				if firstErr == nil {
+					firstErr = err
+				}
+				mu.Unlock()
 				return
 			}
 			mu.Lock()
+			successCount++
 			live = append(live, liveL...)
 			upcoming = append(upcoming, upL...)
 			mu.Unlock()
 		}(leagueID)
 	}
 	wg.Wait()
+
+	if successCount == 0 && firstErr != nil {
+		return nil, nil, fmt.Errorf("fetch live matches: all %d league requests failed: %w", len(activeLeagues), firstErr)
+	}
 	return live, upcoming, nil
 }
 
